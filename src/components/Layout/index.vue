@@ -1,5 +1,5 @@
 <template>
-  <div class="layout">
+  <div class="basic-layout">
     <n-layout has-sider>
       <!-- 侧边栏 -->
       <n-layout-sider
@@ -15,7 +15,7 @@
       </n-layout-sider>
 
       <!-- 主内容区 -->
-      <n-layout>
+      <n-layout class="main-layout">
         <!-- 头部 -->
         <n-layout-header bordered>
           <LayoutHeader />
@@ -25,8 +25,8 @@
         <LayoutTabbar v-if="showTabbar" />
 
         <!-- 内容区 -->
-        <n-layout-content>
-          <div class="content">
+        <n-layout-content class="layout-content">
+          <div class="content-wrapper">
             <router-view v-slot="{ Component }">
               <transition name="fade-slide" mode="out-in">
                 <component :is="Component" />
@@ -59,15 +59,27 @@ const handleCollapse = (collapsed) => {
 </script>
 
 <style scoped>
-.layout {
+.basic-layout {
   height: 100vh;
+  width: 100%;
   overflow: hidden;
 }
 
-.content {
+.main-layout {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.layout-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.content-wrapper {
+  height: 100%;
+  overflow-y: auto;
   padding: 16px;
-  min-height: calc(100vh - 64px);
-  background: #f0f2f5;
 }
 
 /* 页面切换动画 */

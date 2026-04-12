@@ -1,7 +1,7 @@
 // services/http.js
 
 /**
- * 通用 fetch 封装（专为对接 Python 后端设计）
+ * 通用 fetch 封装
  * 支持：JSON 请求、文件上传、流式响应（SSE）、超时控制、请求拦截、响应拦截
  */
 
@@ -223,27 +223,23 @@ const upload = (url, formData, options = {}) => {
 const stream = async (url, data, callbacks, signal = null) => {
   const { onChunk, onDone, onError } = callbacks
 
-  // 获取 token
-  const token = localStorage.getItem('access_token')
-
   try {
     const response = await fetch(`${BASE_URL}${url}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(data),
       signal,
     })
 
     if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`流式请求失败: ${response.status} ${errorText}`)
+      throw new Error(`HTTP ${response.status}`)
     }
 
     const reader = response.body.getReader()
     const decoder = new TextDecoder('utf-8')
+    let buffer = ''
 
     while (true) {
       const { done, value } = await reader.read()
@@ -252,25 +248,30 @@ const stream = async (url, data, callbacks, signal = null) => {
         break
       }
 
-      const chunk = decoder.decode(value, { stream: true })
-      // 处理 SSE 格式（data: xxx\n\n）
-      const lines = chunk.split('\n')
+      buffer += decoder.decode(value, { stream: true })
+
+      // 按行分割
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const dataContent = line.slice(6)
-          if (dataContent === '[DONE]') {
-            onDone?.()
-            return
-          }
-          onChunk?.(dataContent)
-        } else if (line.trim()) {
-          // 非 SSE 格式，直接输出
-          onChunk?.(line)
+        const trimmedLine = line.trim()
+
+        if (!trimmedLine) continue
+
+        // 检查结束标记
+        if (trimmedLine === '[DONE]') {
+          onDone?.()
+          return
+        }
+
+        // 直接输出内容
+        if (onChunk) {
+          onChunk(trimmedLine)
         }
       }
     }
   } catch (error) {
-    // 如果是主动中止，不触发 onError
     if (error.name === 'AbortError') {
       return
     }

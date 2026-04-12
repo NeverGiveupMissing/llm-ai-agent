@@ -9,7 +9,7 @@ import http from '@/utils/http'
  * @returns {Promise}
  */
 export const sendMessage = (data) => {
-  return http.post('/app/completion', data)
+  return http.post('/api/chat', data)
 }
 
 /**
@@ -25,7 +25,7 @@ export const sendMessage = (data) => {
  */
 export const streamChat = (data, callbacks, signal) => {
   return http.stream(
-    '/app/completion',
+    '/api/chat',
     {
       ...data,
       stream: true,
