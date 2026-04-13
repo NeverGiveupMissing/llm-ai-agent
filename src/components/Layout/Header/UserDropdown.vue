@@ -20,7 +20,6 @@ const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo)
 
 const userOptions = ref([
-  { label: '个人中心', key: 'profile' },
   { label: '系统设置', key: 'settings' },
   { type: 'divider', key: 'divider' },
   { label: '退出登录', key: 'logout' },
@@ -28,15 +27,12 @@ const userOptions = ref([
 
 const handleSelect = (key) => {
   switch (key) {
-    case 'profile':
-      router.push('/profile')
-      break
     case 'settings':
-      router.push('/settings')
+      router.push({ name: 'Settings' })
       break
     case 'logout':
       userStore.logout()
-      router.push('/login')
+      router.push({ name: 'Login' })
       break
   }
 }

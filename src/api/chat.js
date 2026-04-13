@@ -1,53 +1,72 @@
-// AI 对话相关接口
-
-import http from '@/utils/http'
-
-/**
- * 发送普通消息（非流式）
- * @param {Object} data - 请求参数
- * @param {string} data.message - 用户消息
- * @returns {Promise}
- */
-export const sendMessage = (data) => {
-  return http.post('/api/chat', data)
-}
+// src/api/chat.js
+import { fetchSSE, createSSEController } from '@/utils/sse'
+import { CHAT_CONFIG } from '@/utils/constants'
 
 /**
- * 流式对话（AI 打字机效果）
- * @param {Object} data - 请求参数
- * @param {string} data.message - 用户消息
- * @param {boolean} data.stream - 是否流式
- * @param {Object} callbacks - 回调函数
- * @param {Function} callbacks.onChunk - 接收数据块
- * @param {Function} callbacks.onDone - 完成回调
- * @param {Function} callbacks.onError - 错误回调
- * @param {AbortSignal} signal - 中止信号
+ * 发送聊天消息配置
+ * @param {Object} params
+ * @param {Array} params.messages - 消息历史
+ * @param {boolean} params.stream - 是否流式
  */
-export const streamChat = (data, callbacks, signal) => {
-  return http.stream(
-    '/api/chat',
-    {
-      ...data,
-      stream: true,
+export function sendChatMessage(params) {
+  const { messages, stream = true } = params
+
+  return {
+    url: '/api/chat',
+    data: {
+      messages,
+      stream,
     },
-    callbacks,
-    signal,
-  )
+  }
 }
 
 /**
- * 获取对话历史
- * @param {Object} params - 查询参数
- * @param {number} params.page - 页码
- * @param {number} params.size - 每页数量
+ * 构建 SSE 回调处理器
+ * @param {Object} callbacks - 业务层回调
+ * @returns {Object} SSE 层回调
  */
-export const getChatHistory = (params) => {
-  return http.get('/app/history', params)
+function buildSSECallbacks(callbacks) {
+  return {
+    onMessage: (data) => {
+      if (data.content && data.content.trim() !== '' && callbacks.onChunk) {
+        callbacks.onChunk(data.content)
+      } else if (callbacks.onChunk && typeof data === 'string' && data.trim() !== '') {
+        callbacks.onChunk(data)
+      }
+    },
+    onComplete: () => {
+      callbacks.onDone?.()
+    },
+    onError: (error) => {
+      callbacks.onError?.(error)
+    },
+  }
 }
 
 /**
- * 清空对话历史
+ * 创建流式聊天控制器
  */
-export const clearHistory = () => {
-  return http.delete('/app/history')
+export function createChatStream() {
+  const sseController = createSSEController()
+
+  return {
+    send: (messages, callbacks) => {
+      const requestConfig = sendChatMessage({ messages, stream: true })
+
+      return fetchSSE({
+        url: requestConfig.url,
+        data: requestConfig.data,
+        useTypewriter: callbacks.useTypewriter ?? CHAT_CONFIG.TYPEWRITER_ENABLED,
+        typewriterDelay: callbacks.typewriterDelay ?? CHAT_CONFIG.TYPEWRITER_DELAY,
+        callbacks: buildSSECallbacks(callbacks),
+        signal: sseController.signal,
+      })
+    },
+
+    abort: () => {
+      sseController.abort()
+    },
+
+    isAborted: () => sseController.isAborted(),
+  }
 }
