@@ -5,7 +5,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup name="Sidebar">
 import SidebarLogo from './SidebarLogo.vue'
 import SidebarMenu from './SidebarMenu.vue'
 </script>

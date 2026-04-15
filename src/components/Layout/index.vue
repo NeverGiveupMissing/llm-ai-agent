@@ -39,7 +39,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup name="BasicLayout">
 import { ref } from 'vue'
 import { useAppStore } from '@/stores/modules/app'
 import Sidebar from './Sidebar/index.vue'

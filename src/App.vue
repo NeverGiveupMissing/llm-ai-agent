@@ -10,7 +10,7 @@
   </n-config-provider>
 </template>
 
-<script setup>
+<script setup name="App">
 import { ref } from 'vue'
 import { zhCN, dateZhCN } from 'naive-ui'
 

@@ -1,4 +1,3 @@
-<!-- src/views/chat/components/ChatMessageList.vue -->
 <template>
   <div ref="messageListRef" class="chat-message-list">
     <div v-if="messages.length === 0" class="empty-state">
@@ -15,67 +14,53 @@
         </template>
       </n-empty>
     </div>
-    <template v-else v-for="msg in messages" :key="msg.id">
+    <div v-else v-for="msg in messages" :key="msg.id">
       <ChatMessage :message="msg" :is-last="msg.id === lastMessageId" />
-    </template>
+    </div>
   </div>
 </template>
 
-<script>
+<script setup name="ChatMessageList">
 import { ref, watch, nextTick } from 'vue'
 import { NEmpty, NIcon } from 'naive-ui'
 import ChatMessage from './ChatMessage.vue'
 import { scrollToBottom } from '@/utils/sse'
 
-export default {
-  name: 'ChatMessageList',
-  components: {
-    ChatMessage,
-    NEmpty,
-    NIcon,
+const props = defineProps({
+  messages: {
+    type: Array,
+    default: () => [],
   },
-  props: {
-    messages: {
-      type: Array,
-      default: () => [],
-    },
-  },
-  setup(props) {
-    const messageListRef = ref(null)
-    const lastMessageId = ref('')
+})
 
-    const scrollToEnd = () => {
-      nextTick(() => {
-        scrollToBottom(messageListRef.value)
-        if (props.messages.length > 0) {
-          lastMessageId.value = props.messages[props.messages.length - 1].id
-        }
-      })
+const messageListRef = ref(null)
+const lastMessageId = ref('')
+
+const scrollToEnd = () => {
+  nextTick(() => {
+    scrollToBottom(messageListRef.value)
+    if (props.messages.length > 0) {
+      lastMessageId.value = props.messages[props.messages.length - 1].id
     }
-
-    watch(
-      () => props.messages.length,
-      () => {
-        scrollToEnd()
-      },
-    )
-
-    watch(
-      () => props.messages.map((m) => m.content).join(''),
-      () => {
-        const streamingMsg = props.messages.find((m) => m.isStreaming)
-        if (streamingMsg) {
-          scrollToEnd()
-        }
-      },
-    )
-
-    return {
-      messageListRef,
-      lastMessageId,
-    }
-  },
+  })
 }
+
+watch(
+  () => props.messages.length,
+  () => {
+    scrollToEnd()
+  },
+)
+
+watch(
+  () => props.messages.map((m) => m.content).join(''),
+  () => {
+    const streamingMsg = props.messages.find((m) => m.isStreaming)
+    if (streamingMsg) {
+      scrollToEnd()
+    }
+  },
+)
 </script>
 
 <style scoped>

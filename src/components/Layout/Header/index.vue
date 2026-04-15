@@ -104,7 +104,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup name="LayoutHeader">
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/modules/app'

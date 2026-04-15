@@ -1,4 +1,3 @@
-<!-- src/views/chat/components/ChatInput.vue -->
 <template>
   <div class="chat-input-wrapper">
     <n-input
@@ -15,44 +14,31 @@
   </div>
 </template>
 
-<script>
+<script setup name="ChatInput">
 import { ref } from 'vue'
 import { NInput, NButton } from 'naive-ui'
 
-export default {
-  name: 'ChatInput',
-  components: {
-    NInput,
-    NButton,
+const props = defineProps({
+  loading: {
+    type: Boolean,
+    default: false,
   },
-  props: {
-    loading: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  emits: ['send', 'abort'],
-  setup(props, { emit }) {
-    const inputValue = ref('')
+})
 
-    const handleSend = () => {
-      const content = inputValue.value.trim()
-      if (!content || props.loading) return
+const emit = defineEmits(['send', 'abort'])
 
-      emit('send', content)
-      inputValue.value = ''
-    }
+const inputValue = ref('')
 
-    const handleAbort = () => {
-      emit('abort')
-    }
+const handleSend = () => {
+  const content = inputValue.value.trim()
+  if (!content || props.loading) return
 
-    return {
-      inputValue,
-      handleSend,
-      handleAbort,
-    }
-  },
+  emit('send', content)
+  inputValue.value = ''
+}
+
+const handleAbort = () => {
+  emit('abort')
 }
 </script>
 

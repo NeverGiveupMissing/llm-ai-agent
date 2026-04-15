@@ -9,7 +9,7 @@
   </n-dropdown>
 </template>
 
-<script setup>
+<script setup name="UserDropdown">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/modules/user'

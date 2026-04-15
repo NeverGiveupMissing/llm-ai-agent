@@ -10,7 +10,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup name="SidebarLogo">
 import { useAppStore } from '@/stores/modules/app'
 
 const appStore = useAppStore()

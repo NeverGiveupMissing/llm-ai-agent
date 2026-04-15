@@ -12,7 +12,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup name="Tabbar">
 import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
