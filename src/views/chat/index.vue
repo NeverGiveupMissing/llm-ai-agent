@@ -10,7 +10,7 @@ import { ref } from 'vue'
 import { useMessage } from 'naive-ui'
 import ChatMessageList from './components/ChatMessageList.vue'
 import ChatInput from './components/ChatInput.vue'
-import { createChatStream } from '@/api/chat'
+import { createChatStream } from './components/util.js'
 import { generateId } from '@/utils/sse'
 import { CHAT_CONFIG } from '@/utils/constants'
 

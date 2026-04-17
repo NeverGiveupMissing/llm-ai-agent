@@ -27,7 +27,7 @@ const props = defineProps({
 
 const emit = defineEmits(['send', 'abort'])
 
-const inputValue = ref('')
+const inputValue = ref('你是谁?')
 
 const handleSend = () => {
   const content = inputValue.value.trim()

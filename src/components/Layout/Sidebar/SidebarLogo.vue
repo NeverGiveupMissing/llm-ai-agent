@@ -1,11 +1,6 @@
 <template>
   <div class="logo" :class="{ collapsed: appStore.collapsed }">
-    <!-- <img src="/assets/logo.svg" alt="logo" class="logo-img" /> -->
-    <img
-      src="https://statics.moonshot.cn/kimi-web-seo/assets/kimi-logo-CegIMkbU.png"
-      alt="logo"
-      class="logo-img"
-    />
+    <img src="/logo.png" alt="logo" class="logo-img" />
     <span v-if="!appStore.collapsed" class="logo-text">AI Agent</span>
   </div>
 </template>
@@ -33,7 +28,6 @@ const appStore = useAppStore()
 
 .logo-img {
   width: 32px;
-  height: 32px;
 }
 
 .logo-text {
