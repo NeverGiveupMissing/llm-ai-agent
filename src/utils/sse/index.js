@@ -81,6 +81,7 @@ export async function fetchSSE(options) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
       },
       body: JSON.stringify(data),
       signal,
@@ -88,6 +89,10 @@ export async function fetchSSE(options) {
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    if (!response.body) {
+      throw new Error('ReadableStream not supported')
     }
 
     const reader = response.body.getReader()
@@ -98,11 +103,13 @@ export async function fetchSSE(options) {
       const { done, value } = await reader.read()
 
       if (done) {
+        console.log('SSE stream completed')
         onComplete?.()
         break
       }
 
-      buffer += decoder.decode(value, { stream: true })
+      const chunk = decoder.decode(value, { stream: true })
+      buffer += chunk
 
       const lines = buffer.split('\n')
       buffer = lines.pop() || ''
@@ -116,6 +123,7 @@ export async function fetchSSE(options) {
           const dataStr = trimmedLine.slice(5).trim()
 
           if (dataStr === '[DONE]') {
+            console.log('Received [DONE] signal')
             onComplete?.()
             return
           }
@@ -138,6 +146,7 @@ export async function fetchSSE(options) {
             }
           } catch (e) {
             if (dataStr && dataStr.trim() !== '') {
+              console.log('Non-JSON data received:', dataStr)
               if (useTypewriter) {
                 await typewriterEffect(
                   dataStr,
