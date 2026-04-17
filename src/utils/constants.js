@@ -1,7 +1,9 @@
 /**
  * API 基础地址
+ * - 开发环境使用空字符串，通过 Vite 代理转发
+ * - 生产环境使用实际的 API 地址
  */
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 /**
  * 聊天配置
