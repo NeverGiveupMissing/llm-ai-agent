@@ -189,8 +189,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['regenerate'])
-// eslint-disable-next-line vue/no-dupe-keys
-const message = useMessage()
+const msgApi = useMessage() // 🔑 重命名避免与 props.message 冲突
 const feedback = ref(null)
 
 // 判断是否处于思考状态
@@ -207,9 +206,9 @@ const showActions = computed(() => {
 const handleCopy = async () => {
   try {
     await navigator.clipboard.writeText(props.message.content)
-    message.success('已复制到剪贴板')
+    msgApi.success('已复制到剪贴板')
   } catch (error) {
-    message.error('复制失败', error)
+    msgApi.error('复制失败')
   }
 }
 
@@ -221,12 +220,12 @@ const handleRegenerate = () => {
 // 反馈（赞/踩）
 const handleFeedback = (type) => {
   feedback.value = feedback.value === type ? null : type
-  message.info(feedback.value ? `已${feedback.value === 'good' ? '点赞' : '点踩'}` : '已取消反馈')
+  msgApi.info(feedback.value ? `已${feedback.value === 'good' ? '点赞' : '点踩'}` : '已取消反馈')
 }
 
 // 分享
 const handleShare = () => {
-  message.info('分享功能开发中...')
+  msgApi.info('分享功能开发中...')
 }
 
 const formatTime = (timestamp) => {

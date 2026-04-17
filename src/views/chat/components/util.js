@@ -10,10 +10,9 @@ import { CHAT_CONFIG } from '@/utils/constants'
 function buildSSECallbacks(callbacks) {
   return {
     onMessage: (data) => {
-      if (data.content && data.content.trim() !== '' && callbacks.onChunk) {
-        callbacks.onChunk(data.content)
-      } else if (callbacks.onChunk && typeof data === 'string' && data.trim() !== '') {
-        callbacks.onChunk(data)
+      const content = typeof data === 'string' ? data : data.content
+      if (content && content.trim() !== '' && callbacks.onChunk) {
+        callbacks.onChunk(content)
       }
     },
     onComplete: () => {
@@ -38,8 +37,11 @@ function createChatStream() {
       return fetchSSE({
         url: requestConfig.url,
         data: requestConfig.data,
-        useTypewriter: callbacks.useTypewriter ?? CHAT_CONFIG.TYPEWRITER_ENABLED,
-        typewriterDelay: callbacks.typewriterDelay ?? CHAT_CONFIG.TYPEWRITER_DELAY,
+        useTypewriter: false,
+        typewriterDelay:
+          callbacks.typewriterDelay !== undefined
+            ? callbacks.typewriterDelay
+            : CHAT_CONFIG.TYPEWRITER_DELAY,
         callbacks: buildSSECallbacks(callbacks),
         signal: sseController.signal,
       })
