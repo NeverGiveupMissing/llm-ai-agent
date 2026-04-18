@@ -43,6 +43,18 @@ const routes = [
         component: () => import('@/views/settings/index.vue'),
         meta: { title: '系统设置' },
       },
+      {
+        path: 'docs',
+        name: 'ApiDocs',
+        component: () => import('@/views/ApiDocs/index.vue'),
+        meta: { title: 'API文档' },
+      },
+      {
+        path: 'ChatLogs',
+        name: 'ChatLogs',
+        component: () => import('@/views/ChatLogs/index.vue'),
+        meta: { title: '对话日志' },
+      },
     ],
   },
   {

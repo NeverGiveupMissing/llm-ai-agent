@@ -7,6 +7,7 @@ import Components from 'unplugin-vue-components/vite'
 import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
 import VueSetupExtend from 'vite-plugin-vue-setup-extend'
 
+const target = 'http://127.0.0.1:8888'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -19,10 +20,13 @@ export default defineConfig({
   ],
   server: {
     proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8000', // Replace with your actual backend URL
+      '/koa2api': {
+        target,
         changeOrigin: true,
-        // rewrite: (path) => path.replace(/^\/app/, '') // Uncomment if needed
+      },
+      '/koa2api-docs': {
+        target,
+        changeOrigin: true,
       },
     },
   },

@@ -37,3 +37,18 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+
+# node
+NEW_FILE_CODE
+node_modules/
+.env
+.env.local
+.env.*.local
+logs/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+

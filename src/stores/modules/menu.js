@@ -29,6 +29,16 @@ export const useMenuStore = defineStore('menu', {
         icon: () => '🔧',
       },
       {
+        label: 'API文档',
+        key: 'ApiDocs',
+        icon: () => '📖',
+      },
+      {
+        label: '对话日志',
+        key: 'ChatLogs',
+        icon: () => '📋',
+      },
+      {
         label: '系统设置',
         key: 'Settings',
         icon: () => '⚙️',

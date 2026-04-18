@@ -4,6 +4,7 @@
  * - 生产环境使用实际的 API 地址
  */
 export const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+export const API_PREFIX = '/koa2api'
 
 /**
  * 聊天配置

@@ -1,5 +1,4 @@
-import { fetchSSE, createSSEController } from '@/utils/sse'
-import { CHAT_CONFIG } from '@/utils/constants'
+import { API_PREFIX } from '@/utils/constants'
 
 /**
  * 发送聊天消息配置
@@ -11,7 +10,7 @@ export function sendChatMessage(params) {
   const { messages, stream = true } = params
 
   return {
-    url: '/api/chat',
+    url: `${API_PREFIX}/chat`,
     data: {
       messages,
       stream,

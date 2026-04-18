@@ -1,0 +1,35 @@
+{
+  "name": "ai-api",
+  "version": "1.0.0",
+  "description": "AI Chat API - Node.js Koa2 JavaScript Implementation",
+  "main": "src/app.js",
+  "scripts": {
+    "dev": "nodemon src/app.js",
+    "start": "node src/app.js",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "koa": "^2.14.2",
+    "@koa/router": "^12.0.0",
+    "koa-bodyparser": "^4.4.1",
+    "koa2-swagger-ui": "^5.10.0",
+    "swagger-jsdoc": "^6.2.8",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.2",
+    "uuid": "^9.0.0",
+    "dayjs": "^1.11.10"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2",
+    "eslint": "^8.56.0"
+  },
+  "keywords": [
+    "koa",
+    "javascript",
+    "ai",
+    "api",
+    "swagger"
+  ],
+  "author": "",
+  "license": "MIT"
+}
