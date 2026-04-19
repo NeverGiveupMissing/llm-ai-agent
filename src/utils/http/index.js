@@ -55,7 +55,7 @@ const responseInterceptor = async (response) => {
     let errorMessage = `请求失败: ${response.status} ${response.statusText}`
     try {
       const errorData = await response.json()
-      errorMessage = errorData.detail || errorData.message || errorMessage
+      errorMessage = errorData.msg || errorData.message || errorMessage
     } catch (e) {
       // 响应不是 JSON 格式，使用默认错误信息
     }
@@ -67,10 +67,18 @@ const responseInterceptor = async (response) => {
     return null
   }
 
-  // 尝试解析 JSON，如果失败则返回原始文本
+  // 尝试解析 JSON
   const contentType = response.headers.get('content-type')
   if (contentType?.includes('application/json')) {
-    return response.json()
+    const data = await response.json()
+
+    // 统一处理后端返回格式 { code, msg, data }
+    if (data.code !== undefined && data.code !== 200) {
+      throw new Error(data.msg || '请求失败')
+    }
+
+    // 返回 data 字段或完整响应
+    return data.data !== undefined ? data : data
   }
 
   return response.text()

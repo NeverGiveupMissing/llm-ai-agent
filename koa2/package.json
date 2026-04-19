@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/app.js",
     "start": "node src/app.js",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "db:init": "node src/utils/init-memory-db.js"
   },
   "dependencies": {
     "@koa/router": "^12.0.0",

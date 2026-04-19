@@ -1,6 +1,7 @@
 const { ChatRequestModel } = require('../models/chat.model')
 const { callAiNonStream, callAiStream } = require('../services/ai.service')
 const { logChat } = require('../utils/chat-logger')
+const ResponseUtil = require('../utils/response')
 const config = require('../config')
 
 /**
@@ -21,7 +22,7 @@ class ChatController {
 
     if (!request.validate()) {
       ctx.status = 400
-      ctx.body = { error: 'Invalid request: messages are required' }
+      ctx.body = ResponseUtil.error('参数错误：messages 不能为空')
       return
     }
 
@@ -62,13 +63,14 @@ class ChatController {
 
         logChat(messages, content, duration, config.api.model)
 
-        ctx.body = { content }
+        ctx.status = 200
+        ctx.body = ResponseUtil.success({ content }, 'success')
       } catch (error) {
         const duration = (Date.now() - startTime) / 1000
         logChat(messages, '', duration, config.api.model, error.message)
 
         ctx.status = 500
-        ctx.body = { error: error.message }
+        ctx.body = ResponseUtil.serverError(error.message)
       }
     }
   }

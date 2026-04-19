@@ -32,6 +32,12 @@ const routes = [
         meta: { title: '知识库' },
       },
       {
+        path: 'memory',
+        name: 'Memory',
+        component: () => import('@/views/memory/index.vue'),
+        meta: { title: '记忆管理' },
+      },
+      {
         path: 'tools',
         name: 'Tools',
         component: () => import('@/views/tools/index.vue'),

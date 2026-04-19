@@ -4,19 +4,6 @@ const path = require('path')
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env'
 require('dotenv').config({ path: path.join(process.cwd(), envFile) })
 
-/**
- * @type {Object} Config
- * @property {Object} api - AI API 配置
- * @property {string} api.apiKey - API 密钥
- * @property {string} api.baseUrl - API 基础 URL
- * @property {string} api.model - 模型名称
- * @property {Object} server - 服务器配置
- * @property {string} server.host - 主机地址
- * @property {number} server.port - 端口
- * @property {string} server.env - 环境
- * @property {Object} log - 日志配置
- * @property {string} log.dir - 日志目录
- */
 const config = {
   api: {
     apiKey: process.env.API_KEY || '',
@@ -31,6 +18,19 @@ const config = {
   },
   log: {
     dir: process.env.LOG_DIR || 'logs/chat_history',
+  },
+  database: {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'postgres',
+  },
+  memory: {
+    maxRetrieveCount: parseInt(process.env.MEMORY_MAX_RETRIEVE || '5', 10),
+    minSimilarity: parseFloat(process.env.MEMORY_MIN_SIMILARITY || '0.7', 10),
+    maxMemoriesPerUser: parseInt(process.env.MEMORY_MAX_PER_USER || '100', 10),
+    embeddingModel: process.env.EMBEDDING_MODEL || 'text-embedding-ada-002',
   },
 }
 

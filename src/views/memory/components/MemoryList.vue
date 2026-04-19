@@ -1,0 +1,286 @@
+<template>
+  <n-card title="📚 记忆列表" :bordered="false" size="small">
+    <template #header-extra>
+      <n-space>
+        <n-select
+          v-model:value="typeFilter"
+          :options="typeOptions"
+          placeholder="类型筛选"
+          style="width: 120px"
+          clearable
+          @update:value="handleFilterChange"
+        />
+        <n-input
+          v-model:value="searchKeyword"
+          placeholder="搜索记忆内容"
+          style="width: 200px"
+          clearable
+          @keyup.enter="handleSearch"
+        >
+          <template #prefix>🔍</template>
+        </n-input>
+        <n-button type="primary" @click="handleSearch">搜索</n-button>
+        <n-button type="error" secondary @click="handleClearAll">清空所有</n-button>
+      </n-space>
+    </template>
+
+    <n-data-table
+      :columns="columns"
+      :data="memoryList"
+      :loading="loading"
+      :pagination="false"
+      :scroll-x="1200"
+    />
+
+    <div style="display: flex; justify-content: flex-end; margin-top: 16px">
+      <n-pagination
+        v-model:page="pagination.page"
+        v-model:page-size="pagination.pageSize"
+        :item-count="pagination.itemCount"
+        :page-sizes="pagination.pageSizes"
+        :page-slot="pagination.pageSlot"
+        show-size-picker
+        show-quick-jumper
+        :prefix="({ itemCount }) => `共 ${itemCount} 条`"
+        @update:page="handlePageChange"
+        @update:page-size="handlePageSizeChange"
+      />
+    </div>
+  </n-card>
+</template>
+
+<script setup name="MemoryList">
+import { ref, h, onMounted } from 'vue'
+import { useMessage, useDialog, NTag, NButton, NSpace, NPopconfirm } from 'naive-ui'
+import { getMemoryList, deleteMemory, clearMemories } from '@/api/memory'
+
+const props = defineProps({
+  userId: { type: String, required: true },
+})
+
+const emit = defineEmits(['refresh', 'edit'])
+
+const message = useMessage()
+const dialog = useDialog()
+
+const loading = ref(false)
+const memoryList = ref([])
+const searchKeyword = ref('')
+const typeFilter = ref(null)
+
+const pagination = ref({
+  page: 1,
+  pageSize: 10,
+  itemCount: 0,
+  pageSizes: [5, 10, 20, 50],
+  pageSlot: 7,
+})
+
+const typeOptions = [
+  { label: '事实', value: 'fact' },
+  { label: '偏好', value: 'preference' },
+  { label: '目标', value: 'goal' },
+  { label: '事件', value: 'event' },
+  { label: '观点', value: 'opinion' },
+]
+
+const typeMap = {
+  fact: { label: '事实', type: 'info' },
+  preference: { label: '偏好', type: 'success' },
+  goal: { label: '目标', type: 'warning' },
+  event: { label: '事件', type: 'error' },
+  opinion: { label: '观点', type: 'default' },
+}
+
+const columns = [
+  {
+    title: '内容',
+    key: 'content',
+    minWidth: 300,
+    ellipsis: { tooltip: true },
+  },
+  {
+    title: '类型',
+    key: 'memoryType',
+    width: 80,
+    render: (row) => {
+      const config = typeMap[row.memoryType] || { label: row.memoryType, type: 'default' }
+      return h(NTag, { type: config.type, size: 'small' }, { default: () => config.label })
+    },
+  },
+  {
+    title: '重要性',
+    key: 'importance',
+    width: 100,
+    render: (row) => {
+      const color = row.importance >= 8 ? '#ff4d4f' : row.importance >= 6 ? '#faad14' : '#52c41a'
+      return h('span', { style: { color, fontWeight: 'bold' } }, `⭐ ${row.importance}`)
+    },
+  },
+  {
+    title: '标签',
+    key: 'tags',
+    width: 150,
+    render: (row) => {
+      if (!row.tags || row.tags.length === 0) return '-'
+      return h(
+        NSpace,
+        { size: 4 },
+        {
+          default: () =>
+            row.tags
+              .slice(0, 3)
+              .map((tag) => h(NTag, { size: 'tiny', type: 'info' }, { default: () => tag })),
+        },
+      )
+    },
+  },
+  {
+    title: '创建时间',
+    key: 'createdAt',
+    width: 160,
+    render: (row) => {
+      if (!row.created_at) return '-'
+      return new Date(row.created_at).toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      })
+    },
+  },
+  {
+    title: '操作',
+    key: 'actions',
+    width: 160,
+    fixed: 'right',
+    render: (row) => {
+      return h(
+        NSpace,
+        { size: 8 },
+        {
+          default: () => [
+            h(
+              NButton,
+              { size: 'small', type: 'primary', text: true, onClick: () => emit('edit', row) },
+              { default: () => '编辑' },
+            ),
+            h(
+              NPopconfirm,
+              { onPositiveClick: () => handleDelete(row.id) },
+              {
+                trigger: () =>
+                  h(
+                    NButton,
+                    { size: 'small', type: 'error', text: true },
+                    { default: () => '删除' },
+                  ),
+                default: () => '确定要删除这条记忆吗？',
+              },
+            ),
+          ],
+        },
+      )
+    },
+  },
+]
+
+const fetchMemories = async () => {
+  loading.value = true
+  try {
+    const params = {
+      limit: pagination.value.pageSize,
+      offset: (pagination.value.page - 1) * pagination.value.pageSize,
+    }
+
+    if (props.userId) {
+      params.userId = props.userId
+    }
+
+    if (typeFilter.value) {
+      params.type = typeFilter.value
+    }
+
+    const res = await getMemoryList(params)
+
+    const data = res.data
+    const list = Array.isArray(data.list) ? data.list : []
+    const total = Number(data.total) || 0
+
+    memoryList.value = list
+    pagination.value.itemCount = total
+  } catch (error) {
+    message.error(error.message || '获取记忆列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handlePageChange = (page) => {
+  pagination.value.page = page
+  fetchMemories()
+}
+
+const handlePageSizeChange = (pageSize) => {
+  pagination.value.pageSize = pageSize
+  pagination.value.page = 1
+  fetchMemories()
+}
+
+const handleFilterChange = () => {
+  pagination.value.page = 1
+  fetchMemories()
+}
+
+const handleSearch = () => {
+  pagination.value.page = 1
+  fetchMemories()
+}
+
+const handleDelete = async (id) => {
+  try {
+    const res = await deleteMemory(id)
+    if (res.success) {
+      message.success('删除成功')
+      fetchMemories()
+      emit('refresh')
+    }
+  } catch (error) {
+    message.error(error.message || '删除失败')
+  }
+}
+
+const handleClearAll = () => {
+  dialog.warning({
+    title: '警告',
+    content: '确定要清空所有记忆吗？此操作不可恢复！',
+    positiveText: '确定清空',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        const res = await clearMemories({ userId: props.userId })
+        if (res.success) {
+          message.success(res.message || '清空成功')
+          fetchMemories()
+          emit('refresh')
+        }
+      } catch (error) {
+        message.error(error.message || '清空失败')
+      }
+    },
+  })
+}
+
+const refresh = () => {
+  fetchMemories()
+}
+
+defineExpose({ refresh })
+
+onMounted(() => {
+  fetchMemories()
+})
+</script>
