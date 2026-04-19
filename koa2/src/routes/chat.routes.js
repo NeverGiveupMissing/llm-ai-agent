@@ -1,7 +1,7 @@
 const Router = require('@koa/router')
 const chatController = require('../controller/chat.controller')
 
-const router = new Router()
+const router = new Router({ prefix: '/chat' })
 
 /**
  * @swagger
@@ -39,6 +39,6 @@ const router = new Router()
  *       500:
  *         description: 服务器错误
  */
-router.post('/chat', chatController.simpleChat.bind(chatController))
+router.post('/', chatController.simpleChat.bind(chatController))
 
 module.exports = router

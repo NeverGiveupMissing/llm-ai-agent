@@ -1,6 +1,13 @@
+// 说明：聊天流式请求工具 - 处理 SSE 流式通信和记忆参数传递
+
 import { sendChatMessage } from '@/api/chat'
 import { createSSEController, fetchSSE } from '@/utils/sse'
 import { CHAT_CONFIG } from '@/utils/constants'
+
+// 生成默认 userId（实际项目中应从登录信息获取）
+const DEFAULT_USER_ID =
+  'user_' + (localStorage.getItem('userId') || Math.random().toString(36).substr(2, 9))
+localStorage.setItem('userId', DEFAULT_USER_ID.replace('user_', ''))
 
 /**
  * 构建 SSE 回调处理器
@@ -31,8 +38,19 @@ function createChatStream() {
   const sseController = createSSEController()
 
   return {
-    send: (messages, callbacks) => {
-      const requestConfig = sendChatMessage({ messages, stream: true })
+    send: (messages, callbacks, sessionId) => {
+      // 获取 sessionId
+      const currentSessionId = sessionId || localStorage.getItem('current_session_id') || 'default'
+
+      // 获取 userId
+      const currentUserId = localStorage.getItem('userId') || 'anonymous'
+
+      const requestConfig = sendChatMessage({
+        messages,
+        stream: true,
+        sessionId: currentSessionId,
+        userId: currentUserId,
+      })
 
       return fetchSSE({
         url: requestConfig.url,

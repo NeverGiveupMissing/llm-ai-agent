@@ -2,13 +2,17 @@ const Router = require('@koa/router')
 const chatRoutes = require('./chat.routes')
 const logsRoutes = require('./logs.routes')
 const memoryRoutes = require('./memory.routes')
+const chatMemoryRoutes = require('./chat-memory.routes')
+const sessionRoutes = require('./session.routes')
 const config = require('../config')
 
 const router = new Router({ prefix: config.api.prefix })
 
 router.use(chatRoutes.routes(), chatRoutes.allowedMethods())
 router.use(logsRoutes.routes(), logsRoutes.allowedMethods())
-router.use('/memory', memoryRoutes.routes(), memoryRoutes.allowedMethods())
+router.use(memoryRoutes.routes(), memoryRoutes.allowedMethods())
+router.use(chatMemoryRoutes.routes(), chatMemoryRoutes.allowedMethods())
+router.use(sessionRoutes.routes(), sessionRoutes.allowedMethods())
 
 /**
  * @swagger
