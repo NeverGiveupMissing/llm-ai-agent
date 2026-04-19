@@ -5,7 +5,7 @@ const ResponseUtil = require('../utils/response')
 class MemoryController {
   async createMemory(ctx) {
     try {
-      const { userId, content, memoryType, importance, tags } = ctx.request.body
+      const { userId, content, memoryType, importance, tags, skipDeduplication } = ctx.request.body
 
       if (!userId || !content) {
         ctx.status = 400
@@ -13,17 +13,30 @@ class MemoryController {
         return
       }
 
-      const memory = await memoryService.createMemory({
-        userId,
-        content,
-        memoryType,
-        importance,
-        tags,
-        source: 'manual',
-      })
+      const result = await memoryService.createMemory(
+        {
+          userId,
+          content,
+          memoryType,
+          importance,
+          tags,
+          source: 'manual',
+        },
+        {
+          skipDeduplication: skipDeduplication || false,
+        },
+      )
+
+      if (result.isDuplicate) {
+        ctx.status = 200
+        ctx.body = ResponseUtil.success(result.duplicateInfo, result.message, 200, {
+          isDuplicate: true,
+        })
+        return
+      }
 
       ctx.status = 200
-      ctx.body = ResponseUtil.success(memory, '创建成功')
+      ctx.body = ResponseUtil.success(result.data, '创建成功')
     } catch (error) {
       ctx.status = 500
       ctx.body = ResponseUtil.serverError(error.message)
@@ -56,7 +69,7 @@ class MemoryController {
 
   async extractMemories(ctx) {
     try {
-      const { userId, messages } = ctx.request.body
+      const { userId, messages, skipDeduplication } = ctx.request.body
 
       if (!userId || !messages || !Array.isArray(messages)) {
         ctx.status = 400
@@ -66,15 +79,29 @@ class MemoryController {
 
       const extractedMemories = await memoryExtractorService.extractFromConversation(messages)
 
-      const createdMemories = await memoryService.batchCreateMemories(
+      const result = await memoryService.batchCreateMemories(
         extractedMemories.map((m) => ({
           ...m,
           userId,
         })),
+        {
+          skipDeduplication: skipDeduplication || false,
+        },
       )
 
       ctx.status = 200
-      ctx.body = ResponseUtil.success(createdMemories, '提取成功')
+      ctx.body = ResponseUtil.success(
+        {
+          created: result.created,
+          skipped: result.skipped,
+          statistics: {
+            total: result.total,
+            createdCount: result.createdCount,
+            skippedCount: result.skippedCount,
+          },
+        },
+        `提取完成：创建 ${result.createdCount} 条，跳过 ${result.skippedCount} 条重复记忆`,
+      )
     } catch (error) {
       ctx.status = 500
       ctx.body = ResponseUtil.serverError(error.message)

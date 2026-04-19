@@ -18,6 +18,24 @@
         />
       </n-form-item>
 
+      <n-alert
+        v-if="duplicateWarning"
+        type="warning"
+        :title="`⚠️ 发现相似记忆（相似度: ${duplicateWarning.similarityPercent}%）`"
+        style="margin-bottom: 16px"
+      >
+        <div>{{ duplicateWarning.message }}</div>
+        <n-button
+          text
+          type="primary"
+          size="small"
+          style="margin-top: 8px"
+          @click="handleViewDuplicate"
+        >
+          查看相似记忆
+        </n-button>
+      </n-alert>
+
       <n-form-item label="记忆类型" path="memoryType">
         <n-select
           v-model:value="formData.memoryType"
@@ -42,6 +60,14 @@
       <n-form-item label="标签">
         <n-dynamic-tags v-model:value="formData.tags" />
       </n-form-item>
+
+      <n-form-item label="跳过去重">
+        <n-switch v-model:value="formData.skipDeduplication">
+          <template #checked>是</template>
+          <template #unchecked>否</template>
+        </n-switch>
+        <span style="margin-left: 8px; color: #999; font-size: 12px"> 开启后将不检查重复记忆 </span>
+      </n-form-item>
     </n-form>
 
     <template #footer>
@@ -52,6 +78,25 @@
         </n-button>
       </n-space>
     </template>
+  </n-modal>
+
+  <n-modal
+    v-model:show="showDuplicateModal"
+    title="📋 相似记忆详情"
+    preset="card"
+    style="width: 500px"
+  >
+    <n-descriptions label-placement="left" bordered>
+      <n-descriptions-item label="相似度">
+        {{ duplicateWarning?.similarityPercent }}%
+      </n-descriptions-item>
+      <n-descriptions-item label="记忆内容">
+        {{ duplicateWarning?.content }}
+      </n-descriptions-item>
+      <n-descriptions-item label="创建时间">
+        {{ duplicateWarning?.createdAt }}
+      </n-descriptions-item>
+    </n-descriptions>
   </n-modal>
 </template>
 
@@ -78,12 +123,15 @@ const showModal = computed({
 const isEdit = computed(() => !!props.editData)
 const formRef = ref(null)
 const submitting = ref(false)
+const duplicateWarning = ref(null)
+const showDuplicateModal = ref(false)
 
 const formData = ref({
   content: '',
   memoryType: 'fact',
   importance: 5,
   tags: [],
+  skipDeduplication: false,
 })
 
 const rules = {
@@ -109,20 +157,39 @@ const resetForm = () => {
     memoryType: 'fact',
     importance: 5,
     tags: [],
+    skipDeduplication: false,
   }
+  duplicateWarning.value = null
   formRef.value?.restoreValidation()
+}
+
+const handleViewDuplicate = () => {
+  showDuplicateModal.value = true
 }
 
 const handleSubmit = async () => {
   try {
     await formRef.value?.validate()
     submitting.value = true
+    duplicateWarning.value = null
 
     const res = isEdit.value
       ? await updateMemory(props.editData.id, formData.value)
       : await createMemory({ userId: props.userId, ...formData.value })
 
     if (res.success) {
+      if (res.extra?.isDuplicate) {
+        const similarityPercent = (res.data.similarity * 100).toFixed(2)
+        duplicateWarning.value = {
+          similarityPercent,
+          content: res.data.similarMemory?.content,
+          createdAt: res.data.similarMemory?.created_at,
+          message: '已存在相似记忆，建议先查看已有记忆，避免重复创建。',
+        }
+        message.warning(`发现相似记忆（相似度: ${similarityPercent}%）`)
+        return
+      }
+
       message.success(isEdit.value ? '更新成功' : '创建成功')
       showModal.value = false
       emit('success')
@@ -145,6 +212,7 @@ watch(
         memoryType: val.memoryType,
         importance: val.importance,
         tags: val.tags || [],
+        skipDeduplication: false,
       }
     } else {
       resetForm()

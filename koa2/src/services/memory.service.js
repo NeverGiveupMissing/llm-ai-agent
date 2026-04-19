@@ -1,15 +1,37 @@
 const { pool } = require('../config/db')
 const { MemoryModel } = require('../models/memory.model')
 const embeddingService = require('../services/embedding.service')
+const memoryDeduplicationService = require('../services/memory-deduplication.service')
 const { MEMORY_TYPES, DEFAULT_MEMORY_CONFIG } = require('../utils/memory-constants')
 
 class MemoryService {
-  async createMemory(data) {
+  async createMemory(data, options = {}) {
+    const {
+      skipDeduplication = false,
+      similarityThreshold = DEFAULT_MEMORY_CONFIG.MIN_SIMILARITY_FOR_DEDUP,
+    } = options
+
     const memory = new MemoryModel(data)
 
     const validation = memory.validate()
     if (!validation.valid) {
       throw new Error(validation.error)
+    }
+
+    if (!skipDeduplication && memory.content) {
+      const duplicateInfo = await memoryDeduplicationService.checkDuplicate(
+        memory.userId,
+        memory.content,
+        similarityThreshold,
+      )
+
+      if (duplicateInfo.isDuplicate) {
+        return {
+          isDuplicate: true,
+          duplicateInfo: duplicateInfo,
+          message: `发现相似记忆（相似度: ${(duplicateInfo.similarity * 100).toFixed(2)}%）`,
+        }
+      }
     }
 
     if (!memory.embedding && memory.content) {
@@ -25,16 +47,37 @@ class MemoryService {
     `
 
     const result = await pool.query(query, memory.toInsertParams())
-    return result.rows[0]
+    return {
+      isDuplicate: false,
+      data: result.rows[0],
+    }
   }
 
-  async batchCreateMemories(memoriesData) {
+  async batchCreateMemories(memoriesData, options = {}) {
+    const {
+      skipDeduplication = false,
+      similarityThreshold = DEFAULT_MEMORY_CONFIG.MIN_SIMILARITY_FOR_DEDUP,
+    } = options
     const results = []
+    const skipped = []
+
     for (const data of memoriesData) {
-      const memory = await this.createMemory(data)
-      results.push(memory)
+      const result = await this.createMemory(data, { skipDeduplication, similarityThreshold })
+
+      if (result.isDuplicate) {
+        skipped.push(result)
+      } else {
+        results.push(result.data)
+      }
     }
-    return results
+
+    return {
+      created: results,
+      skipped: skipped,
+      total: memoriesData.length,
+      createdCount: results.length,
+      skippedCount: skipped.length,
+    }
   }
 
   async retrieveMemories(userId, query, limit = DEFAULT_MEMORY_CONFIG.MAX_RETRIEVE_COUNT) {
