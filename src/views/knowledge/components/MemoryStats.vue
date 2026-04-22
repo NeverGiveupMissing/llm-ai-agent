@@ -43,20 +43,20 @@ const stats = ref({})
 const fetchStats = async () => {
   try {
     const res = await getMemoryStats({ userId: props.userId })
-    if (res.success) {
-      stats.value = res.data || {}
-      // 确保 avg_importance 是数字
-      const result = res.data
+
+    // ✅ 拦截器已返回 data 字段内容 { total, facts, preferences, ... }
+    if (res) {
       stats.value = {
-        ...result,
-        avg_importance:
-          typeof result.avg_importance === 'number'
-            ? result.avg_importance
-            : parseFloat(result.avg_importance) || 0,
+        total: Number(res.total) || 0,
+        facts: Number(res.facts) || 0,
+        preferences: Number(res.preferences) || 0,
+        goals: Number(res.goals) || 0,
+        events: Number(res.events) || 0,
+        avg_importance: Number(res.avg_importance) || 0,
       }
     }
   } catch (error) {
-    message.error(error.message || '获取记忆统计失败')
+    console.error('获取记忆统计失败:', error)
   }
 }
 

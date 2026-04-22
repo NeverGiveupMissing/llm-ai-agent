@@ -45,7 +45,7 @@ class ChatMemoryController {
         return
       }
 
-      const extractedMemories = await chatMemoryService.autoExtractFromConversation(
+      const result = await chatMemoryService.autoExtractFromConversation(
         sessionId,
         userId,
         messages,
@@ -53,10 +53,19 @@ class ChatMemoryController {
 
       ctx.status = 200
       ctx.body = ResponseUtil.success(
-        extractedMemories,
-        `成功提取 ${extractedMemories.length} 条记忆`,
+        {
+          created: result.created || [],
+          statistics: {
+            totalCount: result.totalCount || 0,
+            skippedCount: result.skippedCount || 0,
+            filteredCount: result.filteredCount || 0,
+            duplicateCount: result.duplicateCount || 0,
+          },
+        },
+        `成功提取 ${result.created?.length || 0} 条记忆`,
       )
     } catch (err) {
+      console.error('❌ 提取记忆异常:', err)
       ctx.status = 500
       ctx.body = ResponseUtil.serverError(err.message || '提取记忆失败')
     }

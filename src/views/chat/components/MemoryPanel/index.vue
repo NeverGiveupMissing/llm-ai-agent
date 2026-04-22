@@ -44,7 +44,7 @@ import { ref, watch } from 'vue'
 import { useMessage, useDialog, NTabs, NTabPane, NIcon } from 'naive-ui'
 import { CloseOutline } from '@vicons/ionicons5'
 import { getSessionMemoryContext, autoExtractMemories } from '@/api/chat-memory'
-import { getMemoryList, deleteMemory } from '@/api/memory'
+import { getMemoryList, deleteMemory, retrieveMemories } from '@/api/memory'
 import MemoryUsedTab from './components/MemoryUsedTab.vue'
 import MemoryExtractedTab from './components/MemoryExtractedTab.vue'
 import MemoryAllTab from './components/MemoryAllTab.vue'
@@ -86,64 +86,119 @@ const handleClose = () => {
   visible.value = false
 }
 
+/**
+ * 获取本次使用的记忆（用户全局记忆）
+ * ChatGPT 逻辑：显示用户的所有记忆，AI 会从中检索相关内容
+ */
 const fetchUsedMemories = async () => {
-  if (!props.sessionId || !props.userId) return
+  if (!props.userId) {
+    console.warn('⚠️ userId 为空，无法获取使用的记忆')
+    return
+  }
 
   try {
-    const res = await getSessionMemoryContext({
-      sessionId: props.sessionId,
+    console.log('🔍 获取使用的记忆（用户全局记忆）...', { userId: props.userId })
+
+    const res = await getMemoryList({
       userId: props.userId,
-      query: '',
+      limit: 10,
     })
 
-    if (res.success && res.data) {
-      usedMemories.value = res.data.memories || []
+    console.log('📊 使用的记忆响应:', res)
+
+    if (res && res.data.list) {
+      usedMemories.value = res.data.list
+      console.log(`✅ 获取到 ${usedMemories.value.length} 条记忆`)
+    } else {
+      console.warn('⚠️ 获取使用的记忆失败:', res)
+      usedMemories.value = []
     }
   } catch (error) {
-    console.error('获取使用的记忆失败:', error)
+    console.error('❌ 获取使用的记忆失败:', error)
+    msgApi.error(error.message)
+    usedMemories.value = []
   }
 }
 
+/**
+ * 提取本次对话的记忆
+ * ChatGPT 逻辑：提取的记忆属于用户，存入全局记忆库
+ */
 const fetchExtractedMemories = async (messages) => {
-  if (!props.sessionId || !props.userId || !messages) return
+  if (!props.sessionId || !props.userId || !messages) {
+    console.warn('⚠️ 参数不完整，无法提取记忆', {
+      sessionId: props.sessionId,
+      userId: props.userId,
+      hasMessages: !!messages,
+    })
+    return
+  }
 
   try {
+    console.log('🔍 开始提取记忆...', {
+      sessionId: props.sessionId,
+      userId: props.userId,
+      messageCount: messages.length,
+    })
+
     const res = await autoExtractMemories({
       sessionId: props.sessionId,
       userId: props.userId,
       messages,
-      skipDeduplication: false,
     })
 
-    if (res.success && res.data) {
-      extractedMemories.value = (res.data.created || []).map((m) => ({
-        ...m,
-        confirmed: true,
-      }))
+    console.log('📊 提取记忆响应:', res)
 
-      const skippedCount = res.data.statistics?.skippedCount || 0
-      if (skippedCount > 0) {
-        msgApi.info(`Skipped ${skippedCount} duplicate memories`)
-      }
+    if (Array.isArray(res)) {
+      extractedMemories.value = res
+        .filter((m) => m.content || (m.data && m.data.content))
+        .map((m) => ({
+          ...(m.content ? m : m.data),
+          confirmed: true,
+        }))
+
+      console.log(`✅ 提取完成: 创建 ${extractedMemories.value.length} 条记忆`)
+    } else {
+      console.warn('⚠️ 提取记忆失败:', res)
+      extractedMemories.value = []
     }
   } catch (error) {
-    console.error('提取记忆失败:', error)
+    console.error('❌ 提取记忆失败:', error)
+    msgApi.error(error.message)
+    extractedMemories.value = []
   }
 }
 
+/**
+ * 获取用户全部记忆
+ */
 const fetchAllMemories = async () => {
+  if (!props.userId) {
+    console.warn('⚠️ userId 为空，无法获取全部记忆')
+    return
+  }
+
   loadingAll.value = true
   try {
+    console.log('🔍 获取全部记忆...', { userId: props.userId })
     const res = await getMemoryList({
       userId: props.userId,
       limit: 50,
     })
 
-    if (res.success && res.data) {
-      allMemories.value = res.data.list || []
+    console.log('📊 全部记忆响应:', res)
+
+    if (res && res.data.list) {
+      allMemories.value = res.data.list
+      console.log(`✅ 获取到 ${allMemories.value.length} 条记忆`)
+    } else {
+      console.warn('⚠️ 获取全部记忆失败:', res)
+      allMemories.value = []
     }
   } catch (error) {
-    msgApi.error('Failed to load memories')
+    console.error('❌ 获取全部记忆失败:', error)
+    msgApi.error(error.message)
+    allMemories.value = []
   } finally {
     loadingAll.value = false
   }
@@ -301,6 +356,6 @@ defineExpose({
 
 :deep(.n-tabs-pane-wrapper) {
   flex: 1;
-  overflow: hidden;
+  overflow: scroll;
 }
 </style>

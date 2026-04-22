@@ -122,7 +122,7 @@ const handleSubmit = async () => {
       ? await updateMemory(props.editData.id, formData.value)
       : await createMemory({ userId: props.userId, ...formData.value })
 
-    if (res.success) {
+    if (res) {
       message.success(isEdit.value ? '更新成功' : '创建成功')
       showModal.value = false
       emit('success')

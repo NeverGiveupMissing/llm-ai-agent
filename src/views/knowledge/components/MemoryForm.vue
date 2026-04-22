@@ -177,7 +177,7 @@ const handleSubmit = async () => {
       ? await updateMemory(props.editData.id, formData.value)
       : await createMemory({ userId: props.userId, ...formData.value })
 
-    if (res.success) {
+    if (res) {
       if (res.extra?.isDuplicate) {
         const similarityPercent = (res.data.similarity * 100).toFixed(2)
         duplicateWarning.value = {

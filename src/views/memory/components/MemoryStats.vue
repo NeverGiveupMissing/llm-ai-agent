@@ -36,7 +36,7 @@
           <n-icon :size="20"><StarOutline /></n-icon>
         </div>
         <div class="stat-content">
-          <div class="stat-value">{{ formatAvgImportance }}</div>
+          <div class="stat-value">{{ stats.avg_importance }}</div>
           <div class="stat-label">平均重要性</div>
         </div>
       </div>
@@ -45,7 +45,7 @@
 </template>
 
 <script setup name="MemoryStats">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { NIcon } from 'naive-ui'
 import { LayersOutline, DocumentTextOutline, HeartOutline, StarOutline } from '@vicons/ionicons5'
 import { getMemoryStats } from '@/api/memory'
@@ -63,16 +63,19 @@ const stats = ref({
   avg_importance: 0,
 })
 
-const formatAvgImportance = computed(() => {
-  const avg = stats.value.avg_importance || 0
-  return avg.toFixed(1)
-})
-
 const fetchStats = async () => {
   try {
     const res = await getMemoryStats({ userId: props.userId })
-    if (res.success && res.data) {
-      stats.value = res.data
+    const result = res.data
+    if (res) {
+      stats.value = {
+        total: Number(result.total) || 0,
+        facts: Number(result.facts) || 0,
+        preferences: Number(result.preferences) || 0,
+        goals: Number(result.goals) || 0,
+        events: Number(result.events) || 0,
+        avg_importance: Number(result.avg_importance)?.toFixed(1) || 0,
+      }
     }
   } catch (error) {
     console.error('获取记忆统计失败:', error)

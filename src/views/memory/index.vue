@@ -1,29 +1,33 @@
+<!-- 文件路径：D:\WorkSpace\code\MyProject\llm-ai-agent\vite-vue3-NaïveUI-pinia\src\views\memory\index.vue -->
 <template>
   <div class="memory-container">
     <div class="page-header">
-      <h1 class="page-title">记忆管理</h1>
-      <p class="page-description">
-        管理 AI 记住的关于你的信息。记忆功能帮助 AI 提供更个性化和基于上下文的回答。
-      </p>
+      <div class="page-header-left">
+        <h1 class="page-title">记忆管理</h1>
+        <p class="page-description">
+          管理 AI 记住的关于你的信息。这些记忆帮助 AI 提供更个性化的回答。
+        </p>
+      </div>
+      <div class="page-header-actions">
+        <n-button type="primary" @click="handleCreate">
+          <template #icon
+            ><n-icon><AddOutline /></n-icon
+          ></template>
+          添加记忆
+        </n-button>
+        <n-button @click="handleRefresh">
+          <template #icon
+            ><n-icon><RefreshOutline /></n-icon
+          ></template>
+          刷新
+        </n-button>
+      </div>
     </div>
 
+    <!-- 记忆统计 -->
     <MemoryStats ref="statsRef" :userId="userId" />
 
-    <div class="content-sections">
-      <div class="section-grid">
-        <RecentMemories ref="recentRef" :userId="userId" @view-all="activeTab = 'list'" />
-        <MemoryDistribution :stats="statsData" />
-      </div>
-
-      <QuickActions
-        @browse="activeTab = 'list'"
-        @test-retrieval="activeTab = 'retrieval'"
-        @clear-all="handleClearAll"
-      />
-
-      <HowItWorks />
-    </div>
-
+    <!-- 记忆列表与检索 -->
     <n-tabs v-model:value="activeTab" type="line" animated class="detail-tabs">
       <n-tab-pane name="list" tab="记忆列表">
         <MemoryList ref="listRef" :userId="userId" @refresh="handleRefresh" @edit="handleEdit" />
@@ -33,6 +37,7 @@
       </n-tab-pane>
     </n-tabs>
 
+    <!-- 添加/编辑记忆表单 -->
     <MemoryForm
       v-model:visible="formVisible"
       :userId="userId"
@@ -41,29 +46,34 @@
     />
   </div>
 </template>
-
 <script setup name="Memory">
 import { ref, computed } from 'vue'
 import { useMessage, useDialog, NButton, NIcon } from 'naive-ui'
 import { AddOutline, RefreshOutline } from '@vicons/ionicons5'
-import { useUserStore } from '@/stores/modules/user'
 import MemoryStats from './components/MemoryStats.vue'
 import MemoryList from './components/MemoryList.vue'
 import MemoryRetrieval from './components/MemoryRetrieval.vue'
 import MemoryForm from './components/MemoryForm.vue'
-import RecentMemories from './components/RecentMemories.vue'
-import MemoryDistribution from './components/MemoryDistribution.vue'
-import QuickActions from './components/QuickActions.vue'
-import HowItWorks from './components/HowItWorks.vue'
 import { clearMemories } from '@/api/memory'
 
 const msgApi = useMessage()
 const dialogApi = useDialog()
-const userStore = useUserStore()
-const userId = ref(userStore.userInfo?.id || 'user_001')
+
+// ✅ 使用与 AI 对话页面相同的 userId 获取逻辑
+const initUserId = () => {
+  const savedUserId = localStorage.getItem('userId')
+  if (savedUserId) {
+    return savedUserId
+  }
+  // 如果没有，生成一个新的并保存
+  const newUserId = 'user_' + Date.now()
+  localStorage.setItem('userId', newUserId)
+  return newUserId
+}
+
+const userId = ref(initUserId())
 
 const statsRef = ref(null)
-const recentRef = ref(null)
 const listRef = ref(null)
 const formVisible = ref(false)
 const editData = ref(null)
@@ -84,33 +94,12 @@ const handleEdit = (row) => {
 const handleFormSuccess = () => {
   listRef.value?.refresh()
   statsRef.value?.refresh()
-  recentRef.value?.refresh()
 }
 
 const handleRefresh = () => {
   listRef.value?.refresh()
   statsRef.value?.refresh()
-  recentRef.value?.refresh()
   msgApi.success('已刷新')
-}
-
-const handleClearAll = () => {
-  dialogApi.warning({
-    title: '清空所有记忆',
-    content: '此操作将永久删除所有记忆，无法恢复。确定要继续吗？',
-    positiveText: '确认清空',
-    negativeText: '取消',
-    positiveButtonProps: { type: 'error' },
-    onPositiveClick: async () => {
-      try {
-        await clearMemories({ userId: userId.value })
-        msgApi.success('已清空所有记忆')
-        handleRefresh()
-      } catch (error) {
-        msgApi.error('清空失败')
-      }
-    },
-  })
 }
 </script>
 
@@ -152,17 +141,6 @@ const handleClearAll = () => {
   display: flex;
   gap: 12px;
   flex-shrink: 0;
-}
-
-.content-sections {
-  margin-bottom: 32px;
-}
-
-.section-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
 }
 
 .detail-tabs {

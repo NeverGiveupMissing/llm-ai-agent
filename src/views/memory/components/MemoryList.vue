@@ -220,16 +220,24 @@ const fetchMemories = async () => {
 
     const res = await getMemoryList(params)
 
-    const data = res.data
-    const list = Array.isArray(data.list) ? data.list : []
-    const total = Number(data.total) || 0
+    const total = Number(res?.data.total) || 0
 
-    memoryList.value = list
+    memoryList.value = res.data.list
     pagination.value.itemCount = total
   } catch (error) {
     message.error(error.message || '获取记忆列表失败')
   } finally {
     loading.value = false
+  }
+}
+const handleDelete = async (id) => {
+  try {
+    await deleteMemory(id)
+    message.success('删除成功')
+    fetchMemories()
+    emit('refresh')
+  } catch (error) {
+    message.error(error.message || '删除失败')
   }
 }
 
@@ -252,19 +260,6 @@ const handleFilterChange = () => {
 const handleSearch = () => {
   pagination.value.page = 1
   fetchMemories()
-}
-
-const handleDelete = async (id) => {
-  try {
-    const res = await deleteMemory(id)
-    if (res.success) {
-      message.success('删除成功')
-      fetchMemories()
-      emit('refresh')
-    }
-  } catch (error) {
-    message.error(error.message || '删除失败')
-  }
 }
 
 const refresh = () => {

@@ -54,7 +54,13 @@ let aiMessageId = null
 
 const initSession = async () => {
   const saved = localStorage.getItem('current_session_id')
-  currentUserId.value = localStorage.getItem('userId') || 'anonymous'
+  const savedUserId = localStorage.getItem('userId')
+
+  // 确保 userId 始终有值
+  currentUserId.value = savedUserId || 'user_' + Date.now()
+  if (!savedUserId) {
+    localStorage.setItem('userId', currentUserId.value)
+  }
 
   if (saved) {
     currentSessionId.value = saved
@@ -122,10 +128,10 @@ const handleSend = async (content) => {
 
           updateSessionMessageCount()
 
+          // 自动提取记忆
           if (memoryPanelRef.value) {
-            await memoryPanelRef.value.fetchExtractedMemories(
-              history.concat([{ role: 'assistant', content: m?.content || '' }]),
-            )
+            const fullHistory = history.concat([{ role: 'assistant', content: m?.content || '' }])
+            await memoryPanelRef.value.fetchExtractedMemories(fullHistory)
           }
         },
         onError: (err) => {

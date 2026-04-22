@@ -2,29 +2,28 @@
 
 const memoryService = require('../services/memory.service')
 const aiService = require('../services/ai.service')
+const { DEFAULT_MEMORY_CONFIG } = require('../utils/memory-constants')
 
 /**
- * 对话记忆服务 - 自动记忆管理
+ * 对话记忆服务 - 自动记忆管理（遵循 ChatGPT 逻辑）
  */
 class ChatMemoryService {
   /**
    * 构建记忆上下文（对话前调用）
-   * 检索相关记忆并格式化为系统提示
+   * ChatGPT 逻辑：检索用户的所有相关记忆，注入到对话上下文
    */
   async buildMemoryContext(sessionId, userId, query = null) {
     let relevantMemories = []
 
-    // 如果有查询内容，进行向量检索
+    // ChatGPT 逻辑：始终基于用户的所有记忆进行向量检索
     if (query) {
       relevantMemories = await memoryService.retrieveMemories(userId, query, 5)
     } else {
-      // 否则获取会话相关记忆
-      const chatMemoryModel = require('../models/chat-memory.model')
-      relevantMemories = await chatMemoryModel.getSessionMemories(sessionId)
-      relevantMemories = relevantMemories.slice(0, 5)
+      // 如果没有查询内容，获取用户最近的重要记忆作为上下文
+      const memoriesResult = await memoryService.getUserMemories(userId, 10, 0)
+      relevantMemories = memoriesResult.list.slice(0, 5)
     }
 
-    // 格式化为上下文文本
     const memoryContext =
       relevantMemories.length > 0
         ? `相关记忆：\n${relevantMemories.map((m) => `- ${m.content}`).join('\n')}`
@@ -39,7 +38,7 @@ class ChatMemoryService {
 
   /**
    * 自动从对话中提取记忆（对话后调用）
-   * 使用 AI 分析对话内容，提取有价值的长期记忆
+   * ChatGPT 逻辑：提取的记忆属于用户，不绑定特定会话
    */
   async autoExtractFromConversation(sessionId, userId, messages) {
     // 只处理用户消息
@@ -50,10 +49,17 @@ class ChatMemoryService {
 
     // 对话太短，不提取记忆
     if (userMessages.length < 10) {
-      return []
+      console.log('ℹ️ 对话内容过短，跳过记忆提取')
+      return {
+        created: [],
+        totalCount: 0,
+        skippedCount: 0,
+        filteredCount: 0,
+        duplicateCount: 0,
+      }
     }
 
-    // 构建提取提示词（优化版）
+    // 构建提取提示词
     const extractPrompt = `你是一个专业的记忆提取专家。请从以下对话中提取有价值的**长期记忆**。
 
 ## 📋 记忆类型定义
@@ -91,7 +97,7 @@ class ChatMemoryService {
 ## 📝 提取要求
 
 1. **简洁明确**：每条记忆不超过 50 字
-2. **第一人称视角**：用"我"来描述（如"我是大学生"而非"用户是大学生"）
+2. **第一人称视角**：用"我"来描述
 3. **长期有效**：只提取至少在 1 个月内仍然有效的信息
 4. **避免重复**：如果已存在相似记忆，不要重复提取
 5. **合理评分**：
@@ -102,31 +108,18 @@ class ChatMemoryService {
 
 ## 📄 返回格式
 
-请以 JSON 数组格式返回，格式如下：
+请以 JSON 数组格式返回：
 
 \`\`\`json
 [
   {
-    "content": "记忆内容（简洁明了）",
+    "content": "记忆内容",
     "type": "fact/preference/goal/event",
     "importance": 8,
     "tags": ["标签1", "标签2"]
   }
 ]
 \`\`\`
-
-**标签建议：**
-- 事实类：身份、地点、职业、教育
-- 偏好类：技术栈、语言、工具、风格
-- 目标类：学习、职业、项目、考试
-- 经历类：工作、比赛、项目、实习
-
-## ⚠️ 重要提醒
-
-- 如果没有有价值的记忆，返回空数组 \`[]\`
-- 不要编造或推测用户未提及的信息
-- 宁可少提取，不要提取垃圾信息
-- 确保 JSON 格式完全正确
 
 ## 💬 对话内容
 
@@ -140,71 +133,119 @@ ${userMessages}
     ]
 
     try {
+      console.log('🔍 开始提取记忆...')
+
       // 调用 AI 提取记忆
       const extractionResult = await aiService.callAiNonStream(extractionMessages)
       const jsonMatch = extractionResult.match(/\[[\s\S]*\]/)
 
       if (!jsonMatch) {
         console.warn('⚠️ 未找到有效的 JSON 数组格式')
-        return []
+        return {
+          created: [],
+          totalCount: 0,
+          skippedCount: 0,
+          filteredCount: 0,
+          duplicateCount: 0,
+        }
       }
 
       // 解析提取的记忆
       const extractedMemories = JSON.parse(jsonMatch[0])
+      console.log(`📊 AI 提取了 ${extractedMemories.length} 条原始记忆`)
 
-      // 过滤低重要性记忆（importance < 4）
-      const filteredMemories = extractedMemories.filter((m) => (m.importance || 5) >= 4)
+      // 过滤低重要性记忆
+      const minImportance = DEFAULT_MEMORY_CONFIG.MIN_IMPORTANCE_FOR_SAVE
+      const filteredMemories = extractedMemories.filter((m) => (m.importance || 5) >= minImportance)
+
+      // 记录过滤信息
+      const filteredCount = extractedMemories.length - filteredMemories.length
+      if (filteredCount > 0) {
+        console.log(`⚠️ 过滤掉 ${filteredCount} 条低重要性记忆 (importance < ${minImportance})`)
+      }
 
       // 保存到数据库
       const createdMemories = []
+      let duplicateCount = 0
+
       for (const memory of filteredMemories) {
-        const createdMemory = await memoryService.createMemory({
-          userId,
-          sessionId,
-          content: memory.content,
-          memoryType: memory.type || 'fact',
-          importance: memory.importance || 5,
-          tags: memory.tags || [],
-          source: 'auto_extract',
-        })
-        createdMemories.push(createdMemory)
+        try {
+          // ✅ ChatGPT 逻辑：记忆属于用户，不绑定特定会话
+          const result = await memoryService.createMemory(
+            {
+              userId,
+              sessionId: null, // 不绑定会话，成为全局长期记忆
+              content: memory.content,
+              memoryType: memory.type || 'fact',
+              importance: memory.importance || 5,
+              tags: memory.tags || [],
+              source: 'auto_extract',
+            },
+            {
+              skipDeduplication: true, // 跳过重复检查，让用户看到提取结果
+            },
+          )
+
+          if (result.data) {
+            createdMemories.push(result.data)
+          }
+        } catch (error) {
+          console.error(`❌ 保存记忆失败: ${memory.content.substring(0, 30)}...`, error.message)
+        }
       }
+
+      const totalCount = extractedMemories.length
+      const skippedCount = filteredCount + duplicateCount
 
       if (createdMemories.length > 0) {
-        console.log(`✅ 成功提取 ${createdMemories.length} 条记忆`)
+        console.log(`✅ 成功提取 ${createdMemories.length} 条新记忆`)
+      } else {
+        console.log('ℹ️ 本次对话未提取到新记忆')
       }
 
-      return createdMemories
+      return {
+        created: createdMemories,
+        totalCount,
+        skippedCount,
+        filteredCount,
+        duplicateCount,
+      }
     } catch (error) {
       console.error('❌ 自动提取记忆失败:', error.message)
-      return []
+      return {
+        created: [],
+        totalCount: 0,
+        skippedCount: 0,
+        filteredCount: 0,
+        duplicateCount: 0,
+      }
     }
   }
 
   /**
-   * 获取会话记忆列表
+   * 获取会话记忆列表（已废弃：ChatGPT 逻辑使用全局记忆）
+   * @deprecated 使用 memoryService.getUserMemories 替代
    */
   async getSessionMemories(sessionId) {
-    const chatMemoryModel = require('../models/chat-memory.model')
-    const memories = await chatMemoryModel.getSessionMemories(sessionId)
+    console.warn('⚠️ getSessionMemories 已废弃，请使用 getUserMemories')
     return {
       success: true,
       data: {
-        memories,
-        total: memories.length,
+        memories: [],
+        total: 0,
       },
     }
   }
 
   /**
-   * 清空会话记忆
+   * 清空会话记忆（已废弃）
+   * @deprecated
    */
   async clearSessionMemories(sessionId) {
-    const chatMemoryModel = require('../models/chat-memory.model')
-    await chatMemoryModel.clearSessionMemories(sessionId)
+    console.warn('⚠️ clearSessionMemories 已废弃')
     return {
       success: true,
-      message: '会话记忆已清空',
+      message: '会话记忆功能已废弃',
     }
   }
 }

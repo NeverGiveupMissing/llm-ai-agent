@@ -88,7 +88,7 @@ const handleRetrieve = async () => {
       limit: 5,
     })
 
-    if (res.success) {
+    if (res) {
       retrievedMemories.value = res.data || []
       if (retrievedMemories.value.length === 0) {
         message.info('未找到相关记忆')

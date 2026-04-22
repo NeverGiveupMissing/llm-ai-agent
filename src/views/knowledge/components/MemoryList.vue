@@ -2,6 +2,7 @@
   <n-card title="📚 记忆列表" :bordered="false" size="small">
     <template #header-extra>
       <n-space>
+        <ImportanceFilter v-model="minImportance" />
         <n-select
           v-model:value="typeFilter"
           :options="typeOptions"
@@ -41,7 +42,6 @@
         :page-slot="pagination.pageSlot"
         show-size-picker
         show-quick-jumper
-        :prefix="({ itemCount }) => `共 ${itemCount} 条`"
         @update:page="handlePageChange"
         @update:page-size="handlePageSizeChange"
       />
@@ -50,9 +50,10 @@
 </template>
 
 <script setup name="MemoryList">
-import { ref, h, onMounted } from 'vue'
-import { useMessage, useDialog, NTag, NButton, NSpace, NPopconfirm } from 'naive-ui'
-import { getMemoryList, deleteMemory, clearMemories } from '@/api/memory'
+import { ref, computed, onMounted } from 'vue'
+import { useMessage, useDialog } from 'naive-ui'
+import { getMemoryList, deleteMemory } from '@/api/memory'
+import ImportanceFilter from '@/views/chat/components/MemoryPanel/components/ImportanceFilter.vue'
 
 const props = defineProps({
   userId: { type: String, required: true },
@@ -65,121 +66,104 @@ const dialog = useDialog()
 
 const loading = ref(false)
 const memoryList = ref([])
-const searchKeyword = ref('')
 const typeFilter = ref(null)
+const searchKeyword = ref('')
+const minImportance = ref(4)
 
 const pagination = ref({
   page: 1,
   pageSize: 10,
   itemCount: 0,
-  pageSizes: [5, 10, 20, 50],
+  pageSizes: [10, 20, 50, 100],
   pageSlot: 7,
 })
-
-const typeOptions = [
-  { label: '事实', value: 'fact' },
-  { label: '偏好', value: 'preference' },
-  { label: '目标', value: 'goal' },
-  { label: '事件', value: 'event' },
-  { label: '观点', value: 'opinion' },
-]
-
-const typeMap = {
-  fact: { label: '事实', type: 'info' },
-  preference: { label: '偏好', type: 'success' },
-  goal: { label: '目标', type: 'warning' },
-  event: { label: '事件', type: 'error' },
-  opinion: { label: '观点', type: 'default' },
-}
 
 const columns = [
   {
     title: '内容',
     key: 'content',
-    minWidth: 300,
     ellipsis: { tooltip: true },
+    width: 300,
   },
   {
     title: '类型',
-    key: 'memoryType',
-    width: 80,
-    render: (row) => {
-      const config = typeMap[row.memoryType] || { label: row.memoryType, type: 'default' }
-      return h(NTag, { type: config.type, size: 'small' }, { default: () => config.label })
+    key: 'memory_type',
+    width: 100,
+    render(row) {
+      const typeMap = {
+        fact: { label: '事实', type: 'info' },
+        preference: { label: '偏好', type: 'error' },
+        goal: { label: '目标', type: 'success' },
+        event: { label: '经历', type: 'warning' },
+        opinion: { label: '观点', type: 'default' },
+      }
+      const typeInfo = typeMap[row.memory_type] || { label: row.memory_type, type: 'default' }
+      return h('n-tag', { type: typeInfo.type, size: 'small' }, () => typeInfo.label)
     },
   },
   {
     title: '重要性',
     key: 'importance',
     width: 100,
-    render: (row) => {
-      const color = row.importance >= 8 ? '#ff4d4f' : row.importance >= 6 ? '#faad14' : '#52c41a'
-      return h('span', { style: { color, fontWeight: 'bold' } }, `⭐ ${row.importance}`)
+    render(row) {
+      const importance = row.importance || 5
+      let type = 'default'
+      if (importance >= 8) type = 'error'
+      else if (importance >= 6) type = 'warning'
+      else if (importance >= 4) type = 'success'
+
+      return h('n-tag', { type, size: 'small' }, () => `${importance}/10`)
     },
   },
   {
     title: '标签',
     key: 'tags',
-    width: 150,
-    render: (row) => {
+    width: 200,
+    render(row) {
       if (!row.tags || row.tags.length === 0) return '-'
       return h(
-        NSpace,
-        { size: 4 },
-        {
-          default: () =>
-            row.tags
-              .slice(0, 3)
-              .map((tag) => h(NTag, { size: 'tiny', type: 'info' }, { default: () => tag })),
-        },
+        'div',
+        { style: 'display: flex; gap: 4px; flex-wrap: wrap' },
+        row.tags.map((tag) => h('n-tag', { size: 'tiny', type: 'info' }, () => tag)),
       )
     },
   },
   {
     title: '创建时间',
-    key: 'createdAt',
+    key: 'created_at',
     width: 160,
-    render: (row) => {
-      if (!row.created_at) return '-'
-      return new Date(row.created_at).toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false,
-      })
+    render(row) {
+      return new Date(row.created_at).toLocaleString('zh-CN')
     },
   },
   {
     title: '操作',
     key: 'actions',
-    width: 160,
+    width: 120,
     fixed: 'right',
-    render: (row) => {
+    render(row) {
       return h(
-        NSpace,
-        { size: 8 },
+        'n-space',
+        {},
         {
           default: () => [
             h(
-              NButton,
-              { size: 'small', type: 'primary', text: true, onClick: () => emit('edit', row) },
-              { default: () => '编辑' },
+              'n-button',
+              {
+                text: true,
+                type: 'primary',
+                onClick: () => emit('edit', row),
+              },
+              () => '编辑',
             ),
             h(
-              NPopconfirm,
-              { onPositiveClick: () => handleDelete(row.id) },
+              'n-button',
               {
-                trigger: () =>
-                  h(
-                    NButton,
-                    { size: 'small', type: 'error', text: true },
-                    { default: () => '删除' },
-                  ),
-                default: () => '确定要删除这条记忆吗？',
+                text: true,
+                type: 'error',
+                onClick: () => handleDelete(row.id),
               },
+              () => '删除',
             ),
           ],
         },
@@ -194,10 +178,7 @@ const fetchMemories = async () => {
     const params = {
       limit: pagination.value.pageSize,
       offset: (pagination.value.page - 1) * pagination.value.pageSize,
-    }
-
-    if (props.userId) {
-      params.userId = props.userId
+      userId: props.userId,
     }
 
     if (typeFilter.value) {
@@ -210,7 +191,8 @@ const fetchMemories = async () => {
     const list = Array.isArray(data.list) ? data.list : []
     const total = Number(data.total) || 0
 
-    memoryList.value = list
+    // 前端重要性过滤
+    memoryList.value = list.filter((m) => (m.importance || 5) >= minImportance.value)
     pagination.value.itemCount = total
   } catch (error) {
     message.error(error.message || '获取记忆列表失败')
@@ -241,34 +223,21 @@ const handleSearch = () => {
 }
 
 const handleDelete = async (id) => {
-  try {
-    const res = await deleteMemory(id)
-    if (res.success) {
-      message.success('删除成功')
-      fetchMemories()
-      emit('refresh')
-    }
-  } catch (error) {
-    message.error(error.message || '删除失败')
-  }
-}
-
-const handleClearAll = () => {
   dialog.warning({
-    title: '警告',
-    content: '确定要清空所有记忆吗？此操作不可恢复！',
-    positiveText: '确定清空',
+    title: '确认删除',
+    content: '确定要删除这条记忆吗？',
+    positiveText: '确定',
     negativeText: '取消',
     onPositiveClick: async () => {
       try {
-        const res = await clearMemories({ userId: props.userId })
-        if (res.success) {
-          message.success(res.message || '清空成功')
+        const res = await deleteMemory(id)
+        if (res) {
+          message.success('删除成功')
           fetchMemories()
           emit('refresh')
         }
       } catch (error) {
-        message.error(error.message || '清空失败')
+        message.error(error.message || '删除失败')
       }
     },
   })
@@ -284,3 +253,31 @@ onMounted(() => {
   fetchMemories()
 })
 </script>
+
+<style scoped>
+.memory-list-container {
+  min-height: 400px;
+}
+
+.list-header {
+  margin-bottom: 16px;
+}
+
+.filter-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.memory-table {
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+</style>

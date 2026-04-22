@@ -7,11 +7,17 @@
     />
 
     <div v-else class="memory-list">
+      <div class="extracted-summary">
+        <n-alert type="success" :show-icon="false" size="small">
+          已自动过滤低重要性记忆，共提取 {{ memories.length }} 条有价值记忆
+        </n-alert>
+      </div>
+
       <MemoryItem
         v-for="(memory, index) in memories"
         :key="index"
         :memory="memory"
-        :type-label="getMemoryTypeLabel(memory.memoryType)"
+        :type-label="getMemoryTypeLabel(memory.memory_type || memory.memoryType)"
         :importance="memory.importance"
         :confirmed="memory.confirmed"
       >
@@ -27,7 +33,7 @@
 </template>
 
 <script setup name="MemoryExtractedTab">
-import { NIcon } from 'naive-ui'
+import { NIcon, NAlert } from 'naive-ui'
 import { DocumentTextOutline, CheckmarkOutline } from '@vicons/ionicons5'
 import MemoryEmptyState from './MemoryEmptyState.vue'
 import MemoryItem from './MemoryItem.vue'
@@ -46,7 +52,7 @@ const getMemoryTypeLabel = (type) => {
     event: 'Event',
     opinion: 'Opinion',
   }
-  return labels[type] || type
+  return labels[type] || type || 'Unknown'
 }
 
 const handleConfirm = (index) => {
@@ -59,6 +65,10 @@ const handleConfirm = (index) => {
   height: 100%;
   overflow-y: auto;
   padding: 20px;
+}
+
+.extracted-summary {
+  margin-bottom: 16px;
 }
 
 .memory-list {
