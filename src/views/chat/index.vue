@@ -4,9 +4,11 @@
     <ChatInput
       :loading="loading"
       :show-session-list="showSessionList"
+      :show-memory-panel="showMemoryPanel"
       @send="handleSend"
       @abort="handleAbort"
       @update:show-session-list="showSessionList = $event"
+      @update:show-memory-panel="showMemoryPanel = $event"
     />
 
     <!-- 右侧：会话历史抽屉 -->
@@ -15,6 +17,13 @@
       :current-session-id="currentSessionId"
       @select="handleSelectSession"
       @create="handleCreateSession"
+    />
+
+    <MemoryPanel
+      ref="memoryPanelRef"
+      v-model:show="showMemoryPanel"
+      :session-id="currentSessionId"
+      :user-id="currentUserId"
     />
   </div>
 </template>
@@ -25,6 +34,7 @@ import { useMessage } from 'naive-ui'
 import ChatMessageList from './components/ChatMessageList.vue'
 import ChatInput from './components/ChatInput.vue'
 import SessionList from './components/SessionList.vue'
+import MemoryPanel from './components/MemoryPanel/index.vue'
 import { createChatStream } from './components/util.js'
 import { generateId } from '@/utils/sse'
 import { CHAT_CONFIG } from '@/utils/constants'
@@ -34,8 +44,10 @@ const msgApi = useMessage()
 const messages = ref([])
 const loading = ref(false)
 const showSessionList = ref(false)
+const showMemoryPanel = ref(false)
 const currentSessionId = ref('')
 const currentUserId = ref('')
+const memoryPanelRef = ref(null)
 
 let chatStream = null
 let aiMessageId = null
@@ -102,14 +114,19 @@ const handleSend = async (content) => {
           const m = messages.value.find((x) => x.id === aiMessageId)
           if (m) m.content += chunk
         },
-        onDone: () => {
+        onDone: async () => {
           const m = messages.value.find((x) => x.id === aiMessageId)
           if (m) m.isStreaming = false
           loading.value = false
           aiMessageId = null
 
-          // 更新会话消息计数
           updateSessionMessageCount()
+
+          if (memoryPanelRef.value) {
+            await memoryPanelRef.value.fetchExtractedMemories(
+              history.concat([{ role: 'assistant', content: m?.content || '' }]),
+            )
+          }
         },
         onError: (err) => {
           msgApi.error(`失败：${err.message}`)
@@ -129,6 +146,10 @@ const handleSend = async (content) => {
 
 const updateSessionMessageCount = async () => {
   try {
+    if (!currentSessionId.value) {
+      console.warn('当前会话ID为空，跳过更新')
+      return
+    }
     const count = messages.value.length
     await updateSession(currentSessionId.value, { message_count: count })
   } catch (error) {

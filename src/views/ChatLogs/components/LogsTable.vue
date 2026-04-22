@@ -11,7 +11,7 @@
       size="huge"
       style="padding: 60px 0"
     />
-    <div v-else style="width: 100%">
+    <div v-else style="width: 100%; overflow-x: scroll">
       <n-data-table
         :columns="columns"
         :data="logs"
@@ -88,7 +88,7 @@ const columns = [
   {
     title: '耗时 (s)',
     key: 'duration',
-    minWidth: 100,
+    minWidth: 80,
     align: 'center',
     render: (row) => {
       return h(

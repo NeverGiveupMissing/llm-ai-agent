@@ -1,7 +1,7 @@
 <template>
-  <div class="memory-list-container">
-    <div class="list-header">
-      <div class="filter-group">
+  <n-card title="📚 记忆列表" :bordered="false" size="small">
+    <template #header-extra>
+      <n-space>
         <n-select
           v-model:value="typeFilter"
           :options="typeOptions"
@@ -12,18 +12,17 @@
         />
         <n-input
           v-model:value="searchKeyword"
-          placeholder="搜索记忆内容..."
-          style="width: 240px"
+          placeholder="搜索记忆内容"
+          style="width: 200px"
           clearable
           @keyup.enter="handleSearch"
         >
-          <template #prefix>
-            <n-icon><SearchOutline /></n-icon>
-          </template>
+          <template #prefix>🔍</template>
         </n-input>
         <n-button type="primary" @click="handleSearch">搜索</n-button>
-      </div>
-    </div>
+        <n-button type="error" secondary @click="handleClearAll">清空所有</n-button>
+      </n-space>
+    </template>
 
     <n-data-table
       :columns="columns"
@@ -31,10 +30,9 @@
       :loading="loading"
       :pagination="false"
       :scroll-x="1200"
-      class="memory-table"
     />
 
-    <div class="pagination-wrapper">
+    <div style="display: flex; justify-content: flex-end; margin-top: 16px">
       <n-pagination
         v-model:page="pagination.page"
         v-model:page-size="pagination.pageSize"
@@ -48,13 +46,12 @@
         @update:page-size="handlePageSizeChange"
       />
     </div>
-  </div>
+  </n-card>
 </template>
 
 <script setup name="MemoryList">
 import { ref, h, onMounted } from 'vue'
-import { useMessage, useDialog, NTag, NButton, NSpace, NPopconfirm, NIcon } from 'naive-ui'
-import { SearchOutline } from '@vicons/ionicons5'
+import { useMessage, useDialog, NTag, NButton, NSpace, NPopconfirm } from 'naive-ui'
 import { getMemoryList, deleteMemory, clearMemories } from '@/api/memory'
 
 const props = defineProps({
@@ -83,15 +80,15 @@ const typeOptions = [
   { label: '事实', value: 'fact' },
   { label: '偏好', value: 'preference' },
   { label: '目标', value: 'goal' },
-  { label: '经历', value: 'event' },
+  { label: '事件', value: 'event' },
   { label: '观点', value: 'opinion' },
 ]
 
 const typeMap = {
   fact: { label: '事实', type: 'info' },
-  preference: { label: '偏好', type: 'error' },
-  goal: { label: '目标', type: 'success' },
-  event: { label: '经历', type: 'warning' },
+  preference: { label: '偏好', type: 'success' },
+  goal: { label: '目标', type: 'warning' },
+  event: { label: '事件', type: 'error' },
   opinion: { label: '观点', type: 'default' },
 }
 
@@ -104,10 +101,10 @@ const columns = [
   },
   {
     title: '类型',
-    key: 'memory_type',
+    key: 'memoryType',
     width: 80,
     render: (row) => {
-      const config = typeMap[row.memory_type] || { label: row.memory_type, type: 'default' }
+      const config = typeMap[row.memoryType] || { label: row.memoryType, type: 'default' }
       return h(NTag, { type: config.type, size: 'small' }, { default: () => config.label })
     },
   },
@@ -117,20 +114,7 @@ const columns = [
     width: 100,
     render: (row) => {
       const color = row.importance >= 8 ? '#ff4d4f' : row.importance >= 6 ? '#faad14' : '#52c41a'
-      return h('span', { style: { color, fontWeight: 'bold' } }, `${row.importance}/10`)
-    },
-  },
-  {
-    title: '来源',
-    key: 'source',
-    width: 100,
-    render: (row) => {
-      const isAuto = row.source === 'auto_extract'
-      return h(
-        NTag,
-        { type: isAuto ? 'info' : 'default', size: 'small' },
-        { default: () => (isAuto ? '自动提取' : '手动创建') },
-      )
+      return h('span', { style: { color, fontWeight: 'bold' } }, `⭐ ${row.importance}`)
     },
   },
   {
@@ -153,7 +137,7 @@ const columns = [
   },
   {
     title: '创建时间',
-    key: 'created_at',
+    key: 'createdAt',
     width: 160,
     render: (row) => {
       if (!row.created_at) return '-'
@@ -163,6 +147,8 @@ const columns = [
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
       })
     },
   },
@@ -267,6 +253,27 @@ const handleDelete = async (id) => {
   }
 }
 
+const handleClearAll = () => {
+  dialog.warning({
+    title: '警告',
+    content: '确定要清空所有记忆吗？此操作不可恢复！',
+    positiveText: '确定清空',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        const res = await clearMemories({ userId: props.userId })
+        if (res.success) {
+          message.success(res.message || '清空成功')
+          fetchMemories()
+          emit('refresh')
+        }
+      } catch (error) {
+        message.error(error.message || '清空失败')
+      }
+    },
+  })
+}
+
 const refresh = () => {
   fetchMemories()
 }
@@ -277,31 +284,3 @@ onMounted(() => {
   fetchMemories()
 })
 </script>
-
-<style scoped>
-.memory-list-container {
-  min-height: 400px;
-}
-
-.list-header {
-  margin-bottom: 16px;
-}
-
-.filter-group {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.memory-table {
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-</style>

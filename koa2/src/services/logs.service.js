@@ -159,18 +159,54 @@ class LogsService {
 
   /**
    * 获取统计信息
-   * @param {string} [date] - 日期
+   * @param {string} [date] - 日期（不传则统计所有日志）
    * @returns {Promise<Object>} 统计数据
    */
   async getStats(date) {
-    const queryDate = date || dayjs().format('YYYY-MM-DD')
-    const logFile = path.join(LOG_DIR, `chat_${queryDate}.jsonl`)
+    // 如果指定了日期，只查询该日期的日志
+    if (date) {
+      const logFile = path.join(LOG_DIR, `chat_${date}.jsonl`)
 
-    if (!fs.existsSync(logFile)) {
-      return { date: queryDate, total: 0 }
+      if (!fs.existsSync(logFile)) {
+        return {
+          date: date,
+          total: 0,
+          success: 0,
+          failed: 0,
+          success_rate: 0,
+          avg_duration: 0,
+          total_tokens: {
+            input: 0,
+            output: 0,
+            total: 0,
+          },
+        }
+      }
+
+      const logs = this.readLogFile(logFile)
+      return this.calculateStats(logs, date)
     }
 
-    const logs = this.readLogFile(logFile)
+    // 如果没有指定日期，查询所有日志文件的总和
+    const logFiles = this.getLogFiles()
+    let allLogs = []
+
+    for (const logFile of logFiles) {
+      const logs = this.readLogFile(logFile)
+      allLogs = allLogs.concat(logs)
+    }
+
+    return this.calculateStats(allLogs, 'all')
+  }
+
+  /**
+   * 计算统计数据
+   * @private
+   * @param {Array} logs - 日志数组
+   * @param {string} date - 日期标识
+   * @returns {Object} 统计数据
+   */
+  calculateStats(logs, date) {
     const total = logs.length
     const success = logs.filter((log) => log.status === 'success').length
     const failed = total - success
@@ -179,7 +215,7 @@ class LogsService {
     const outputTokens = logs.reduce((sum, log) => sum + (log.tokens?.output || 0), 0)
 
     return {
-      date: queryDate,
+      date: date,
       total,
       success,
       failed,

@@ -8,7 +8,8 @@
     "start": "node src/app.js",
     "lint": "eslint src",
     "db:init": "node src/utils/init-memory-db.js",
-    "db:init2": "node src/utils/init-chat-memory-db"
+    "db:init:chat": "node src/utils/init-chat-memory-db.js",
+    "db:init:all": "npm run db:init && npm run db:init:chat"
   },
   "dependencies": {
     "@koa/router": "^12.0.0",

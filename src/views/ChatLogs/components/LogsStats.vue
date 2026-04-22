@@ -1,90 +1,143 @@
 <template>
-  <div class="stats-row" v-if="stats">
-    <div class="stat-item">
-      <div class="stat-num text-blue">{{ stats.total || 0 }}</div>
-      <div class="stat-title">总对话数</div>
-    </div>
-    <div class="stat-divider"></div>
+  <div v-if="stats" class="logs-stats">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon total">
+          <n-icon :size="20"><ChatbubbleEllipsesOutline /></n-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.total || 0 }}</div>
+          <div class="stat-label">总对话数</div>
+        </div>
+      </div>
 
-    <div class="stat-item">
-      <div class="stat-num text-green">{{ stats.success || 0 }}</div>
-      <div class="stat-title">成功数</div>
-    </div>
-    <div class="stat-divider"></div>
+      <div class="stat-card">
+        <div class="stat-icon success">
+          <n-icon :size="20"><CheckmarkCircleOutline /></n-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.success || 0 }}</div>
+          <div class="stat-label">成功数</div>
+        </div>
+      </div>
 
-    <div class="stat-item">
-      <div class="stat-num text-red">{{ stats.error || 0 }}</div>
-      <div class="stat-title">失败数</div>
-    </div>
-    <div class="stat-divider"></div>
+      <div class="stat-card">
+        <div class="stat-icon error">
+          <n-icon :size="20"><CloseCircleOutline /></n-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.failed || 0 }}</div>
+          <div class="stat-label">失败数</div>
+        </div>
+      </div>
 
-    <div class="stat-item">
-      <div class="stat-num text-purple">{{ (Number(stats.avgDuration) || 0).toFixed(2) }}s</div>
-      <div class="stat-title">平均耗时</div>
+      <div class="stat-card">
+        <div class="stat-icon duration">
+          <n-icon :size="20"><TimeOutline /></n-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ formatDuration }}s</div>
+          <div class="stat-label">平均耗时</div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup name="LogsStats">
-defineProps({
+import { computed } from 'vue'
+import { NIcon } from 'naive-ui'
+import {
+  ChatbubbleEllipsesOutline,
+  CheckmarkCircleOutline,
+  CloseCircleOutline,
+  TimeOutline,
+} from '@vicons/ionicons5'
+
+const props = defineProps({
   stats: {
     type: Object,
     default: null,
   },
 })
+
+const formatDuration = computed(() => {
+  const duration = Number(props.stats?.avg_duration) || 0
+  return duration.toFixed(2)
+})
 </script>
 
 <style scoped>
-.stats-row {
+.logs-stats {
+  margin-bottom: 24px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
   display: flex;
-  justify-content: space-around;
   align-items: center;
-  background-color: #fff;
-  border: 1px solid #e4e7ed;
+  gap: 16px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #e5e5e5;
   border-radius: 8px;
-  padding: 5px;
-  margin-bottom: 16px;
-  width: 100%;
-  box-sizing: border-box;
+  transition: all 0.2s;
 }
 
-.stat-item {
+.stat-card:hover {
+  border-color: #d0d0d0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+}
+
+.stat-icon.total {
+  background: #f0f9ff;
+  color: #0284c7;
+}
+
+.stat-icon.success {
+  background: #f0fdf4;
+  color: #10a37f;
+}
+
+.stat-icon.error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.stat-icon.duration {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+
+.stat-content {
   flex: 1;
-  text-align: center;
-  white-space: nowrap;
 }
 
-.stat-num {
+.stat-value {
   font-size: 28px;
   font-weight: 700;
-  margin-bottom: 6px;
-  font-family: 'DIN Alternate', 'Helvetica Neue', sans-serif;
+  color: #0d0d0d;
+  line-height: 1;
+  margin-bottom: 4px;
 }
 
-.stat-title {
-  font-size: 14px;
-  color: #909399;
-}
-
-.stat-divider {
-  width: 1px;
-  height: 20px;
-  background-color: #e4e7ed;
-}
-
-.text-blue {
-  color: #409eff;
-}
-
-.text-green {
-  color: #67c23a;
-}
-
-.text-red {
-  color: #f56c6c;
-}
-
-.text-purple {
-  color: #909399;
+.stat-label {
+  font-size: 13px;
+  color: #6e6e80;
+  font-weight: 500;
 }
 </style>

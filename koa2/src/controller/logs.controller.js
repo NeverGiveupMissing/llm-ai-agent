@@ -1,12 +1,9 @@
 const logsService = require('../services/logs.service')
+const ResponseUtil = require('../utils/response')
 
-/**
- * 日志控制器
- */
 class LogsController {
   /**
    * 获取日志列表
-   * @param {import('koa').Context} ctx - Koa 上下文
    */
   async getLogs(ctx) {
     const params = {
@@ -17,12 +14,14 @@ class LogsController {
     }
 
     const result = await logsService.getLogs(params)
-    ctx.body = result
+    ctx.body = ResponseUtil.success({
+      list: result.logs || [],
+      total: result.count || 0,
+    })
   }
 
   /**
    * 获取今日日志
-   * @param {import('koa').Context} ctx - Koa 上下文
    */
   async getTodayLogs(ctx) {
     const params = {
@@ -33,47 +32,54 @@ class LogsController {
     }
 
     const result = await logsService.getTodayLogs(params)
-    ctx.body = result
+    ctx.body = ResponseUtil.success({
+      list: result.logs || [],
+      total: result.count || 0,
+    })
   }
 
   /**
    * 通过 Trace ID 查询日志
-   * @param {import('koa').Context} ctx - Koa 上下文
    */
   async getTraceLog(ctx) {
     const traceId = ctx.params.trace_id
     const result = await logsService.getTraceLog(traceId)
-    ctx.body = result
+
+    if (result.error) {
+      ctx.body = ResponseUtil.error(null, result.error)
+    } else {
+      ctx.body = ResponseUtil.success(result)
+    }
   }
 
   /**
    * 获取会话日志
-   * @param {import('koa').Context} ctx - Koa 上下文
    */
   async getSessionLogs(ctx) {
     const sessionId = ctx.params.session_id
     const limit = parseInt(ctx.query.limit) || 50
     const result = await logsService.getSessionLogs(sessionId, limit)
-    ctx.body = result
+    ctx.body = ResponseUtil.success({
+      list: result.logs || [],
+      total: result.count || 0,
+    })
   }
 
   /**
    * 获取可用日期列表
-   * @param {import('koa').Context} ctx - Koa 上下文
    */
   async getAvailableDates(ctx) {
     const result = await logsService.getAvailableDates()
-    ctx.body = result
+    ctx.body = ResponseUtil.success(result)
   }
 
   /**
    * 获取统计信息
-   * @param {import('koa').Context} ctx - Koa 上下文
    */
   async getStats(ctx) {
     const date = ctx.query.date
     const result = await logsService.getStats(date)
-    ctx.body = result
+    ctx.body = ResponseUtil.success(result)
   }
 }
 

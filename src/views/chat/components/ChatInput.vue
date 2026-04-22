@@ -1,193 +1,152 @@
 <template>
   <div class="chat-input-wrapper">
-    <div class="input-card">
+    <div class="input-container">
       <n-input
+        ref="inputRef"
         v-model:value="inputValue"
         type="textarea"
-        placeholder="输入你的问题..."
-        :autosize="{ minRows: 1, maxRows: 6 }"
-        class="chat-textarea"
-        @keydown.enter.prevent="handleSend"
-      />
-      <div class="input-toolbar">
-        <div class="toolbar-left">
-          <!-- 会话历史按钮（ChatGPT 风格） -->
-          <n-tooltip trigger="hover" placement="top">
-            <template #trigger>
-              <button class="action-icon-btn" @click="handleToggleSessionList">
-                <n-icon size="18"><MenuOutline /></n-icon>
-              </button>
-            </template>
-            会话历史
-          </n-tooltip>
-        </div>
-        <div class="toolbar-right">
-          <n-button
-            v-if="loading"
-            type="error"
-            size="small"
-            ghost
-            class="stop-btn"
-            @click="handleAbort"
-          >
-            停止
-          </n-button>
-          <button class="send-btn" :disabled="!inputValue.trim() || loading" @click="handleSend">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-              stroke-linecap="round"
-              stroke-linejoin="round"
+        :placeholder="placeholder"
+        :autosize="{ minRows: 1, maxRows: 8 }"
+        :disabled="loading"
+        @keydown.enter.exact.prevent="handleSend"
+      >
+        <template #suffix>
+          <n-space vertical align="end" style="gap: 4px">
+            <n-space horizontal>
+              <n-button
+                text
+                size="tiny"
+                :type="showMemoryPanel ? 'primary' : 'default'"
+                @click="toggleMemoryPanel"
+                title="记忆中心"
+              >
+                <template #icon>
+                  <n-icon><SparklesOutline /></n-icon>
+                </template>
+              </n-button>
+              <n-button
+                text
+                size="tiny"
+                :type="showSessionList ? 'primary' : 'default'"
+                @click="toggleSessionList"
+                title="会话历史"
+              >
+                <template #icon>
+                  <n-icon><ListOutline /></n-icon>
+                </template>
+              </n-button>
+            </n-space>
+            <n-button
+              v-if="loading"
+              text
+              size="tiny"
+              type="error"
+              @click="handleAbort"
+              title="停止生成"
             >
-              <line x1="12" y1="19" x2="12" y2="5"></line>
-              <polyline points="5 12 12 5 19 12"></polyline>
-            </svg>
-          </button>
-        </div>
-      </div>
+              <template #icon>
+                <n-icon><StopOutline /></n-icon>
+              </template>
+            </n-button>
+            <n-button
+              v-else
+              text
+              size="tiny"
+              type="primary"
+              :disabled="!inputValue.trim()"
+              @click="handleSend"
+              title="发送"
+            >
+              <template #icon>
+                <n-icon><SendOutline /></n-icon>
+              </template>
+            </n-button>
+          </n-space>
+        </template>
+      </n-input>
     </div>
-    <div class="input-disclaimer">AI 生成的内容可能不准确，请核查重要信息。</div>
+    <div class="input-tip">按 Enter 发送，Shift + Enter 换行</div>
   </div>
 </template>
 
 <script setup name="ChatInput">
-import { ref } from 'vue'
-import { NInput, NButton, NTooltip, NIcon } from 'naive-ui'
-import { MenuOutline } from '@vicons/ionicons5'
+import { ref, watch } from 'vue'
+import { NInput, NButton, NIcon, NSpace } from 'naive-ui'
+import { SendOutline, StopOutline, ListOutline, SparklesOutline } from '@vicons/ionicons5'
 
 const props = defineProps({
   loading: { type: Boolean, default: false },
   showSessionList: { type: Boolean, default: false },
+  showMemoryPanel: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['send', 'abort', 'update:showSessionList'])
+const emit = defineEmits(['send', 'abort', 'update:showSessionList', 'update:showMemoryPanel'])
 
+const inputRef = ref(null)
 const inputValue = ref('')
 
+const placeholder = '输入消息...'
+
 const handleSend = () => {
-  const content = inputValue.value.trim()
-  if (!content || props.loading) return
-  emit('send', content)
+  if (!inputValue.value.trim() || props.loading) return
+  emit('send', inputValue.value)
   inputValue.value = ''
 }
 
-const handleAbort = () => emit('abort')
-const handleToggleSessionList = () => emit('update:showSessionList', !props.showSessionList)
+const handleAbort = () => {
+  emit('abort')
+}
+
+const toggleSessionList = () => {
+  emit('update:showSessionList', !props.showSessionList)
+}
+
+const toggleMemoryPanel = () => {
+  emit('update:showMemoryPanel', !props.showMemoryPanel)
+}
+
+watch(
+  () => props.loading,
+  (val) => {
+    if (!val) {
+      setTimeout(() => {
+        inputRef.value?.focus()
+      }, 100)
+    }
+  },
+)
+
+defineExpose({
+  focus: () => inputRef.value?.focus(),
+})
 </script>
 
 <style scoped>
 .chat-input-wrapper {
-  padding: 0 16px 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
 }
 
-.input-card {
-  width: 100%;
-  max-width: 768px;
-  background: #fff;
+.input-container {
+  max-width: 800px;
+  margin: 0 auto;
   border: 1px solid #e5e5e5;
-  border-radius: 24px;
-  padding: 10px 14px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.03);
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s;
+  border-radius: 12px;
+  background: #fff;
+  transition: border-color 0.2s;
 }
 
-.input-card:focus-within {
-  border-color: #c5c5c5;
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.06);
+.input-container:focus-within {
+  border-color: #10a37f;
+  box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.1);
 }
 
-.chat-textarea :deep(.n-input__textarea-el) {
-  resize: none;
-  font-size: 15px;
-  line-height: 1.5;
-  padding: 4px 0;
-  border: none;
-  box-shadow: none;
-  outline: none;
-}
-
-.chat-textarea :deep(.n-input__border),
-.chat-textarea :deep(.n-input__state-border) {
-  display: none;
-}
-
-.input-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 4px;
-}
-
-.toolbar-left {
-  display: flex;
-  gap: 8px;
-}
-
-.action-icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  color: #888;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.action-icon-btn:hover {
-  background: #f0f0f0;
-  color: #10a37f;
-}
-
-.toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.send-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 8px;
-  background: #10a37f;
-  color: #fff;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.send-btn:hover:not(:disabled) {
-  background: #0d8c6d;
-}
-.send-btn:disabled {
-  background: #e5e5e5;
-  color: #aaa;
-  cursor: not-allowed;
-}
-
-.stop-btn :deep(.n-button__content) {
-  font-size: 12px;
-}
-
-.input-disclaimer {
-  margin-top: 8px;
-  font-size: 11px;
-  color: #999;
+.input-tip {
+  max-width: 800px;
+  margin: 8px auto 0;
   text-align: center;
+  font-size: 12px;
+  color: #999;
 }
 </style>

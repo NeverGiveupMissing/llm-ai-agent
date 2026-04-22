@@ -79,7 +79,7 @@ const handleCollapse = (collapsed) => {
 .content-wrapper {
   height: 100%;
   overflow-y: auto;
-  padding: 16px;
+  padding: 15px;
 }
 
 /* 页面切换动画 */

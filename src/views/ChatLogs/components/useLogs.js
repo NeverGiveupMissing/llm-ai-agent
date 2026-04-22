@@ -43,10 +43,9 @@ export const useLogs = () => {
         params.keyword = keyword.value
       }
 
-      const data = await getLogs(params)
-      const dataObj = data.data || data
-      logs.value = dataObj.logs || []
-      pagination.value.itemCount = Number(dataObj.total) || logs.value.length
+      const res = await getLogs(params)
+      logs.value = Array.isArray(res.data.list) ? res.data.list : []
+      pagination.value.itemCount = Number(res.total) || logs.value.length
     } catch (error) {
       console.error('获取日志失败:', error)
       logs.value = []
@@ -62,14 +61,8 @@ export const useLogs = () => {
       if (selectedDate.value) {
         params.date = formatDate(selectedDate.value)
       }
-      const data = await getLogsStats(params)
-      const dataObj = data.data || data
-      stats.value = {
-        total: dataObj.total || 0,
-        success: dataObj.success || 0,
-        error: dataObj.failed || 0,
-        avgDuration: dataObj.avg_duration || 0,
-      }
+      const res = await getLogsStats(params)
+      stats.value = res.data
     } catch (error) {
       console.error('获取统计信息失败:', error)
       stats.value = null
