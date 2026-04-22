@@ -29,7 +29,7 @@
 <script setup name="ChatMessageList">
 import { ref, watch, nextTick } from 'vue'
 import ChatMessage from './ChatMessage.vue'
-import { scrollToBottom } from '@/utils/sse'
+import { scrollToBottom } from '@/utils/http'
 
 const props = defineProps({ messages: { type: Array, default: () => [] } })
 

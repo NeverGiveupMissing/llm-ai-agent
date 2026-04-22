@@ -83,7 +83,7 @@ const props = defineProps({
 const emit = defineEmits(['send', 'abort', 'update:showSessionList', 'update:showMemoryPanel'])
 
 const inputRef = ref(null)
-const inputValue = ref('')
+const inputValue = ref('你是谁?')
 
 const placeholder = '输入消息...'
 

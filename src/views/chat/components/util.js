@@ -1,7 +1,7 @@
 // 说明：聊天流式请求工具 - 处理 SSE 流式通信和记忆参数传递
 
 import { sendChatMessage } from '@/api/chat'
-import { createSSEController, fetchSSE } from '@/utils/sse'
+import { createSSEController, streamSSE } from '@/utils/http'
 import { CHAT_CONFIG } from '@/utils/constants'
 
 // 生成默认 userId（实际项目中应从登录信息获取）
@@ -52,7 +52,7 @@ function createChatStream() {
         userId: currentUserId,
       })
 
-      return fetchSSE({
+      return streamSSE({
         url: requestConfig.url,
         data: requestConfig.data,
         useTypewriter: false,

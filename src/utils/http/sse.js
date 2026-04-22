@@ -1,59 +1,16 @@
-import { BASE_URL, CHAT_CONFIG } from '@/utils/constants'
+import { BASE_URL } from './config'
+import { typewriterEffect } from './sse-tools'
 
 /**
- * 生成唯一 ID
+ * 默认 SSE 配置
  */
-export function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2)
+const DEFAULT_SSE_CONFIG = {
+  TYPEWRITER_ENABLED: true,
+  TYPEWRITER_DELAY: 50,
 }
 
 /**
- * 滚动到底部
- */
-export function scrollToBottom(element) {
-  if (element) {
-    element.scrollTop = element.scrollHeight
-  }
-}
-
-/**
- * 打字机效果 - 逐字显示
- * @param {string} text - 要显示的文本
- * @param {Function} onChar - 每个字符的回调
- * @param {number} delay - 每个字符的延迟时间（毫秒）
- * @returns {Promise}
- */
-export function typewriterEffect(text, onChar, delay = CHAT_CONFIG.TYPEWRITER_DELAY) {
-  return new Promise((resolve) => {
-    let index = 0
-    const interval = setInterval(() => {
-      if (index < text.length) {
-        onChar(text[index])
-        index++
-      } else {
-        clearInterval(interval)
-        resolve()
-      }
-    }, delay)
-  })
-}
-
-/**
- * 创建 SSE 控制器
- * 用于管理 SSE 连接的生命周期
- */
-export function createSSEController() {
-  const controller = new AbortController()
-
-  return {
-    signal: controller.signal,
-    abort: () => controller.abort(),
-    isAborted: () => controller.signal.aborted,
-  }
-}
-
-/**
- * 发起 SSE 请求
+ * 标准 SSE 协议流式请求（支持 JSON 解析、打字机效果）
  * @param {Object} options
  * @param {string} options.url - 请求地址
  * @param {Object} options.data - 请求数据
@@ -65,14 +22,14 @@ export function createSSEController() {
  * @param {boolean} options.useTypewriter - 是否使用打字机效果
  * @param {number} options.typewriterDelay - 打字机延迟（毫秒）
  */
-export async function fetchSSE(options) {
+export async function streamSSE(options) {
   const {
     url,
     data,
     callbacks = {},
     signal,
-    useTypewriter = CHAT_CONFIG.TYPEWRITER_ENABLED,
-    typewriterDelay = CHAT_CONFIG.TYPEWRITER_DELAY,
+    useTypewriter = DEFAULT_SSE_CONFIG.TYPEWRITER_ENABLED,
+    typewriterDelay = DEFAULT_SSE_CONFIG.TYPEWRITER_DELAY,
   } = options
   const { onMessage, onComplete, onError } = callbacks
 

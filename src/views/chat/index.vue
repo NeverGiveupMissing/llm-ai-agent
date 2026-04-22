@@ -36,7 +36,7 @@ import ChatInput from './components/ChatInput.vue'
 import SessionList from './components/SessionList.vue'
 import MemoryPanel from './components/MemoryPanel/index.vue'
 import { createChatStream } from './components/util.js'
-import { generateId } from '@/utils/sse'
+import { generateId } from '@/utils/http'
 import { CHAT_CONFIG } from '@/utils/constants'
 import { createSession, updateSession } from '@/api/session'
 
