@@ -1,7 +1,7 @@
-// 说明：对话记忆路由 - 提供记忆上下文获取和自动提取接口
+﻿// 说明：对话记忆路由 - 提供记忆上下文获取和自动提取接口
 
 const Router = require('@koa/router')
-const ChatMemoryController = require('../controller/chat-memory.controller')
+const ChatMemoryController = require('./controller')
 
 const router = new Router({ prefix: '/chat-memory' })
 

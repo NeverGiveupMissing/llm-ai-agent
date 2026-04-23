@@ -1,3 +1,4 @@
+// 记忆去重服务（多个模块共用）
 const embeddingService = require('./embedding.service')
 const { pool } = require('../config/db')
 const { DEFAULT_MEMORY_CONFIG } = require('../utils/memory-constants')

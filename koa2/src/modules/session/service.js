@@ -1,6 +1,6 @@
-// 说明：会话业务逻辑 - 处理会话的创建、更新、标题生成
+﻿// 说明：会话业务逻辑 - 处理会话的创建、更新、标题生成
 
-const sessionModel = require('../models/session.model')
+const sessionModel = require('./model')
 
 class SessionService {
   /**

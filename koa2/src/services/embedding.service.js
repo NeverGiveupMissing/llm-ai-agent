@@ -1,3 +1,4 @@
+// 向量嵌入服务（多个模块共用）
 const axios = require('axios')
 const config = require('../config')
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 聊天请求模型
  * @class ChatRequestModel
  */

@@ -1,6 +1,6 @@
-// 说明：会话数据模型 - 管理聊天会话的创建、查询、删除
+﻿// 说明：会话数据模型 - 管理聊天会话的创建、查询、删除
 
-const { pool } = require('../config/db')
+const { pool } = require('../../config/db')
 
 class SessionModel {
   /**

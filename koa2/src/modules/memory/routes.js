@@ -1,5 +1,5 @@
-const Router = require('@koa/router')
-const memoryController = require('../controller/memory.controller')
+﻿const Router = require('@koa/router')
+const memoryController = require('./controller')
 
 const router = new Router({ prefix: '/memory' })
 

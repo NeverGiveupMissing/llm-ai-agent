@@ -1,5 +1,5 @@
-const Router = require('@koa/router')
-const chatController = require('../controller/chat.controller')
+﻿const Router = require('@koa/router')
+const chatController = require('./controller')
 
 const router = new Router({ prefix: '/chat' })
 

@@ -1,9 +1,9 @@
-const { ChatRequestModel } = require('../models/chat.model')
-const { callAiNonStream, callAiStream } = require('../services/ai.service')
-const chatMemoryService = require('../services/chat-memory.service')
-const { logChat } = require('../utils/chat-logger')
-const ResponseUtil = require('../utils/response')
-const config = require('../config')
+﻿const { ChatRequestModel } = require('./model')
+const { callAiNonStream, callAiStream } = require('../../services/ai.service')
+const chatMemoryService = require('../chat-memory/service')
+const { logChat } = require('../../utils/chat-logger')
+const ResponseUtil = require('../../utils/response')
+const config = require('../../config')
 
 /**
  * 聊天控制器（支持自动记忆管理）
@@ -177,4 +177,3 @@ module.exports = new ChatController()
 // 【对话后】异步提取新记忆保存到数据库
 //     ↓
 // 下次对话时 AI 就能记住
-

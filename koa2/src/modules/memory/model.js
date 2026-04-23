@@ -1,5 +1,5 @@
-const { v4: uuidv4 } = require('uuid')
-const { MEMORY_TYPES } = require('../utils/memory-constants')
+﻿const { v4: uuidv4 } = require('uuid')
+const { MEMORY_TYPES } = require('../../utils/memory-constants')
 
 class MemoryModel {
   constructor(data = {}) {

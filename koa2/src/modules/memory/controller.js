@@ -1,6 +1,6 @@
-const memoryService = require('../services/memory.service')
-const memoryExtractorService = require('../services/memory-extractor.service')
-const ResponseUtil = require('../utils/response')
+﻿const memoryService = require('./service')
+const memoryExtractorService = require('../../services/memory-extractor.service')
+const ResponseUtil = require('../../utils/response')
 
 class MemoryController {
   async createMemory(ctx) {

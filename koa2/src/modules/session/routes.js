@@ -1,7 +1,7 @@
-// 说明：会话路由 - 提供会话管理的 HTTP 接口
+﻿// 说明：会话路由 - 提供会话管理的 HTTP 接口
 
 const Router = require('@koa/router')
-const sessionController = require('../controller/session.controller')
+const sessionController = require('./controller')
 
 const router = new Router({ prefix: '/sessions' })
 

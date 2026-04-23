@@ -1,7 +1,7 @@
-// 说明：对话记忆控制器 - 处理会话记忆的上下文获取和自动提取
+﻿// 说明：对话记忆控制器 - 处理会话记忆的上下文获取和自动提取
 
-const chatMemoryService = require('../services/chat-memory.service')
-const ResponseUtil = require('../utils/response')
+const chatMemoryService = require('./service')
+const ResponseUtil = require('../../utils/response')
 
 /**
  * 对话记忆控制器 - 类似 ChatGPT 的自动记忆管理

@@ -1,7 +1,7 @@
-// 说明：会话控制器 - 处理会话的 HTTP 请求
+﻿// 说明：会话控制器 - 处理会话的 HTTP 请求
 
-const sessionService = require('../services/session.service')
-const ResponseUtil = require('../utils/response')
+const sessionService = require('./service')
+const ResponseUtil = require('../../utils/response')
 
 class SessionController {
   /**

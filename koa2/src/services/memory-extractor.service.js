@@ -1,3 +1,4 @@
+// 记忆提取服务（多个模块共用）
 const { callAiNonStream } = require('../services/ai.service')
 const { MEMORY_TYPES } = require('../utils/memory-constants')
 

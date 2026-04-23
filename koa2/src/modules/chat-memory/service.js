@@ -1,8 +1,8 @@
-// 说明：对话记忆服务 - 实现自动记忆上下文构建和对话记忆提取
+﻿// 说明：对话记忆服务 - 实现自动记忆上下文构建和对话记忆提取
 
-const memoryService = require('../services/memory.service')
-const aiService = require('../services/ai.service')
-const { DEFAULT_MEMORY_CONFIG } = require('../utils/memory-constants')
+const memoryService = require('../memory/service')
+const aiService = require('../../services/ai.service')
+const { DEFAULT_MEMORY_CONFIG } = require('../../utils/memory-constants')
 
 /**
  * 对话记忆服务 - 自动记忆管理（遵循 ChatGPT 逻辑）
