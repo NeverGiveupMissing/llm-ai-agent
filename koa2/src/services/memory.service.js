@@ -130,7 +130,7 @@ class MemoryService {
     return result.rows[0] || null
   }
 
-  async getUserMemories(userId = null, limit = 20, offset = 0, type = null) {
+  async getUserMemories(userId = null, limit = 20, offset = 0, type = null, keyword = null) {
     const conditions = ['is_active = true']
     const values = []
     let paramIndex = 1
@@ -147,6 +147,12 @@ class MemoryService {
       paramIndex++
     }
 
+    if (keyword) {
+      conditions.push(`content ILIKE $${paramIndex}`)
+      values.push(`%${keyword}%`)
+      paramIndex++
+    }
+
     const countQuery = `
       SELECT COUNT(*) AS total
       FROM memories
@@ -156,6 +162,7 @@ class MemoryService {
     const total = parseInt(countResult.rows[0].total, 10)
 
     console.log('[MemoryService] Query conditions:', conditions.join(' AND '))
+    console.log('[MemoryService] Query values:', values)
     console.log('[MemoryService] Total count:', total)
 
     let query
@@ -176,6 +183,9 @@ class MemoryService {
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
       `
     }
+
+    console.log('[MemoryService] SQL Query:', query)
+    console.log('[MemoryService] SQL Values:', values)
 
     const result = await pool.query(query, values)
     console.log('[MemoryService] Returned rows:', result.rows.length)

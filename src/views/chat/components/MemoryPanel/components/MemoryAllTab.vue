@@ -14,7 +14,7 @@
       <div class="filter-bar">
         <n-input
           v-model:value="searchKeyword"
-          placeholder="搜索记忆内容..."
+          placeholder="输入问题，测试记忆检索效果，如：我喜欢什么编程语言"
           clearable
           size="small"
           style="flex: 1"

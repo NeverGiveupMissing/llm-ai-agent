@@ -178,26 +178,62 @@ const fetchMemories = async () => {
     const params = {
       limit: pagination.value.pageSize,
       offset: (pagination.value.page - 1) * pagination.value.pageSize,
-      userId: props.userId,
+    }
+
+    if (props.userId) {
+      params.userId = props.userId
     }
 
     if (typeFilter.value) {
       params.type = typeFilter.value
     }
 
+    if (searchKeyword.value) {
+      params.keyword = searchKeyword.value
+    }
+
     const res = await getMemoryList(params)
 
-    const data = res.data
-    const list = Array.isArray(data.list) ? data.list : []
-    const total = Number(data.total) || 0
+    const result = res.data
+    memoryList.value = result.list
+    pagination.value.itemCount = result.total
 
-    // 前端重要性过滤
-    memoryList.value = list.filter((m) => (m.importance || 5) >= minImportance.value)
-    pagination.value.itemCount = total
+    // 如果是第一页且有搜索关键词，加载所有匹配的记忆用于导出
+    if (pagination.value.page === 1 && searchKeyword.value) {
+      await fetchAllMemories()
+    } else if (pagination.value.page === 1 && !searchKeyword.value) {
+      // 没有搜索时，只加载当前页数据用于导出（避免加载过多数据）
+      exportMemories.value = result.list
+    }
   } catch (error) {
     message.error(error.message || '获取记忆列表失败')
   } finally {
     loading.value = false
+  }
+}
+
+// 获取所有记忆（用于导出）
+const fetchAllMemories = async () => {
+  try {
+    const params = {
+      userId: props.userId,
+      limit: 1000,
+      offset: 0,
+    }
+
+    if (typeFilter.value) {
+      params.type = typeFilter.value
+    }
+
+    if (searchKeyword.value) {
+      params.keyword = searchKeyword.value
+    }
+
+    const res = await getMemoryList(params)
+    const data = res.data
+    exportMemories.value = Array.isArray(data.list) ? data.list : []
+  } catch (error) {
+    console.error('获取所有记忆失败:', error)
   }
 }
 

@@ -205,7 +205,6 @@ const columns = [
     },
   },
 ]
-
 const fetchMemories = async () => {
   loading.value = true
   try {
@@ -222,41 +221,24 @@ const fetchMemories = async () => {
       params.type = typeFilter.value
     }
 
+    if (searchKeyword.value) {
+      params.keyword = searchKeyword.value
+    }
+
     const res = await getMemoryList(params)
 
     const result = res.data
     memoryList.value = result.list
     pagination.value.itemCount = result.total
 
-    // 如果是第一页，加载所有记忆用于导出
+    // 第一页时更新导出数据
     if (pagination.value.page === 1) {
-      await fetchAllMemories()
+      exportMemories.value = result.list
     }
   } catch (error) {
     message.error(error.message || '获取记忆列表失败')
   } finally {
     loading.value = false
-  }
-}
-
-// 获取所有记忆（用于导出）
-const fetchAllMemories = async () => {
-  try {
-    const params = {
-      userId: props.userId,
-      limit: 1000,
-      offset: 0,
-    }
-
-    if (typeFilter.value) {
-      params.type = typeFilter.value
-    }
-
-    const res = await getMemoryList(params)
-    const data = res.data
-    exportMemories.value = Array.isArray(data.list) ? data.list : []
-  } catch (error) {
-    console.error('获取所有记忆失败:', error)
   }
 }
 

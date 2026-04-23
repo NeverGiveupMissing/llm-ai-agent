@@ -110,7 +110,9 @@ class MemoryController {
 
   async getMemories(ctx) {
     try {
-      const { userId, limit, offset, type } = ctx.query
+      const { userId, limit, offset, type, keyword } = ctx.query
+
+      console.log('[MemoryController] Query params:', { userId, limit, offset, type, keyword })
 
       let finalLimit = 20
       if (limit !== undefined && limit !== null) {
@@ -127,11 +129,15 @@ class MemoryController {
         finalLimit,
         parseInt(offset) || 0,
         type || null,
+        keyword || null,
       )
+
+      console.log('[MemoryController] Query result count:', result.total)
 
       ctx.status = 200
       ctx.body = ResponseUtil.success(result, '获取成功')
     } catch (error) {
+      console.error('[MemoryController] Error:', error)
       ctx.status = 500
       ctx.body = ResponseUtil.serverError(error.message)
     }
