@@ -22,6 +22,9 @@
           </template>
         </n-input>
         <n-button type="primary" @click="handleSearch">搜索</n-button>
+
+        <!-- 使用公共导出组件 -->
+        <MemoryExport :memories="exportMemories" filename-prefix="记忆管理" />
       </div>
     </div>
 
@@ -55,7 +58,7 @@
 import { ref, h, onMounted } from 'vue'
 import { useMessage, useDialog, NTag, NButton, NSpace, NPopconfirm, NIcon } from 'naive-ui'
 import { SearchOutline } from '@vicons/ionicons5'
-import { getMemoryList, deleteMemory, clearMemories } from '@/api/memory'
+import { getMemoryList, deleteMemory } from '@/api/memory'
 
 const props = defineProps({
   userId: { type: String, required: true },
@@ -70,6 +73,7 @@ const loading = ref(false)
 const memoryList = ref([])
 const searchKeyword = ref('')
 const typeFilter = ref(null)
+const exportMemories = ref([]) // 用于导出的记忆数据
 
 const pagination = ref({
   page: 1,
@@ -220,24 +224,39 @@ const fetchMemories = async () => {
 
     const res = await getMemoryList(params)
 
-    const total = Number(res?.data.total) || 0
+    const result = res.data
+    memoryList.value = result.list
+    pagination.value.itemCount = result.total
 
-    memoryList.value = res.data.list
-    pagination.value.itemCount = total
+    // 如果是第一页，加载所有记忆用于导出
+    if (pagination.value.page === 1) {
+      await fetchAllMemories()
+    }
   } catch (error) {
     message.error(error.message || '获取记忆列表失败')
   } finally {
     loading.value = false
   }
 }
-const handleDelete = async (id) => {
+
+// 获取所有记忆（用于导出）
+const fetchAllMemories = async () => {
   try {
-    await deleteMemory(id)
-    message.success('删除成功')
-    fetchMemories()
-    emit('refresh')
+    const params = {
+      userId: props.userId,
+      limit: 1000,
+      offset: 0,
+    }
+
+    if (typeFilter.value) {
+      params.type = typeFilter.value
+    }
+
+    const res = await getMemoryList(params)
+    const data = res.data
+    exportMemories.value = Array.isArray(data.list) ? data.list : []
   } catch (error) {
-    message.error(error.message || '删除失败')
+    console.error('获取所有记忆失败:', error)
   }
 }
 
@@ -260,6 +279,17 @@ const handleFilterChange = () => {
 const handleSearch = () => {
   pagination.value.page = 1
   fetchMemories()
+}
+
+const handleDelete = async (id) => {
+  try {
+    await deleteMemory(id)
+    message.success('删除成功')
+    fetchMemories()
+    emit('refresh')
+  } catch (error) {
+    message.error(error.message || '删除失败')
+  }
 }
 
 const refresh = () => {

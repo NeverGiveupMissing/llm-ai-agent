@@ -24,6 +24,9 @@
           </template>
         </n-input>
         <ImportanceFilter v-model="minImportance" />
+
+        <!-- 使用公共导出组件 -->
+        <MemoryExport :memories="filteredMemories" filename-prefix="聊天记忆" />
       </div>
 
       <MemoryItem
@@ -68,21 +71,7 @@ const minImportance = ref(4)
 const filteredMemories = computed(() => {
   let result = props.memories
 
-  // 调试日志
-  if (result.length > 0) {
-    console.log('🔍 记忆过滤调试:', {
-      totalMemories: result.length,
-      minImportance: minImportance.value,
-      sampleMemory: {
-        content: result[0]?.content,
-        importance: result[0]?.importance,
-        importanceType: typeof result[0]?.importance,
-        importanceNumber: Number(result[0]?.importance),
-      },
-    })
-  }
-
-  // ✅ 重要性过滤（确保类型转换正确）
+  // 重要性过滤
   result = result.filter((m) => {
     const importance = Number(m.importance) || 5
     return importance >= minImportance.value
@@ -98,7 +87,6 @@ const filteredMemories = computed(() => {
     )
   }
 
-  console.log('✅ 过滤后记忆数量:', result.length)
   return result
 })
 
@@ -156,7 +144,28 @@ const handleDelete = (memoryId) => {
   display: flex;
   gap: 12px;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #f0f0f0;
+}
+
+/* 搜索框样式优化 */
+:deep(.filter-bar .n-input) {
+  flex: 1;
+  min-width: 0;
+}
+
+:deep(.filter-bar .n-input .n-input__input-el) {
+  font-size: 13px;
+}
+
+/* 筛选器间距调整 */
+:deep(.filter-bar .importance-filter) {
+  padding: 0;
+  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .action-btn {
