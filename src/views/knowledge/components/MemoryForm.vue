@@ -186,11 +186,11 @@ const handleSubmit = async () => {
           createdAt: res.data.similarMemory?.created_at,
           message: '已存在相似记忆，建议先查看已有记忆，避免重复创建。',
         }
-        message.warning(`发现相似记忆（相似度: ${similarityPercent}%）`)
+        message.warning(res.message || `发现相似记忆（相似度: ${similarityPercent}%）`)
         return
       }
 
-      message.success(isEdit.value ? '更新成功' : '创建成功')
+      message.success(res.message || (isEdit.value ? '更新成功' : '创建成功'))
       showModal.value = false
       emit('success')
       resetForm()

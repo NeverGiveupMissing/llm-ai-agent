@@ -17,38 +17,37 @@ const ResponseUtil = {
    * 通用发送方法
    * @param {string} type - 对应 CODES 中的键名
    * @param {any} data - 数据
-   * @param {string} msg - 自定义消息
+   * @param {string} message - 自定义消息
    */
-  send(type, data = null, msg) {
+  send(type, data = null, message) {
     const code = CODES[type]
-    // 如果没有传 msg，则使用 type 作为默认值（例如 'success', 'error'）
+    // 如果没有传 message，则使用 type 作为默认值（例如 'success', 'error'）
     return {
       code,
-      msg: msg || type,
+      message: message || type,
       data,
     }
   },
 
   // 动态生成各个方法，保持调用方式不变
-  success(data, msg) {
-    return this.send('success', data, msg)
+  success(data, message) {
+    return this.send('success', data, message)
   },
-  error(data, msg) {
-    return this.send('error', data, msg)
+  error(data, message) {
+    return this.send('error', data, message)
   },
-  unauthorized(msg) {
-    return this.send('unauthorized', null, msg)
+  unauthorized(message) {
+    return this.send('unauthorized', null, message)
   },
-  forbidden(msg) {
-    return this.send('forbidden', null, msg)
+  forbidden(message) {
+    return this.send('forbidden', null, message)
   },
-  notFound(msg) {
-    return this.send('notFound', null, msg)
+  notFound(message) {
+    return this.send('notFound', null, message)
   },
-  serverError(msg) {
-    return this.send('serverError', null, msg)
+  serverError(message) {
+    return this.send('serverError', null, message)
   },
 }
 
 module.exports = ResponseUtil
-

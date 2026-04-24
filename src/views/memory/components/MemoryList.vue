@@ -264,14 +264,17 @@ const handleSearch = () => {
 }
 
 const handleDelete = async (id) => {
-  try {
-    await deleteMemory(id)
-    message.success('删除成功')
-    fetchMemories()
-    emit('refresh')
-  } catch (error) {
-    message.error(error.message || '删除失败')
-  }
+  dialog.warning({
+    title: '确认删除',
+    content: '确定要删除这条记忆吗？',
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      await deleteMemory(id) // 自动显示成功/失败消息
+      fetchMemories()
+      emit('refresh')
+    },
+  })
 }
 
 const refresh = () => {

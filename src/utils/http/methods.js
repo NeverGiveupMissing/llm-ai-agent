@@ -4,7 +4,7 @@ import { request } from './core'
  * GET 请求
  * @param {string} url
  * @param {Object} params - URL 查询参数
- * @param {Object} options - 额外 fetch 配置
+ * @param {Object} options - 额外 fetch 配置（包括 skipLoading）
  */
 export const get = (url, params = {}, options = {}) => {
   const queryString = new URLSearchParams(params).toString()
@@ -16,7 +16,7 @@ export const get = (url, params = {}, options = {}) => {
  * POST 请求（JSON 格式）
  * @param {string} url
  * @param {Object} data - 请求体数据
- * @param {Object} options - 额外 fetch 配置
+ * @param {Object} options - 额外 fetch 配置（包括 skipLoading）
  */
 export const post = (url, data = {}, options = {}) => {
   return request(url, {

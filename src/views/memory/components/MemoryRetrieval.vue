@@ -107,7 +107,7 @@ const handleRetrieve = async () => {
     if (res) {
       retrievedMemories.value = res.data || []
       if (retrievedMemories.value.length === 0) {
-        message.info('未找到相关记忆')
+        message.info(res.message || '未找到相关记忆')
       }
     }
   } catch (error) {

@@ -68,6 +68,7 @@ const loading = ref(false)
 const memoryList = ref([])
 const typeFilter = ref(null)
 const searchKeyword = ref('')
+const exportMemories = ref([]) // 用于导出的记忆数据
 const minImportance = ref(4)
 
 const pagination = ref({
@@ -230,8 +231,7 @@ const fetchAllMemories = async () => {
     }
 
     const res = await getMemoryList(params)
-    const data = res.data
-    exportMemories.value = Array.isArray(data.list) ? data.list : []
+    exportMemories.value = res.data.list || []
   } catch (error) {
     console.error('获取所有记忆失败:', error)
   }
@@ -268,7 +268,7 @@ const handleDelete = async (id) => {
       try {
         const res = await deleteMemory(id)
         if (res) {
-          message.success('删除成功')
+          message.success(res.message || '删除成功')
           fetchMemories()
           emit('refresh')
         }

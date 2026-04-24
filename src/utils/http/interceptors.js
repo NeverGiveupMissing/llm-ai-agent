@@ -1,6 +1,7 @@
-/**
- * 请求/响应拦截器
- */
+import { showLoading, hideLoading } from './loading'
+import { createDiscreteApi } from 'naive-ui'
+
+const { message } = createDiscreteApi(['message'])
 
 /**
  * 请求拦截器
@@ -18,6 +19,11 @@ export const requestInterceptor = (config) => {
     config.params._t = Date.now()
   }
 
+  // ✅ 默认显示 Loading，除非明确设置 skipLoading: true
+  if (!config.skipLoading) {
+    showLoading()
+  }
+
   return config
 }
 
@@ -25,6 +31,11 @@ export const requestInterceptor = (config) => {
  * 响应拦截器
  */
 export const responseInterceptor = async (response) => {
+  // ✅ 隐藏 Loading（如果请求时显示了）
+  if (!response.config?.skipLoading) {
+    hideLoading()
+  }
+
   // 401 未授权
   if (response.status === 401) {
     localStorage.removeItem('access_token')
@@ -32,6 +43,7 @@ export const responseInterceptor = async (response) => {
     if (!window.location.pathname.includes('/login')) {
       window.location.href = '/login'
     }
+    message.error('登录已过期，请重新登录')
     throw new Error('登录已过期，请重新登录')
   }
 
@@ -41,10 +53,16 @@ export const responseInterceptor = async (response) => {
     try {
       // 尝试读取错误信息（此时 body 还没被读，可以读一次）
       const errorData = await response.json()
-      errorMessage = errorData.msg || errorData.message || errorMessage
+      errorMessage = errorData.message || errorMessage
     } catch (e) {
       // 忽略读取错误
     }
+
+    // ✅ 自动显示错误消息（除非设置了 skipErrorMsg）
+    if (!response.config?.skipErrorMsg) {
+      message.error(errorMessage)
+    }
+
     throw new Error(errorMessage)
   }
 
@@ -58,9 +76,18 @@ export const responseInterceptor = async (response) => {
     try {
       const data = await response.json()
 
-      // 统一处理后端返回格式 { code, msg, data }
+      // 统一处理后端返回格式 { code, message, data }
       if (data.code !== 200) {
-        throw new Error(data.msg || '请求失败')
+        // ✅ 自动显示错误消息
+        if (!response.config?.skipErrorMsg) {
+          message.error(data.message || '请求失败')
+        }
+        throw new Error(data.message || '请求失败')
+      }
+
+      // ✅ 成功：自动显示后端返回的成功消息（如果有）
+      if (data.message && !response.config?.skipSuccessMsg) {
+        message.success(data.message)
       }
 
       // ✅ 成功：直接返回 data 字段，业务层无需判断 code

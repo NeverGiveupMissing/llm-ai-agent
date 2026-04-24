@@ -46,10 +46,38 @@ export const request = async (url, options = {}) => {
       ...finalOptions,
       signal: controller.signal,
     })
+
+    // ✅ 将配置传递给响应拦截器
+    response.config = {
+      skipLoading: options.skipLoading,
+      skipErrorMsg: options.skipErrorMsg,
+      skipSuccessMsg: options.skipSuccessMsg,
+    }
+
     clearTimeout(timeoutId)
     return await responseInterceptor(response)
   } catch (error) {
     clearTimeout(timeoutId)
+
+    // ✅ 确保出错时也隐藏 Loading
+    if (!options.skipLoading) {
+      const { hideLoading } = await import('./loading')
+      hideLoading()
+    }
+
+    // ✅ 自动显示网络错误消息（除非设置了 skipErrorMsg）
+    if (!options.skipErrorMsg) {
+      const { createDiscreteApi } = await import('naive-ui')
+      const { message } = createDiscreteApi(['message'])
+
+      if (error.name === 'AbortError') {
+        message.error(`请求超时 (${timeout}ms)`)
+      } else if (error.message === 'Failed to fetch') {
+        message.error('网络连接失败，请检查网络或后端服务是否启动')
+      } else {
+        message.error(error.message || '请求失败')
+      }
+    }
 
     // 超时错误
     if (error.name === 'AbortError') {
