@@ -42,3 +42,11 @@ export const getSessionMessages = (sessionId, limit = 100, offset = 0) => {
 export const getLatestMessages = (sessionId, limit = 10) => {
   return get(`${API_PREFIX}/chat/messages/${sessionId}/latest`, { limit })
 }
+
+/**
+ * 删除消息
+ * @param {string} messageId - 消息ID
+ */
+export const deleteMessage = (messageId) => {
+  return del(`${API_PREFIX}/chat/messages/${messageId}`)
+}

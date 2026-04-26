@@ -247,6 +247,48 @@ ${memoryContext}
       console.error('❌ 生成会话标题失败:', error.message)
     }
   }
+
+  /**
+   * 删除单条消息
+   * @param {import('koa').Context} ctx - Koa 上下文
+   */
+  async deleteMessage(ctx) {
+    const { messageId } = ctx.params
+
+    if (!messageId) {
+      ctx.status = 400
+      ctx.body = ResponseUtil.error('参数错误：messageId 不能为空')
+      return
+    }
+
+    try {
+      console.log('🗑️ 删除消息:', messageId)
+      
+      // 调用 Service 层删除消息
+      const deletedMessage = await ChatMessageService.deleteMessage(messageId)
+      
+      if (!deletedMessage) {
+        ctx.status = 404
+        ctx.body = ResponseUtil.error('消息不存在')
+        return
+      }
+
+      console.log('✅ 消息删除成功')
+      
+      ctx.status = 200
+      ctx.body = ResponseUtil.success({ messageId }, '删除成功')
+    } catch (error) {
+      console.error('❌ 删除消息失败:', error.message)
+      
+      if (error.message === '消息不存在') {
+        ctx.status = 404
+        ctx.body = ResponseUtil.error(error.message)
+      } else {
+        ctx.status = 500
+        ctx.body = ResponseUtil.serverError(error.message)
+      }
+    }
+  }
 }
 
 module.exports = new ChatController()

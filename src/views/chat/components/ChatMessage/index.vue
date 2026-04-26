@@ -1,5 +1,13 @@
 <template>
   <div class="chat-message" :class="`role-${message.role}`">
+    <!-- 删除按钮 -->
+    <button class="message-delete-btn" @click="handleDelete" title="删除消息">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+
     <!-- 选择复选框 -->
     <MessageCheckbox
       :is-share-mode="isShareMode"
@@ -39,11 +47,12 @@
 
 <script setup name="ChatMessage">
 import { computed, ref, watch } from 'vue'
-import { useMessage } from 'naive-ui'
+import { useMessage, useDialog } from 'naive-ui'
 import UserMessage from './UserMessage.vue'
 import AIMessage from './AIMessage.vue'
 import MessageCheckbox from './MessageCheckbox.vue'
 import MessageActionBar from './MessageActionBar.vue'
+import { deleteMessage } from '@/api/chat'
 
 const props = defineProps({
   message: { type: Object, required: true },
@@ -52,9 +61,10 @@ const props = defineProps({
   shareMode: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['regenerate', 'edit', 'select', 'share', 'cancelShare'])
+const emit = defineEmits(['regenerate', 'edit', 'select', 'share', 'cancelShare', 'delete'])
 
 const msgApi = useMessage()
+const dialogApi = useDialog()
 const isSelected = ref(false)
 const isShareMode = ref(false)
 
@@ -173,23 +183,64 @@ const handleRegenerate = () => {
 const handleFeedback = (type) => {
   msgApi.success(type === 'good' ? '感谢您的反馈!' : '我们会改进')
 }
+
+// 删除消息
+const handleDelete = () => {
+  dialogApi.warning({
+    title: '确认删除',
+    content: '删除后将无法恢复此消息，确定要删除吗？',
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      try {
+        await deleteMessage(props.message.id)
+        msgApi.success('删除成功')
+        emit('delete', props.message.id)
+      } catch (error) {
+        msgApi.error('删除失败')
+      }
+    },
+  })
+}
 </script>
 
 <style scoped>
 .chat-message {
-  display: flex;
-  gap: 16px;
-  padding: 24px 0;
-  border-bottom: 1px solid transparent;
-  transition: all 0.2s;
   position: relative;
+  padding: 16px 0;
 }
 
 .chat-message:hover {
-  background-color: #f9f9f9;
+  background: #f9f9f9;
 }
 
-.chat-message.selected {
-  background-color: #f0f7ff;
+/* 删除按钮 */
+.message-delete-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  color: #999;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s;
+  z-index: 10;
 }
+
+.chat-message:hover .message-delete-btn {
+  opacity: 1;
+}
+
+.message-delete-btn:hover {
+  background: #ff4d4f;
+  color: white;
+}
+
 </style>

@@ -41,6 +41,7 @@
         :messages="messages"
         @regenerate="handleRegenerate"
         @edit="handleEditMessage"
+        @delete="handleDeleteMessage"
       />
       <ChatInput
         :loading="loading"
@@ -72,7 +73,7 @@ import { createChatStream } from './components/util.js'
 import { generateId } from '@/utils/http'
 import { CHAT_CONFIG } from '@/utils/constants'
 import { createSession, updateSession, getSessionList } from '@/api/session'
-import { getSessionMessages } from '@/api/chat'
+import { getSessionMessages, deleteMessage } from '@/api/chat'
 
 const msgApi = useMessage()
 const dialogApi = useDialog()
@@ -282,6 +283,23 @@ const handleSend = async (content) => {
 const handleEditMessage = (message) => {
   editingMessage.value = message
   msgApi.info('编辑模式：修改消息后将重新生成回复')
+}
+
+// 删除消息
+const handleDeleteMessage = async (messageId) => {
+  try {
+    // 先调用后端接口删除数据库记录
+    await deleteMessage(messageId)
+    
+    // 删除成功后，从本地消息列表中移除
+    const index = messages.value.findIndex((m) => m.id === messageId)
+    if (index !== -1) {
+      messages.value.splice(index, 1)
+    }
+  } catch (error) {
+    console.error('删除消息失败:', error)
+    // 错误提示已在 deleteMessage 的调用处（ChatMessage 组件）显示
+  }
 }
 
 const handleRegenerate = async (messageId) => {

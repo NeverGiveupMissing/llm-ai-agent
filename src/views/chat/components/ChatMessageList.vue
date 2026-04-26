@@ -29,6 +29,7 @@
             :is-last="msg.id === lastMessageId"
             @regenerate="handleRegenerate"
             @edit="handleEdit"
+            @delete="handleDeleteMessage"
           />
         </div>
       </div>
@@ -78,6 +79,17 @@
             :title="`消息 ${index + 1}`"
           >
             <span class="nav-text">{{ getMessagePreview(msg) }}</span>
+            <!-- 删除按钮 -->
+            <button
+              class="nav-delete-btn"
+              @click.stop="handleNavDelete(msg.id, index)"
+              title="删除此消息"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
         </div>
       </transition>
@@ -87,11 +99,14 @@
 
 <script setup name="ChatMessageList">
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { useDialog } from 'naive-ui'
 import ChatMessage from './ChatMessage/index.vue'
 import { scrollToBottom } from '@/utils/http'
 
 const props = defineProps({ messages: { type: Array, default: () => [] } })
-const emit = defineEmits(['regenerate', 'edit'])
+const emit = defineEmits(['regenerate', 'edit', 'delete'])
+
+const dialogApi = useDialog()
 
 const messageListRef = ref(null)
 const lastMessageId = ref('')
@@ -129,6 +144,24 @@ const getMessagePreview = (msg) => {
 
 const handleRegenerate = (messageId) => emit('regenerate', messageId)
 const handleEdit = (message) => emit('edit', message)
+
+// 删除消息
+const handleDeleteMessage = (messageId) => {
+  emit('delete', messageId)
+}
+
+// 导航栏删除消息（带二次确认）
+const handleNavDelete = (messageId, index) => {
+  dialogApi.warning({
+    title: '确认删除',
+    content: '删除后将无法恢复此消息，确定要删除吗？',
+    positiveText: '确定',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      emit('delete', messageId)
+    },
+  })
+}
 
 // 监听消息滚动，更新当前激活的消息索引
 const setupScrollObserver = () => {
@@ -341,8 +374,9 @@ onUnmounted(() => {
   height: 32px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  padding: 0 10px;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0 8px;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -355,6 +389,42 @@ onUnmounted(() => {
   background: #f3f4f6;
   transform: translateX(-4px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.nav-item:hover .nav-delete-btn {
+  opacity: 1;
+}
+
+/* 导航删除按钮 */
+.nav-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: #9ca3af;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.nav-delete-btn:hover {
+  background: #ff4d4f;
+  color: white;
+}
+
+.nav-item.active .nav-delete-btn {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.nav-item.active .nav-delete-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
 }
 
 .nav-item.active {

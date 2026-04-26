@@ -49,6 +49,20 @@ class ChatMessageService {
   }
 
   /**
+   * 删除单条消息
+   * @param {string} messageId - 消息ID
+   */
+  async deleteMessage(messageId) {
+    const message = await ChatMessageModel.deleteById(messageId)
+    if (!message) {
+      throw new Error('消息不存在')
+    }
+    // 更新会话的消息计数
+    await this.updateMessageCount(message.session_id)
+    return message
+  }
+
+  /**
    * 批量保存消息
    */
   async saveBatchMessages(sessionId, messages) {

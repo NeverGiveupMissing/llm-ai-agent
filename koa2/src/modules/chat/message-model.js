@@ -68,6 +68,19 @@ class ChatMessageModel {
   }
 
   /**
+   * 删除单条消息
+   * @param {string} messageId - 消息ID
+   */
+  async deleteById(messageId) {
+    const query = `
+      DELETE FROM chat_messages WHERE id = $1
+      RETURNING *
+    `
+    const result = await pool.query(query, [messageId])
+    return result.rows[0]
+  }
+
+  /**
    * 更新消息内容
    * @param {string} messageId - 消息ID
    * @param {string} content - 新内容

@@ -85,4 +85,17 @@ router.get('/messages/:sessionId/latest', async (ctx) => {
   }
 })
 
+/**
+ * 删除单条消息
+ */
+router.delete('/messages/:messageId', async (ctx) => {
+  try {
+    await chatController.deleteMessage(ctx)
+  } catch (error) {
+    console.error('❌ 删除消息失败:', error.message)
+    ctx.status = 500
+    ctx.body = ResponseUtil.serverError(error.message)
+  }
+})
+
 module.exports = router
