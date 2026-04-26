@@ -78,60 +78,6 @@ router.put('/:sessionId', sessionController.updateSession)
 
 /**
  * @swagger
- * /sessions/{sessionId}/pin:
- *   post:
- *     summary: 置顶/取消置顶会话
- *     tags: [Sessions]
- *     parameters:
- *       - in: path
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: 操作成功
- */
-router.post('/:sessionId/pin', sessionController.pinSession)
-
-/**
- * @swagger
- * /sessions/{sessionId}/share:
- *   get:
- *     summary: 获取会话分享信息
- *     tags: [Sessions]
- *     parameters:
- *       - in: path
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: 获取成功
- */
-router.get('/:sessionId/share', sessionController.getShareInfo)
-
-/**
- * @swagger
- * /sessions/{sessionId}/detail:
- *   get:
- *     summary: 获取会话详情（包含消息列表）
- *     tags: [Sessions]
- *     parameters:
- *       - in: path
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: 获取成功
- */
-router.get('/:sessionId/detail', sessionController.getSessionDetail)
-
-/**
- * @swagger
  * /sessions/{sessionId}:
  *   delete:
  *     summary: 删除会话

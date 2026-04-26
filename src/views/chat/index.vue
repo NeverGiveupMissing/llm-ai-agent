@@ -153,6 +153,11 @@ const handleCreateSession = async () => {
     localStorage.setItem('current_session_id', session.id)
     messages.value = []
     msgApi.success('已创建新会话')
+
+    // ✅ 刷新会话列表，让新会话立即显示并高亮选中
+    if (sessionListRef.value && sessionListRef.value.fetchSessions) {
+      await sessionListRef.value.fetchSessions()
+    }
   } catch (error) {
     msgApi.error('创建会话失败')
   }
@@ -290,7 +295,7 @@ const handleDeleteMessage = async (messageId) => {
   try {
     // 先调用后端接口删除数据库记录
     await deleteMessage(messageId)
-    
+
     // 删除成功后，从本地消息列表中移除
     const index = messages.value.findIndex((m) => m.id === messageId)
     if (index !== -1) {
@@ -399,7 +404,7 @@ onMounted(() => initSession())
 /* 左侧会话侧边栏 */
 .session-sidebar {
   position: relative;
-  width: 183px;
+  width: 233px;
   flex-shrink: 0;
   border-right: 1px solid #e5e5e5;
   transition: all 0.3s ease;
@@ -421,7 +426,7 @@ onMounted(() => initSession())
 }
 
 .sidebar-content {
-  width: 183px;
+  width: 233px;
   height: 100%;
   transition: all 0.3s ease;
 }

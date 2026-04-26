@@ -17,60 +17,18 @@ class SessionModel {
   }
 
   /**
-   * 获取用户的会话列表（按置顶和时间倒序）
+   * 获取用户的会话列表（按时间倒序）
    */
   async list(userId, limit = 20) {
     const query = `
-      SELECT id, user_id, title, message_count, is_pinned, share_token, created_at, updated_at
+      SELECT id, user_id, title, message_count, created_at, updated_at
       FROM chat_sessions
       WHERE user_id = $1
-      ORDER BY 
-        COALESCE(is_pinned, false) DESC,
-        updated_at DESC
+      ORDER BY updated_at DESC
       LIMIT $2
     `
     const result = await pool.query(query, [userId, limit])
     return result.rows
-  }
-
-  /**
-   * 置顶/取消置顶会话
-   */
-  async pin(sessionId) {
-    const query = `
-      UPDATE chat_sessions
-      SET is_pinned = NOT COALESCE(is_pinned, false),
-          updated_at = NOW()
-      WHERE id = $1
-      RETURNING *
-    `
-    const result = await pool.query(query, [sessionId])
-    return result.rows[0] || null
-  }
-
-  /**
-   * 获取会话分享信息（生成或使用现有的 share_token）
-   */
-  async getShareInfo(sessionId) {
-    const session = await this.getById(sessionId)
-    if (!session) {
-      throw new Error('会话不存在')
-    }
-
-    // 如果没有分享令牌，生成一个
-    if (!session.share_token) {
-      const shareToken = require('crypto').randomBytes(16).toString('hex')
-      const updateQuery = `
-        UPDATE chat_sessions
-        SET share_token = $1, updated_at = NOW()
-        WHERE id = $2
-        RETURNING *
-      `
-      const result = await pool.query(updateQuery, [shareToken, sessionId])
-      return result.rows[0]
-    }
-
-    return session
   }
 
   /**
@@ -101,10 +59,6 @@ class SessionModel {
     if (updates.message_count !== undefined && updates.message_count !== null) {
       fields.push(`message_count = $${idx++}`)
       values.push(Number(updates.message_count))
-    }
-    if (updates.group_id !== undefined) {
-      fields.push(`group_id = $${idx++}`)
-      values.push(updates.group_id)
     }
 
     // 如果没有要更新的字段，直接返回当前会话

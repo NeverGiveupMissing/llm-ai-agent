@@ -7,57 +7,12 @@ class SessionService {
   /**
    * 创建新会话
    */
-  async createSession(userId, title) {
-    const session = await sessionModel.create(userId, title)
+  async createSession(userId) {
+    const session = await sessionModel.create(userId)
     return {
       success: true,
       data: session,
       message: '会话创建成功',
-    }
-  }
-
-  /**
-   * 置顶会话
-   */
-  async pinSession(sessionId) {
-    const session = await sessionModel.pin(sessionId)
-    return {
-      success: true,
-      data: session,
-      message: '会话已置顶',
-    }
-  }
-
-  /**
-   * 获取会话分享信息
-   */
-  async getShareInfo(sessionId) {
-    const shareInfo = await sessionModel.getShareInfo(sessionId)
-    return {
-      success: true,
-      data: shareInfo,
-    }
-  }
-
-  /**
-   * 获取会话详情（包含消息列表）
-   */
-  async getSessionDetail(sessionId) {
-    // 获取会话基本信息
-    const session = await sessionModel.getById(sessionId)
-    if (!session) {
-      throw new Error('会话不存在')
-    }
-
-    // 获取该会话的所有消息
-    const messages = await ChatMessageService.getSessionMessages(sessionId)
-
-    return {
-      success: true,
-      data: {
-        ...session,
-        messages: messages || [],
-      },
     }
   }
 

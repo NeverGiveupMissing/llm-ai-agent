@@ -30,3 +30,24 @@ export const updateSession = (sessionId, data, options = {}) => {
 export const deleteSession = (sessionId) => {
   return del(`${API_PREFIX}/sessions/${sessionId}`)
 }
+
+/**
+ * 置顶/取消置顶会话
+ */
+export const pinSession = (sessionId) => {
+  return post(`${API_PREFIX}/sessions/${sessionId}/pin`)
+}
+
+/**
+ * 获取会话分享信息
+ */
+export const getShareInfo = (sessionId) => {
+  return get(`${API_PREFIX}/sessions/${sessionId}/share`)
+}
+
+/**
+ * 获取会话详情（包含消息列表）
+ */
+export const getSessionDetail = (sessionId) => {
+  return get(`${API_PREFIX}/sessions/${sessionId}/detail`)
+}

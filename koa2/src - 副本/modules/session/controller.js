@@ -82,69 +82,6 @@ class SessionController {
   }
 
   /**
-   * 置顶/取消置顶会话
-   */
-  async pinSession(ctx) {
-    try {
-      const { sessionId } = ctx.params
-      if (!sessionId) {
-        ctx.status = 400
-        ctx.body = ResponseUtil.error('缺少 sessionId 参数')
-        return
-      }
-
-      const result = await sessionService.pinSession(sessionId)
-      ctx.status = 200
-      ctx.body = ResponseUtil.success(result.data, result.message)
-    } catch (err) {
-      ctx.status = 500
-      ctx.body = ResponseUtil.serverError(err.message || '置顶会话失败')
-    }
-  }
-
-  /**
-   * 获取会话分享信息
-   */
-  async getShareInfo(ctx) {
-    try {
-      const { sessionId } = ctx.params
-      if (!sessionId) {
-        ctx.status = 400
-        ctx.body = ResponseUtil.error('缺少 sessionId 参数')
-        return
-      }
-
-      const result = await sessionService.getShareInfo(sessionId)
-      ctx.status = 200
-      ctx.body = ResponseUtil.success(result.data)
-    } catch (err) {
-      ctx.status = 500
-      ctx.body = ResponseUtil.serverError(err.message || '获取分享信息失败')
-    }
-  }
-
-  /**
-   * 获取会话详情（包含消息列表）
-   */
-  async getSessionDetail(ctx) {
-    try {
-      const { sessionId } = ctx.params
-      if (!sessionId) {
-        ctx.status = 400
-        ctx.body = ResponseUtil.error('缺少 sessionId 参数')
-        return
-      }
-
-      const result = await sessionService.getSessionDetail(sessionId)
-      ctx.status = 200
-      ctx.body = ResponseUtil.success(result.data)
-    } catch (err) {
-      ctx.status = 500
-      ctx.body = ResponseUtil.serverError(err.message || '获取会话详情失败')
-    }
-  }
-
-  /**
    * 删除会话
    */
   async deleteSession(ctx) {

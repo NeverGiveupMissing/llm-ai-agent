@@ -4,7 +4,6 @@ const logsRoutes = require('../modules/logs/routes')
 const memoryRoutes = require('../modules/memory/routes')
 const chatMemoryRoutes = require('../modules/chat-memory/routes')
 const sessionRoutes = require('../modules/session/routes')
-const sessionGroupRoutes = require('../modules/session-group/routes')
 const config = require('../config')
 
 const router = new Router({ prefix: config.api.prefix })
@@ -14,7 +13,6 @@ router.use(logsRoutes.routes(), logsRoutes.allowedMethods())
 router.use(memoryRoutes.routes(), memoryRoutes.allowedMethods())
 router.use(chatMemoryRoutes.routes(), chatMemoryRoutes.allowedMethods())
 router.use(sessionRoutes.routes(), sessionRoutes.allowedMethods())
-router.use(sessionGroupRoutes.routes(), sessionGroupRoutes.allowedMethods())
 
 /**
  * @swagger
