@@ -12,6 +12,16 @@ const CODES = {
   serverError: 500,
 }
 
+// 默认消息映射
+const DEFAULT_MESSAGES = {
+  success: '操作成功',
+  error: '请求错误',
+  unauthorized: '未授权',
+  forbidden: '禁止访问',
+  notFound: '资源不存在',
+  serverError: '服务器错误',
+}
+
 const ResponseUtil = {
   /**
    * 通用发送方法
@@ -21,10 +31,10 @@ const ResponseUtil = {
    */
   send(type, data = null, message) {
     const code = CODES[type]
-    // 如果没有传 message，则使用 type 作为默认值（例如 'success', 'error'）
+    // 如果没有传 message，则使用默认中文消息
     return {
       code,
-      message: message || type,
+      message: message || DEFAULT_MESSAGES[type] || type,
       data,
     }
   },

@@ -50,9 +50,15 @@ class SessionController {
    * 更新会话
    */
   async updateSession(ctx) {
+    console.log('🔵 [Controller] 收到更新会话请求')
+    console.log('🔵 [Controller] sessionId:', ctx.params.sessionId)
+    console.log('🔵 [Controller] request.body:', ctx.request.body)
+
     try {
       const { sessionId } = ctx.params
       const updates = ctx.request.body
+
+      console.log('🔵 [Controller] 解析后的参数:', { sessionId, updates })
 
       if (!sessionId) {
         ctx.status = 400
@@ -60,10 +66,16 @@ class SessionController {
         return
       }
 
+      console.log('🔵 [Controller] 调用 service.updateSession...')
       const result = await sessionService.updateSession(sessionId, updates)
+      console.log('🔵 [Controller] service 返回:', result)
+
       ctx.status = 200
       ctx.body = ResponseUtil.success(result.data, result.message)
+      console.log('🔵 [Controller] 响应发送成功')
     } catch (err) {
+      console.error('❌ [Controller] 更新会话失败:', err)
+      console.error('❌ [Controller] 错误堆栈:', err.stack)
       ctx.status = 500
       ctx.body = ResponseUtil.serverError(err.message || '更新会话失败')
     }

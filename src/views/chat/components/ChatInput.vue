@@ -24,17 +24,6 @@
                   <n-icon><SparklesOutline /></n-icon>
                 </template>
               </n-button>
-              <n-button
-                text
-                size="tiny"
-                :type="showSessionList ? 'primary' : 'default'"
-                @click="toggleSessionList"
-                title="会话历史"
-              >
-                <template #icon>
-                  <n-icon><ListOutline /></n-icon>
-                </template>
-              </n-button>
             </n-space>
             <n-button
               v-if="loading"
@@ -76,29 +65,23 @@ import { SendOutline, StopOutline, ListOutline, SparklesOutline } from '@vicons/
 
 const props = defineProps({
   loading: { type: Boolean, default: false },
-  showSessionList: { type: Boolean, default: false },
   showMemoryPanel: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['send', 'abort', 'update:showSessionList', 'update:showMemoryPanel'])
+const emit = defineEmits(['send', 'abort', 'update:showMemoryPanel'])
 
-const inputRef = ref(null)
-const inputValue = ref('你是谁?')
-
-const placeholder = '输入消息...'
+const inputValue = ref('')
+const placeholder = ref('请输入内容...')
 
 const handleSend = () => {
-  if (!inputValue.value.trim() || props.loading) return
-  emit('send', inputValue.value)
-  inputValue.value = ''
+  if (inputValue.value.trim()) {
+    emit('send', inputValue.value)
+    inputValue.value = ''
+  }
 }
 
 const handleAbort = () => {
   emit('abort')
-}
-
-const toggleSessionList = () => {
-  emit('update:showSessionList', !props.showSessionList)
 }
 
 const toggleMemoryPanel = () => {
@@ -107,13 +90,11 @@ const toggleMemoryPanel = () => {
 
 watch(
   () => props.loading,
-  (val) => {
-    if (!val) {
-      setTimeout(() => {
-        inputRef.value?.focus()
-      }, 100)
+  (loading) => {
+    if (!loading) {
+      inputValue.value = ''
     }
-  },
+  }
 )
 
 defineExpose({
@@ -123,9 +104,15 @@ defineExpose({
 
 <style scoped>
 .chat-input-wrapper {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   padding: 16px 20px;
   border-top: 1px solid #f0f0f0;
   background: #fafafa;
+  z-index: 100;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .input-container {
@@ -150,3 +137,4 @@ defineExpose({
   color: #999;
 }
 </style>
+

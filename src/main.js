@@ -5,6 +5,9 @@ import router from './router'
 import naive from 'naive-ui'
 import { registerGlobalComponents } from './components'
 
+// 引入全局样式
+import './styles/markdown-styles.css'
+
 // 创建 pinia 实例
 const pinia = createPinia()
 

@@ -17,10 +17,10 @@
       <!-- 主内容区 -->
       <n-layout class="main-layout">
         <!-- 头部 -->
-        <n-layout-header bordered>
+        <n-layout-header bordered style="position: fixed; z-index: 1000">
           <LayoutHeader />
         </n-layout-header>
-
+        <div style="clear: both; overflow: hidden; height: 66px" />
         <!-- 标签页（可选） -->
         <LayoutTabbar v-if="showTabbar" />
 
@@ -47,7 +47,7 @@ import LayoutHeader from './Header/index.vue'
 import LayoutTabbar from './Tabbar/index.vue'
 
 // 常量
-const SIDEBAR_WIDTH = 220
+const SIDEBAR_WIDTH = 210
 const COLLAPSED_SIDEBAR_WIDTH = 64
 const showTabbar = ref(false) // 是否显示标签页
 

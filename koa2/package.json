@@ -6,10 +6,20 @@
   "scripts": {
     "dev": "nodemon src/app.js",
     "start": "node src/app.js",
+    "prod": "NODE_ENV=production node src/app.js",
+    "pm2:start": "pm2 start ecosystem.config.js --env production",
+    "pm2:restart": "pm2 restart ecosystem.config.js --env production --update-env",
+    "pm2:reload": "pm2 reload ecosystem.config.js --env production --update-env",
+    "pm2:stop": "pm2 stop ai-api",
+    "pm2:delete": "pm2 delete ai-api",
+    "pm2:logs": "pm2 logs ai-api",
+    "pm2:monit": "pm2 monit",
+    "pm2:status": "pm2 list",
     "lint": "eslint src",
     "db:init": "node src/utils/init-memory-db.js",
     "db:init:chat": "node src/utils/init-chat-memory-db.js",
-    "db:init:all": "npm run db:init && npm run db:init:chat"
+    "db:init:all": "npm run db:init && npm run db:init:chat",
+    "db:init:unified": "node -e \"require('./src/config/init-db').initDatabase().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); })\""
   },
   "dependencies": {
     "@koa/router": "^12.0.0",

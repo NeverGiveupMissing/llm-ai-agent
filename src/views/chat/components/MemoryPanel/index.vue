@@ -124,7 +124,7 @@ const fetchUsedMemories = async () => {
  * 提取本次对话的记忆
  * ChatGPT 逻辑：提取的记忆属于用户，存入全局记忆库
  */
-const fetchExtractedMemories = async (messages) => {
+const fetchExtractedMemories = async (messages, options = {}) => {
   if (!props.sessionId || !props.userId || !messages) {
     console.warn('⚠️ 参数不完整，无法提取记忆', {
       sessionId: props.sessionId,
@@ -141,11 +141,14 @@ const fetchExtractedMemories = async (messages) => {
       messageCount: messages.length,
     })
 
-    const res = await autoExtractMemories({
-      sessionId: props.sessionId,
-      userId: props.userId,
-      messages,
-    })
+    const res = await autoExtractMemories(
+      {
+        sessionId: props.sessionId,
+        userId: props.userId,
+        messages,
+      },
+      options,
+    )
 
     console.log('📊 提取记忆响应:', res)
 

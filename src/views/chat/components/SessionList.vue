@@ -1,32 +1,35 @@
 <template>
-  <n-drawer
-    v-model:show="visible"
-    :width="320"
-    placement="right"
-    :mask="false"
-    :z-index="100"
-    style="border-left: 1px solid #e5e5e5; box-shadow: -4px 0 20px rgba(0, 0, 0, 0.05)"
-  >
-    <n-drawer-content :body-style="{ padding: '0', display: 'flex', flexDirection: 'column' }">
-      <!-- 标题区 -->
-      <template #header>
-        <div class="drawer-header">
-          <span class="title">会话历史</span>
-          <n-button text size="tiny" type="primary" @click="handleCreateNew" class="new-btn">
-            <template #icon>
-              <n-icon><AddOutline /></n-icon>
-            </template>
-            新建
-          </n-button>
-        </div>
+  <div class="session-panel" :class="{ collapsed: !props.show }">
+    <!-- 标题区 -->
+    <div class="panel-header">
+      <template v-if="props.show">
+        <span class="title">会话历史</span>
+        <n-button text size="tiny" type="primary" @click="handleCreateNew" class="new-btn">
+          <template #icon>
+            <n-icon><AddOutline /></n-icon>
+          </template>
+          新建
+        </n-button>
       </template>
+      <n-button v-else text size="tiny" type="primary" @click="handleCreateNew" class="new-btn-collapsed" title="新建会话">
+        <template #icon>
+          <n-icon><AddOutline /></n-icon>
+        </template>
+      </n-button>
+    </div>
 
-      <!-- 列表区 -->
-      <div class="session-list">
-        <n-spin :show="loading">
+    <!-- 列表区 -->
+    <div class="session-list" v-if="props.show">
+      <n-tooltip
+        v-for="session in sessions"
+        :key="session.id"
+        trigger="hover"
+        placement="right"
+        :show-arrow="true"
+        :style="{ maxWidth: '800px' }"
+      >
+        <template #trigger>
           <div
-            v-for="session in sessions"
-            :key="session.id"
             class="session-item"
             :class="{ active: session.id === currentSessionId }"
             @click="handleSelect(session)"
@@ -35,32 +38,24 @@
               <n-icon class="icon" size="16">
                 <ChatbubbleEllipsesOutline />
               </n-icon>
-              <span class="text" :title="session.title">{{ session.title }}</span>
+              <span class="text">{{ session.title }}</span>
             </div>
             <button class="delete-btn" @click.stop="handleDelete(session.id)" title="删除">
               <n-icon size="14"><CloseOutline /></n-icon>
             </button>
           </div>
+        </template>
+        {{ session.title }}
+      </n-tooltip>
 
-          <n-empty v-if="sessions.length === 0" description="暂无会话" />
-        </n-spin>
-      </div>
-    </n-drawer-content>
-  </n-drawer>
+      <n-empty v-if="sessions.length === 0" description="暂无会话" />
+    </div>
+  </div>
 </template>
 
 <script setup name="SessionList">
-import { ref, watch } from 'vue'
-import {
-  useMessage,
-  useDialog,
-  NDrawer,
-  NDrawerContent,
-  NButton,
-  NIcon,
-  NSpin,
-  NEmpty,
-} from 'naive-ui'
+import { ref, watch, onMounted } from 'vue'
+import { useMessage, useDialog, NButton, NIcon, NEmpty } from 'naive-ui'
 import { AddOutline, CloseOutline, ChatbubbleEllipsesOutline } from '@vicons/ionicons5'
 import { getSessionList, createSession, deleteSession } from '@/api/session'
 
@@ -74,53 +69,55 @@ const emit = defineEmits(['update:show', 'select', 'create'])
 const msgApi = useMessage()
 const dialogApi = useDialog()
 
-const visible = ref(false)
-const loading = ref(false)
 const sessions = ref([])
+
+// 组件挂载时加载会话列表
+onMounted(() => {
+  fetchSessions()
+})
 
 watch(
   () => props.show,
   (val) => {
-    visible.value = val
     if (val) fetchSessions()
   },
 )
 
-watch(visible, (val) => emit('update:show', val))
-
 const fetchSessions = async () => {
-  loading.value = true
   try {
     const userId = localStorage.getItem('userId') || 'anonymous'
     const res = await getSessionList(userId)
-    sessions.value = res.data || res || []
+    console.log('获取会话列表成功:', res.data)
+    sessions.value = res.data || []
   } catch (error) {
-    msgApi.error('获取会话列表失败')
-  } finally {
-    loading.value = false
+    console.error('获取会话列表失败:', error)
+    sessions.value = []
   }
 }
 
+// 暴露方法给父组件
+defineExpose({
+  fetchSessions,
+})
+
 const handleCreateNew = () => {
   emit('create')
-  visible.value = false
 }
 
 const handleSelect = (session) => {
   emit('select', session)
-  visible.value = false
 }
 
 const handleDelete = (id) => {
   dialogApi.warning({
-    title: '删除会话',
-    content: '确定要删除此会话吗？',
+    title: '确认删除',
+    content: '删除后将无法恢复此会话，确定要删除吗？',
     positiveText: '确定',
     negativeText: '取消',
     onPositiveClick: async () => {
       try {
         await deleteSession(id)
-        msgApi.success('已删除')
+        msgApi.success('删除成功')
         fetchSessions()
       } catch (error) {
         msgApi.error('删除失败')
@@ -128,73 +125,94 @@ const handleDelete = (id) => {
     },
   })
 }
-
-defineExpose({ refresh: fetchSessions })
 </script>
 
 <style scoped>
-.drawer-header {
+.session-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: white;
+}
+
+.session-panel.collapsed {
+  width: 48px !important;
+}
+
+.panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  padding: 16px;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fafafa;
+  transition: all 0.3s ease;
+}
+
+.session-panel.collapsed .panel-header {
+  padding: 12px 8px;
+  justify-content: center;
 }
 
 .title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
-  color: #0d0d0d;
+  color: #333;
 }
 
-.new-btn :deep(.n-button__content) {
-  font-size: 12px;
-  gap: 4px;
+.new-btn {
+  font-size: 13px;
+}
+
+.new-btn-collapsed {
+  padding: 8px;
 }
 
 .session-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: 8px;
 }
 
 .session-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 12px;
+  margin-bottom: 4px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background 0.2s;
-  gap: 8px;
+  transition: all 0.2s;
 }
 
 .session-item:hover {
-  background: #f7f7f8;
+  background: #f0f0f0;
 }
 
 .session-item.active {
-  background: #f0fdf4;
-  border-right: 2px solid #10a37f;
+  background: #e6f4ea;
+  color: #10a37f;
 }
 
 .item-content {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex: 1;
   min-width: 0;
 }
 
 .icon {
+  color: inherit;
   flex-shrink: 0;
-  color: #888;
 }
 
 .text {
-  font-size: 13px;
-  color: #333;
-  white-space: nowrap;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
 }
 
 .delete-btn {
@@ -210,7 +228,6 @@ defineExpose({ refresh: fetchSessions })
   cursor: pointer;
   opacity: 0;
   transition: all 0.2s;
-  flex-shrink: 0;
 }
 
 .session-item:hover .delete-btn {
@@ -218,7 +235,34 @@ defineExpose({ refresh: fetchSessions })
 }
 
 .delete-btn:hover {
-  background: #fef2f2;
-  color: #ef4444;
+  background: #ff4d4f;
+  color: white;
+}
+
+/* 滚动条样式 */
+.session-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.session-list::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+.session-list::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
+}
+
+/* Tooltip 样式 - 确保完整显示内容 */
+:deep(.n-tooltip) {
+  max-width: 800px !important;
+  word-break: break-all !important;
+  white-space: normal !important;
+}
+
+:deep(.n-tooltip__body) {
+  word-break: break-all !important;
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
 }
 </style>

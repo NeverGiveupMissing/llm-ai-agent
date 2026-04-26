@@ -60,6 +60,37 @@ export async function streamSSE(options) {
       const { done, value } = await reader.read()
 
       if (done) {
+        // ✅ 重要:流结束时,先处理 buffer 中剩余的数据
+        if (buffer) {
+          const lines = buffer.split('\n')
+          for (const line of lines) {
+            const trimmedLine = line.trim()
+            
+            if (!trimmedLine || trimmedLine.startsWith(':')) continue
+            
+            if (trimmedLine.startsWith('data:')) {
+              const dataStr = trimmedLine.slice(5).trim()
+              
+              if (dataStr === '[DONE]') {
+                console.log('Received [DONE] signal from buffer')
+                onComplete?.()
+                return
+              }
+              
+              try {
+                const parsedData = JSON.parse(dataStr)
+                if (parsedData.content != null && parsedData.content !== '') {
+                  onMessage?.(parsedData)
+                }
+              } catch (e) {
+                if (dataStr != null && dataStr !== '') {
+                  onMessage?.({ content: dataStr })
+                }
+              }
+            }
+          }
+        }
+        
         console.log('SSE stream completed')
         onComplete?.()
         break
@@ -88,7 +119,8 @@ export async function streamSSE(options) {
           try {
             const parsedData = JSON.parse(dataStr)
 
-            if (parsedData.content && parsedData.content.trim() !== '') {
+            // 修复：只过滤 null/undefined 和空字符串，保留换行符和空格
+            if (parsedData.content != null && parsedData.content !== '') {
               if (useTypewriter) {
                 await typewriterEffect(
                   parsedData.content,
@@ -102,7 +134,8 @@ export async function streamSSE(options) {
               }
             }
           } catch (e) {
-            if (dataStr && dataStr.trim() !== '') {
+            // 修复：非 JSON 数据也要保留换行符
+            if (dataStr != null && dataStr !== '') {
               console.log('Non-JSON data received:', dataStr)
               if (useTypewriter) {
                 await typewriterEffect(

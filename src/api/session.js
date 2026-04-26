@@ -1,13 +1,13 @@
 // 说明：会话管理 API
 
-import { get, post, del, put } from '@/utils/http'
+import { get, post, put, del } from '@/utils/http'
 import { API_PREFIX } from '@/utils/constants'
 
 /**
  * 获取会话列表
  */
 export const getSessionList = (userId) => {
-  return get(`${API_PREFIX}/sessions`, { userId })
+  return get(`${API_PREFIX}/sessions`, { userId }, { skipLoading: true })
 }
 
 /**
@@ -20,8 +20,8 @@ export const createSession = (userId, title) => {
 /**
  * 更新会话
  */
-export const updateSession = (sessionId, data) => {
-  return put(`${API_PREFIX}/sessions/${sessionId}`, data)
+export const updateSession = (sessionId, data, options = {}) => {
+  return put(`${API_PREFIX}/sessions/${sessionId}`, data, options)
 }
 
 /**

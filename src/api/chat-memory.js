@@ -21,8 +21,8 @@ export const getSessionMemoryContext = (params) => {
  * @param {string} data.userId - 用户ID
  * @param {Array} data.messages - 对话消息数组
  */
-export const autoExtractMemories = (data) => {
-  return post(`${API_PREFIX}/chat-memory/extract`, data)
+export const autoExtractMemories = (data, options = {}) => {
+  return post(`${API_PREFIX}/chat-memory/extract`, data, options)
 }
 
 /**

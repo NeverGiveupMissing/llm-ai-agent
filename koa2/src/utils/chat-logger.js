@@ -7,6 +7,7 @@ const config = require('../config')
 
 const LOG_DIR = path.join(process.cwd(), config.log.dir)
 
+// 确保日志目录存在（模块加载时执行一次）
 if (!fs.existsSync(LOG_DIR)) {
   fs.mkdirSync(LOG_DIR, { recursive: true })
 }
@@ -52,6 +53,12 @@ function logChat(messages, response, duration, model, error, stream = false, tra
   }
 
   const logFile = path.join(LOG_DIR, `chat_${now.format('YYYY-MM-DD')}.jsonl`)
+  
+  // 每次写入前确保目录存在（防止目录被意外删除）
+  if (!fs.existsSync(LOG_DIR)) {
+    fs.mkdirSync(LOG_DIR, { recursive: true })
+  }
+  
   fs.appendFileSync(logFile, JSON.stringify(log) + '\n', 'utf-8')
 
   const statusIcon = error ? '❌' : '✅'

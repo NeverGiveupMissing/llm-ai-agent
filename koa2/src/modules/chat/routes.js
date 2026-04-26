@@ -1,5 +1,7 @@
-﻿const Router = require('@koa/router')
+const Router = require('@koa/router')
 const chatController = require('./controller')
+const ChatMessageService = require('./message-service')
+const ResponseUtil = require('../../utils/response')
 
 const router = new Router({ prefix: '/chat' })
 
@@ -40,5 +42,47 @@ const router = new Router({ prefix: '/chat' })
  *         description: 服务器错误
  */
 router.post('/', chatController.simpleChat.bind(chatController))
+
+/**
+ * 获取会话的消息历史
+ */
+router.get('/messages/:sessionId', async (ctx) => {
+  try {
+    const { sessionId } = ctx.params
+    const { limit = 100, offset = 0 } = ctx.query
+
+    const messages = await ChatMessageService.getSessionMessages(
+      sessionId,
+      parseInt(limit),
+      parseInt(offset)
+    )
+
+    ctx.status = 200
+    ctx.body = ResponseUtil.success(messages, '获取消息历史成功')
+  } catch (error) {
+    console.error('❌ 获取消息历史失败:', error.message)
+    ctx.status = 500
+    ctx.body = ResponseUtil.serverError(error.message)
+  }
+})
+
+/**
+ * 获取会话的最新消息
+ */
+router.get('/messages/:sessionId/latest', async (ctx) => {
+  try {
+    const { sessionId } = ctx.params
+    const { limit = 10 } = ctx.query
+
+    const messages = await ChatMessageService.getLatestMessages(sessionId, parseInt(limit))
+
+    ctx.status = 200
+    ctx.body = ResponseUtil.success(messages, '获取最新消息成功')
+  } catch (error) {
+    console.error('❌ 获取最新消息失败:', error.message)
+    ctx.status = 500
+    ctx.body = ResponseUtil.serverError(error.message)
+  }
+})
 
 module.exports = router

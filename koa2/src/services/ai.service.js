@@ -17,9 +17,18 @@ async function callAiNonStream(messages) {
     'Content-Type': 'application/json',
   }
 
+  // 添加系统提示词 - 极简版
+  const systemMessage = {
+    role: 'system',
+    content: `你是一个专业的AI助手，请使用Markdown格式回复。`
+  }
+
+  // 在消息数组开头插入系统提示词
+  const enhancedMessages = [systemMessage, ...messages]
+
   const data = {
     model: MODEL,
-    messages,
+    messages: enhancedMessages,
     stream: false,
   }
 
@@ -56,9 +65,18 @@ async function* callAiStream(messages) {
     'Content-Type': 'application/json',
   }
 
+  // 添加系统提示词 - 极简版
+  const systemMessage = {
+    role: 'system',
+    content: `你是一个专业的AI助手，请使用Markdown格式回复。`
+  }
+
+  // 在消息数组开头插入系统提示词（如果不存在）
+  const enhancedMessages = [systemMessage, ...messages]
+
   const data = {
     model: MODEL,
-    messages,
+    messages: enhancedMessages,
     stream: true,
     max_tokens: 500,
   }
@@ -115,6 +133,13 @@ async function* callAiStream(messages) {
 
       return
     } catch (error) {
+      // ⚠️ 403 错误通常是 API Key 失效，无需重试
+      if (error.response?.status === 403 || error.message.includes('403')) {
+        console.error('❌ AI API 调用失败 (403):', error.message)
+        yield '❌ AI 服务认证失败，请联系管理员更新 API Key'
+        return
+      }
+      
       if (attempt < maxRetries - 1) {
         yield '⚠️ 网络错误，重试中...\n'
         await new Promise((resolve) => setTimeout(resolve, retryDelay))

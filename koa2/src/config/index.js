@@ -1,8 +1,22 @@
-require('dotenv').config()
 const path = require('path')
+const fs = require('fs')
 
+// 根据 NODE_ENV 选择正确的配置文件
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env'
-require('dotenv').config({ path: path.join(process.cwd(), envFile) })
+const envPath = path.join(process.cwd(), envFile)
+
+// 检查文件是否存在
+if (fs.existsSync(envPath)) {
+  const dotenv = require('dotenv')
+  const result = dotenv.config({ path: envPath, override: true })
+  if (result.error) {
+    console.error(`⚠️  加载 ${envFile} 失败:`, result.error.message)
+  } else {
+    console.log(`✅ 已加载配置文件: ${envFile}`)
+  }
+} else {
+  console.warn(`⚠️  配置文件 ${envPath} 不存在，使用系统环境变量`)
+}
 
 const config = {
   api: {
@@ -36,6 +50,9 @@ const config = {
 
 if (!config.api.apiKey) {
   console.error('错误: API_KEY 未配置')
+  console.error('当前 NODE_ENV:', process.env.NODE_ENV)
+  console.error('尝试加载的文件:', envPath)
+  console.error('文件是否存在:', fs.existsSync(envPath))
   process.exit(1)
 }
 
