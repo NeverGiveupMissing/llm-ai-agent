@@ -180,9 +180,12 @@ class SessionGroupController {
       const { sessionId } = ctx.params
       const { group_id } = ctx.request.body
 
+      console.log('📦 [移动分组] 收到请求:', { sessionId, group_id, body: ctx.request.body })
+
       // 验证会话是否存在
       const session = await sessionModel.getById(sessionId)
       if (!session) {
+        console.error('❌ [移动分组] 会话不存在:', sessionId)
         ctx.body = {
           code: 404,
           message: '会话不存在',
@@ -191,10 +194,14 @@ class SessionGroupController {
         return
       }
 
+      // 处理 group_id：空字符串转为 null
+      const finalGroupId = group_id === '' || group_id === undefined ? null : group_id
+
       // 如果指定了 group_id，验证分组是否存在
-      if (group_id) {
-        const group = await SessionGroupModel.findById(group_id)
+      if (finalGroupId) {
+        const group = await SessionGroupModel.findById(finalGroupId)
         if (!group) {
+          console.error('❌ [移动分组] 分组不存在:', finalGroupId)
           ctx.body = {
             code: 404,
             message: '分组不存在',
@@ -204,8 +211,12 @@ class SessionGroupController {
         }
       }
 
+      console.log('📝 [移动分组] 准备更新会话:', { sessionId, group_id: finalGroupId })
+
       // 更新会话的 group_id
-      const updated = await sessionModel.update(sessionId, { group_id })
+      const updated = await sessionModel.update(sessionId, { group_id: finalGroupId })
+
+      console.log('✅ [移动分组] 更新成功:', updated)
 
       ctx.body = {
         code: 200,
@@ -213,7 +224,7 @@ class SessionGroupController {
         data: updated,
       }
     } catch (error) {
-      console.error('移动会话失败:', error)
+      console.error('❌ [移动分组] 移动会话失败:', error)
       ctx.body = {
         code: 500,
         message: '移动会话失败',

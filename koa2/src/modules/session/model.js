@@ -1,4 +1,4 @@
-﻿// 说明：会话数据模型 - 管理聊天会话的创建、查询、删除
+// 说明：会话数据模型 - 管理聊天会话的创建、查询、删除
 
 const { pool } = require('../../config/db')
 
@@ -21,7 +21,7 @@ class SessionModel {
    */
   async list(userId, limit = 20) {
     const query = `
-      SELECT id, user_id, title, message_count, is_pinned, share_token, created_at, updated_at
+      SELECT id, user_id, title, message_count, is_pinned, share_token, group_id, created_at, updated_at
       FROM chat_sessions
       WHERE user_id = $1
       ORDER BY 

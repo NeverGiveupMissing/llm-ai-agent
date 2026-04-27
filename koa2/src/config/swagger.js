@@ -31,7 +31,10 @@ const swaggerConfig = {
       { name: 'logs', description: '日志管理接口' },
     ],
   },
-  apis: [path.join(__dirname, '..', 'routes', '*.js')],
+  apis: [
+    path.join(__dirname, '..', 'routes', '*.js'),
+    path.join(__dirname, '..', 'modules', '*', 'routes.js'),
+  ],
 }
 
 module.exports = swaggerConfig

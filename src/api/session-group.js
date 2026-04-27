@@ -32,6 +32,6 @@ export function pinGroup(id) {
 // 移动会话到分组
 export function moveSessionToGroup(sessionId, groupId) {
   return http.post(`${API_PREFIX}/session-groups/sessions/${sessionId}/move`, {
-    group_id: groupId,
+    group_id: groupId || null,
   })
 }

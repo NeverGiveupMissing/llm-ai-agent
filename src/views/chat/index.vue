@@ -39,6 +39,7 @@
     <div class="chat-main">
       <ChatMessageList
         :messages="messages"
+        :session-id="currentSessionId"
         @regenerate="handleRegenerate"
         @edit="handleEditMessage"
         @delete="handleDeleteMessage"
@@ -293,10 +294,19 @@ const handleEditMessage = (message) => {
 // 删除消息
 const handleDeleteMessage = async (messageId) => {
   try {
-    // 先调用后端接口删除数据库记录
-    await deleteMessage(messageId)
+    // 判断是否为数据库 ID（纯数字）
+    const isDatabaseId = /^\d+$/.test(messageId)
 
-    // 删除成功后，从本地消息列表中移除
+    if (isDatabaseId) {
+      // 历史消息（有数字 ID）：正常调用后端删除
+      await deleteMessage(messageId)
+      console.log('✅ 已从数据库删除消息:', messageId)
+    } else {
+      // 新发送的消息（UUID）：仅前端删除，不调用后端
+      console.log('ℹ️ 仅前端删除消息（UUID）:', messageId)
+    }
+
+    // 从本地消息列表中移除
     const index = messages.value.findIndex((m) => m.id === messageId)
     if (index !== -1) {
       messages.value.splice(index, 1)
@@ -427,8 +437,9 @@ onMounted(() => initSession())
 
 .sidebar-content {
   width: 233px;
-  height: 100%;
+  height: calc(100vh - 60px);
   transition: all 0.3s ease;
+  overflow-y: auto;
 }
 
 .session-sidebar.collapsed .sidebar-content {

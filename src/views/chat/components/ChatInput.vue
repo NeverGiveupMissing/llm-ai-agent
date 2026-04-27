@@ -94,7 +94,7 @@ watch(
     if (!loading) {
       inputValue.value = ''
     }
-  }
+  },
 )
 
 defineExpose({
@@ -137,4 +137,3 @@ defineExpose({
   color: #999;
 }
 </style>
-

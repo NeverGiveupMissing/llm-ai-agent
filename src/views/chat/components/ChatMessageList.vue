@@ -27,6 +27,7 @@
           <ChatMessage
             :message="msg"
             :is-last="msg.id === lastMessageId"
+            :session-id="props.sessionId"
             @regenerate="handleRegenerate"
             @edit="handleEdit"
             @delete="handleDeleteMessage"
@@ -103,7 +104,10 @@ import { useDialog } from 'naive-ui'
 import ChatMessage from './ChatMessage/index.vue'
 import { scrollToBottom } from '@/utils/http'
 
-const props = defineProps({ messages: { type: Array, default: () => [] } })
+const props = defineProps({
+  messages: { type: Array, default: () => [] },
+  sessionId: { type: String, default: '' },
+})
 const emit = defineEmits(['regenerate', 'edit', 'delete'])
 
 const dialogApi = useDialog()

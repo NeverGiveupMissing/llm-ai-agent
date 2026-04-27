@@ -2,7 +2,16 @@
   <div class="chat-message" :class="`role-${message.role}`">
     <!-- 删除按钮 -->
     <button class="message-delete-btn" @click="handleDelete" title="删除消息">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
@@ -17,7 +26,22 @@
     />
 
     <!-- 用户消息 -->
-    <UserMessage v-if="message.role === 'user'" :content="message.content" />
+    <UserMessage
+      v-if="message.role === 'user'"
+      ref="userMessageRef"
+      :content="message.content"
+      @save="handleSaveEdit"
+      @cancel="handleCancelEdit"
+    />
+
+    <!-- 用户消息操作按钮 -->
+    <MessageActions
+      v-if="message.role === 'user' && showUserActions"
+      role="user"
+      @copy="handleCopy"
+      @edit="handleEdit"
+      @share="handleShare"
+    />
 
     <!-- AI 消息 -->
     <AIMessage
@@ -51,6 +75,7 @@ import { useMessage, useDialog } from 'naive-ui'
 import UserMessage from './UserMessage.vue'
 import AIMessage from './AIMessage.vue'
 import MessageCheckbox from './MessageCheckbox.vue'
+import MessageActions from './MessageActions.vue'
 import MessageActionBar from './MessageActionBar.vue'
 import { deleteMessage } from '@/api/chat'
 
@@ -59,6 +84,7 @@ const props = defineProps({
   isLast: { type: Boolean, default: false },
   content: String,
   shareMode: { type: Boolean, default: false },
+  sessionId: { type: String, default: '' },
 })
 
 const emit = defineEmits(['regenerate', 'edit', 'select', 'share', 'cancelShare', 'delete'])
@@ -67,6 +93,7 @@ const msgApi = useMessage()
 const dialogApi = useDialog()
 const isSelected = ref(false)
 const isShareMode = ref(false)
+const userMessageRef = ref(null)
 
 // 监听外部 shareMode 变化
 watch(
@@ -80,9 +107,10 @@ watch(
   { immediate: true },
 )
 
-const showActions = computed(
-  () => props.message.role === 'assistant' && !props.message.isStreaming,
-)
+const showActions = computed(() => props.message.role === 'assistant' && !props.message.isStreaming)
+
+// 用户消息显示操作按钮
+const showUserActions = computed(() => props.message.role === 'user')
 
 // 切换选择状态
 const handleToggleSelect = (selected) => {
@@ -109,7 +137,7 @@ const handleCancelShare = () => {
 // 复制消息
 const handleCopy = async () => {
   const content = props.message.content ?? ''
-  
+
   try {
     // 优先使用现代 Clipboard API
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -117,7 +145,7 @@ const handleCopy = async () => {
       msgApi.success('已复制到剪贴板')
       return
     }
-    
+
     // 降级方案：使用传统的 execCommand
     fallbackCopy(content)
   } catch (error) {
@@ -142,7 +170,7 @@ const fallbackCopy = (text) => {
   document.body.appendChild(textArea)
   textArea.focus()
   textArea.select()
-  
+
   try {
     const successful = document.execCommand('copy')
     if (successful) {
@@ -157,7 +185,11 @@ const fallbackCopy = (text) => {
 
 // 复制链接
 const handleCopyLink = () => {
-  const link = `${window.location.origin}/chat/${props.message.id}`
+  // 使用会话ID生成链接，而不是消息ID
+  const sessionId = props.sessionId || localStorage.getItem('current_session_id') || ''
+  const link = sessionId
+    ? `${window.location.origin}/chat?sessionId=${sessionId}`
+    : `${window.location.origin}/chat`
   navigator.clipboard
     .writeText(link)
     .then(() => {
@@ -170,8 +202,25 @@ const handleCopyLink = () => {
 
 // 编辑消息
 const handleEdit = () => {
-  emit('edit', props.message)
+  // 如果是用户消息，启动编辑模式
+  if (props.message.role === 'user' && userMessageRef.value) {
+    userMessageRef.value.startEdit()
+  } else {
+    // 其他消息类型，触发父组件的编辑事件
+    emit('edit', props.message)
+  }
   isSelected.value = false
+}
+
+// 保存编辑
+const handleSaveEdit = (newContent) => {
+  emit('edit', { ...props.message, content: newContent })
+  msgApi.success('消息已更新')
+}
+
+// 取消编辑
+const handleCancelEdit = () => {
+  msgApi.info('已取消编辑')
 }
 
 // 重新生成
@@ -242,5 +291,4 @@ const handleDelete = () => {
   background: #ff4d4f;
   color: white;
 }
-
 </style>

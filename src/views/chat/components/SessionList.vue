@@ -47,9 +47,11 @@
               <n-icon v-if="group.is_pinned" size="14" color="#ff9800" title="已置顶">
                 <PinOutline />
               </n-icon>
-              
+
               <n-icon size="14">
-                <component :is="collapsedGroups[group.id] ? ChevronForwardOutline : ChevronDownOutline" />
+                <component
+                  :is="collapsedGroups[group.id] ? ChevronForwardOutline : ChevronDownOutline"
+                />
               </n-icon>
               <n-icon size="16">
                 <FolderOutline />
@@ -57,15 +59,20 @@
               <span>{{ group.name }}</span>
               <span class="group-count">({{ getGroupSessionCount(group.id) }})</span>
             </div>
-            
+
             <!-- 分组操作按钮 -->
             <div class="group-actions">
-              <n-button text size="tiny" @click.stop="handlePinGroup(group)" :title="group.is_pinned ? '取消置顶' : '置顶'">
+              <n-button
+                text
+                size="tiny"
+                @click.stop="handlePinGroup(group)"
+                :title="group.is_pinned ? '取消置顶' : '置顶'"
+              >
                 <template #icon>
                   <n-icon><PinOutline /></n-icon>
                 </template>
               </n-button>
-              
+
               <n-dropdown
                 trigger="click"
                 :options="[
@@ -93,6 +100,16 @@
               @click="handleSelect(session)"
             >
               <div class="item-content">
+                <!-- 置顶标志 -->
+                <n-icon
+                  v-if="session.is_pinned"
+                  class="pin-icon"
+                  size="14"
+                  color="#ff9800"
+                  title="已置顶"
+                >
+                  <PinOutline />
+                </n-icon>
                 <n-icon class="icon" size="16">
                   <ChatbubbleEllipsesOutline />
                 </n-icon>
@@ -111,13 +128,11 @@
                 </button>
               </n-dropdown>
             </div>
-            
-            <div v-if="getGroupSessionCount(group.id) === 0" class="empty-group-hint">
-              暂无会话
-            </div>
+
+            <div v-if="getGroupSessionCount(group.id) === 0" class="empty-group-hint">暂无会话</div>
           </div>
         </div>
-        
+
         <!-- 未分组会话 -->
         <div v-if="getUngroupedSessions().length > 0" class="ungrouped-section">
           <div class="group-header">
@@ -129,7 +144,7 @@
               <span class="group-count">({{ getUngroupedSessions().length }})</span>
             </div>
           </div>
-          
+
           <div
             v-for="session in getUngroupedSessions()"
             :key="session.id"
@@ -138,6 +153,16 @@
             @click="handleSelect(session)"
           >
             <div class="item-content">
+              <!-- 置顶标志 -->
+              <n-icon
+                v-if="session.is_pinned"
+                class="pin-icon"
+                size="14"
+                color="#ff9800"
+                title="已置顶"
+              >
+                <PinOutline />
+              </n-icon>
               <n-icon class="icon" size="16">
                 <ChatbubbleEllipsesOutline />
               </n-icon>
@@ -159,12 +184,9 @@
         </div>
       </div>
 
-      <n-empty
-        v-if="sessions.length === 0"
-        description="暂无会话"
-      />
+      <n-empty v-if="sessions.length === 0" description="暂无会话" />
     </div>
-    
+
     <!-- 创建分组模态框 -->
     <n-modal v-model:show="groupModalVisible" preset="card" title="新建分组" style="width: 500px">
       <n-space vertical>
@@ -172,9 +194,9 @@
           <n-input-group-label>分组名称：</n-input-group-label>
           <n-input v-model:value="newGroupName" placeholder="请输入分组名称" />
         </n-input-group>
-        
+
         <div>
-          <div style="margin-bottom: 8px; font-size: 14px; color: #666;">选择图标：</div>
+          <div style="margin-bottom: 8px; font-size: 14px; color: #666">选择图标：</div>
           <n-space wrap>
             <n-button
               v-for="icon in presetIcons"
@@ -190,7 +212,7 @@
           </n-space>
         </div>
       </n-space>
-      
+
       <template #footer>
         <n-space justify="end">
           <n-button @click="groupModalVisible = false">取消</n-button>
@@ -198,16 +220,21 @@
         </n-space>
       </template>
     </n-modal>
-    
+
     <!-- 重命名分组模态框 -->
-    <n-modal v-model:show="renameGroupModalVisible" preset="card" title="重命名分组" style="width: 400px">
+    <n-modal
+      v-model:show="renameGroupModalVisible"
+      preset="card"
+      title="重命名分组"
+      style="width: 400px"
+    >
       <n-space vertical>
         <n-input-group>
           <n-input-group-label>分组名称：</n-input-group-label>
           <n-input v-model:value="newGroupName" placeholder="请输入新的分组名称" />
         </n-input-group>
       </n-space>
-      
+
       <template #footer>
         <n-space justify="end">
           <n-button @click="renameGroupModalVisible = false">取消</n-button>
@@ -215,11 +242,16 @@
         </n-space>
       </template>
     </n-modal>
-    
+
     <!-- 移动到分组模态框 -->
-    <n-modal v-model:show="moveToGroupModalVisible" preset="card" title="移动到分组" style="width: 400px">
+    <n-modal
+      v-model:show="moveToGroupModalVisible"
+      preset="card"
+      title="移动到分组"
+      style="width: 400px"
+    >
       <n-space vertical>
-        <div style="font-size: 14px; color: #666;">选择目标分组：</div>
+        <div style="font-size: 14px; color: #666">选择目标分组：</div>
         <n-space vertical>
           <n-button
             v-for="group in groups"
@@ -235,7 +267,7 @@
           </n-button>
         </n-space>
       </n-space>
-      
+
       <template #footer>
         <n-space justify="end">
           <n-button @click="moveToGroupModalVisible = false">取消</n-button>
@@ -243,7 +275,7 @@
         </n-space>
       </template>
     </n-modal>
-    
+
     <!-- 分享模态框 -->
     <n-modal v-model:show="shareModalVisible" preset="card" title="分享对话" style="width: 500px">
       <n-space vertical>
@@ -259,12 +291,46 @@
         </n-input>
       </n-space>
     </n-modal>
+
+    <!-- 重命名会话模态框 -->
+    <n-modal
+      v-model:show="renameModalVisible"
+      preset="card"
+      title="重命名会话"
+      style="width: 400px"
+    >
+      <n-input
+        v-model:value="renameTitle"
+        placeholder="请输入新的会话名称"
+        @keydown.enter="handleConfirmRename"
+      />
+
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="renameModalVisible = false">取消</n-button>
+          <n-button type="primary" @click="handleConfirmRename">确定</n-button>
+        </n-space>
+      </template>
+    </n-modal>
   </div>
 </template>
 
 <script setup name="SessionList">
 import { ref, watch, onMounted, computed, h, reactive } from 'vue'
-import { useMessage, useDialog, NButton, NIcon, NEmpty, NInput, NDropdown, NModal, NCard, NSpace, NInputGroup, NInputGroupLabel } from 'naive-ui'
+import {
+  useMessage,
+  useDialog,
+  NButton,
+  NIcon,
+  NEmpty,
+  NInput,
+  NDropdown,
+  NModal,
+  NCard,
+  NSpace,
+  NInputGroup,
+  NInputGroupLabel,
+} from 'naive-ui'
 import {
   AddOutline,
   CloseOutline,
@@ -293,8 +359,23 @@ import {
   HeartOutline as HealthIcon,
   CodeSlashOutline as CodeIcon,
 } from '@vicons/ionicons5'
-import { getSessionList, createSession, deleteSession, updateSession, pinSession, getShareInfo, getSessionDetail } from '@/api/session'
-import { getGroupList, createGroup, updateGroup, deleteGroup, pinGroup, moveSessionToGroup as moveSessionToGroupApi } from '@/api/session-group'
+import {
+  getSessionList,
+  createSession,
+  deleteSession,
+  updateSession,
+  pinSession,
+  getShareInfo,
+  getSessionDetail,
+} from '@/api/session'
+import {
+  getGroupList,
+  createGroup,
+  updateGroup,
+  deleteGroup,
+  pinGroup,
+  moveSessionToGroup as moveSessionToGroupApi,
+} from '@/api/session-group'
 
 const props = defineProps({
   show: { type: Boolean, default: false },
@@ -309,6 +390,7 @@ const dialogApi = useDialog()
 const sessions = ref([])
 const groups = ref([]) // 分组列表
 const searchKeyword = ref('')
+const renameModalVisible = ref(false)
 const renameSessionId = ref(null)
 const renameTitle = ref('')
 const shareModalVisible = ref(false)
@@ -340,7 +422,7 @@ const filteredSessions = computed(() => {
   if (!searchKeyword.value.trim()) {
     return sessions.value
   }
-  
+
   const keyword = searchKeyword.value.toLowerCase().trim()
   return sessions.value.filter((session) => {
     return session.title && session.title.toLowerCase().includes(keyword)
@@ -349,12 +431,12 @@ const filteredSessions = computed(() => {
 
 // 获取未分组的会话
 const getUngroupedSessions = () => {
-  return sessions.value.filter(session => !session.group_id)
+  return sessions.value.filter((session) => !session.group_id)
 }
 
 // 获取指定分组的会话
 const getGroupSessions = (groupId) => {
-  return sessions.value.filter(session => session.group_id === groupId)
+  return sessions.value.filter((session) => session.group_id === groupId)
 }
 
 // 获取分组下的会话数量
@@ -372,10 +454,10 @@ const getSessionMenuOptions = (session) => {
       icon: () => h(NIcon, null, { default: () => h(AddCircleOutline) }),
     },
   ]
-  
+
   // 添加现有分组选项
   if (groups.value.length > 0) {
-    groups.value.forEach(group => {
+    groups.value.forEach((group) => {
       moveToGroupChildren.push({
         label: group.name,
         key: `group-${group.id}`,
@@ -383,7 +465,7 @@ const getSessionMenuOptions = (session) => {
       })
     })
   }
-  
+
   return [
     {
       label: '重命名',
@@ -460,17 +542,17 @@ const getSessionMenuOptions = (session) => {
 // 处理会话菜单选择
 const handleSessionMenuSelect = async (key, session) => {
   console.log('选中菜单项:', key, session)
-  
+
   // 处理移动到分组
   if (key.startsWith('group-')) {
     const groupId = key.replace('group-', '')
-    await moveSessionToGroup(session.id, groupId)
+    await moveSessionToGroupAPI(session.id, groupId)
     return
   }
-  
+
   switch (key) {
     case 'rename':
-      await handleRename(session)
+      handleRename(session)
       break
     case 'pin':
       await handlePin(session)
@@ -509,37 +591,55 @@ const handleSessionMenuSelect = async (key, session) => {
 }
 
 // 重命名会话
-const handleRename = async (session) => {
-  dialogApi.prompt({
-    title: '重命名会话',
-    content: '请输入新的会话名称',
-    defaultValue: session.title,
-    positiveText: '确定',
-    negativeText: '取消',
-    onPositiveClick: async (value) => {
-      if (!value || !value.trim()) {
-        msgApi.warning('会话名称不能为空')
-        return false
-      }
-      try {
-        await updateSession(session.id, { title: value.trim() })
-        msgApi.success('重命名成功')
-        fetchSessions()
-      } catch (error) {
-        msgApi.error('重命名失败')
-      }
-    },
-  })
+const handleRename = (session) => {
+  renameSessionId.value = session.id
+  renameTitle.value = session.title
+  renameModalVisible.value = true
+}
+
+// 确认重命名
+const handleConfirmRename = async () => {
+  if (!renameTitle.value || !renameTitle.value.trim()) {
+    msgApi.warning('会话名称不能为空')
+    return
+  }
+
+  try {
+    await updateSession(renameSessionId.value, { title: renameTitle.value.trim() })
+    msgApi.success('重命名成功')
+    renameModalVisible.value = false
+    fetchSessions()
+  } catch (error) {
+    console.error('重命名失败:', error)
+    msgApi.error('重命名失败')
+  }
 }
 
 // 置顶会话
 const handlePin = async (session) => {
   try {
+    // 保存原始置顶状态
+    const originalPinnedState = session.is_pinned
+    
+    // 先切换本地状态（优化用户体验）
+    session.is_pinned = !originalPinnedState
+    
+    // 调用后端 API
     await pinSession(session.id)
-    msgApi.success(session.is_pinned ? '已取消置顶' : '已置顶')
-    fetchSessions()
+    msgApi.success(originalPinnedState ? '已取消置顶' : '已置顶')
+    
+    // 同时刷新会话列表和分组列表（确保 group_id 数据完整）
+    await Promise.all([
+      fetchSessions(),
+      fetchGroups()
+    ])
   } catch (error) {
     console.error('置顶操作失败:', error)
+    // 如果失败，恢复原状态
+    const sessionToRestore = sessions.value.find(s => s.id === session.id)
+    if (sessionToRestore) {
+      sessionToRestore.is_pinned = session.is_pinned
+    }
     msgApi.error('操作失败')
   }
 }
@@ -561,11 +661,14 @@ const handleShare = async (session) => {
 
 // 复制分享链接
 const copyShareLink = () => {
-  navigator.clipboard.writeText(shareLink.value).then(() => {
-    msgApi.success('链接已复制到剪贴板')
-  }).catch(() => {
-    msgApi.error('复制失败，请手动复制')
-  })
+  navigator.clipboard
+    .writeText(shareLink.value)
+    .then(() => {
+      msgApi.success('链接已复制到剪贴板')
+    })
+    .catch(() => {
+      msgApi.error('复制失败，请手动复制')
+    })
 }
 
 // 打开创建分组模态框
@@ -586,25 +689,25 @@ const handleCreateGroup = async () => {
 
   try {
     const userId = localStorage.getItem('userId') || 'anonymous'
-    
+
     // 调用后端 API 创建分组
     const res = await createGroup({
       name: newGroupName.value.trim(),
       icon: selectedGroupIcon.value?.name || 'FolderOutline',
       user_id: userId,
     })
-    
+
     if (res.code === 200) {
       const newGroup = res.data
-      
+
       // 刷新分组列表
       await fetchGroups()
-      
+
       // 如果是从移动会话时创建分组，直接移动到新分组
       if (currentMoveSession.value) {
         await moveSessionToGroupAPI(currentMoveSession.value.id, newGroup.id)
       }
-      
+
       msgApi.success(`分组 "${newGroup.name}" 创建成功`)
       groupModalVisible.value = false
       newGroupName.value = ''
@@ -623,17 +726,20 @@ const moveSessionToGroupAPI = async (sessionId, groupId) => {
   try {
     // 调用后端专用 API
     const res = await moveSessionToGroupApi(sessionId, groupId)
-    
+
     if (res.code === 200) {
       // 更新本地状态
       const session = sessions.value.find((s) => s.id === sessionId)
       if (session) {
         session.group_id = groupId || null
       }
-      
-      // 刷新分组列表（更新会话数量统计）
-      await fetchGroups()
-      
+
+      // 同时刷新会话列表和分组列表（确保 group_id 数据完整）
+      await Promise.all([
+        fetchSessions(),
+        fetchGroups()
+      ])
+
       msgApi.success('已移动到分组')
     } else {
       msgApi.error(res.message || '移动失败')
@@ -650,7 +756,7 @@ const handleMoveToGroup = async () => {
     msgApi.warning('请选择目标分组')
     return
   }
-  
+
   await moveSessionToGroupAPI(currentMoveSession.value.id, moveTargetGroup.value)
   moveToGroupModalVisible.value = false
   currentMoveSession.value = null
@@ -670,7 +776,7 @@ const handleExport = async (session, format) => {
   try {
     // 获取会话详情（包含消息列表）
     const res = await getSessionDetail(session.id)
-    
+
     if (res.code !== 200 || !res.data) {
       msgApi.error('获取会话详情失败')
       return
@@ -678,7 +784,7 @@ const handleExport = async (session, format) => {
 
     const sessionData = res.data
     const messages = sessionData.messages || []
-    
+
     if (messages.length === 0) {
       msgApi.warning('该会话没有消息，无法导出')
       return
@@ -720,10 +826,10 @@ const exportAsMarkdown = (session, messages) => {
   messages.forEach((msg, index) => {
     const role = msg.role === 'user' ? '👤 用户' : '🤖 AI助手'
     const time = new Date(msg.created_at).toLocaleString('zh-CN')
-    
+
     markdown += `## ${index + 1}. ${role}\n\n`
     markdown += `*${time}*\n\n`
-    
+
     // 处理消息内容，保持 Markdown 格式
     const content = msg.content.trim()
     if (content) {
@@ -732,7 +838,7 @@ const exportAsMarkdown = (session, messages) => {
     } else {
       markdown += `*(空消息)*\n\n`
     }
-    
+
     markdown += `---\n\n`
   })
 
@@ -773,7 +879,7 @@ const exportAsJSON = (session, messages) => {
       updated_at: session.updated_at,
       message_count: messages.length,
     },
-    messages: messages.map(msg => ({
+    messages: messages.map((msg) => ({
       role: msg.role,
       content: msg.content,
       created_at: msg.created_at,
@@ -818,7 +924,7 @@ const exportAsWord = (session, messages) => {
     const role = msg.role === 'user' ? '用户' : 'AI助手'
     const className = msg.role === 'user' ? 'user' : 'assistant'
     const time = new Date(msg.created_at).toLocaleString('zh-CN')
-    
+
     html += `
   <div class="message ${className}">
     <div class="role">${role}</div>
@@ -877,7 +983,7 @@ const exportAsPDF = (session, messages) => {
     const role = msg.role === 'user' ? '用户' : 'AI助手'
     const className = msg.role === 'user' ? 'user' : 'assistant'
     const time = new Date(msg.created_at).toLocaleString('zh-CN')
-    
+
     html += `
   <div class="message ${className}">
     <div class="role">${role}</div>
@@ -890,7 +996,7 @@ const exportAsPDF = (session, messages) => {
   // 使用字符串拼接避免 Vue 编译器误解析 script 标签
   const scriptTag = '<scr' + 'ipt>'
   const endScriptTag = '</scr' + 'ipt>'
-  
+
   html += '\n  ' + scriptTag + '\n'
   html += '    // 自动打开打印对话框\n'
   html += '    setTimeout(() => window.print(), 500);\n'
@@ -1000,7 +1106,7 @@ const handleDelete = (sessionId) => {
         await deleteSession(sessionId)
         msgApi.success('删除成功')
         fetchSessions()
-        
+
         // 如果删除的是当前选中的会话，清空选择
         if (props.currentSessionId === sessionId) {
           emit('select', null)
@@ -1087,12 +1193,12 @@ const handleDeleteGroup = async (group) => {
       try {
         // 调用后端 API 删除分组
         const res = await deleteGroup(group.id)
-        
+
         if (res.code === 200) {
           // 刷新列表
           await fetchGroups()
           await fetchSessions()
-          
+
           msgApi.success('分组已删除')
         } else {
           msgApi.error(res.message || '删除失败')
@@ -1104,15 +1210,15 @@ const handleDeleteGroup = async (group) => {
     },
   })
 }
-
 </script>
 
 <style scoped>
 .session-panel {
-  height: 100%;
+  height: 80%;
   display: flex;
   flex-direction: column;
   background: white;
+  max-height: 80%;
 }
 
 .session-panel.collapsed {
@@ -1279,6 +1385,11 @@ const handleDeleteGroup = async (group) => {
   gap: 8px;
   flex: 1;
   min-width: 0;
+}
+
+/* 置顶标志样式 */
+.pin-icon {
+  flex-shrink: 0;
 }
 
 .icon {

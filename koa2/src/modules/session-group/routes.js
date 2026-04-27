@@ -27,4 +27,7 @@ router.post('/:id/pin', SessionGroupController.pinGroup)
 // 移动会话到分组
 router.post('/sessions/:sessionId/move', SessionGroupController.moveSessionToGroup)
 
+// 移动会话到分组（新路由，保持兼容）
+router.post('/:sessionId/move-to-group', SessionGroupController.moveSessionToGroup)
+
 module.exports = router
