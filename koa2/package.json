@@ -16,10 +16,7 @@
     "pm2:monit": "pm2 monit",
     "pm2:status": "pm2 list",
     "lint": "eslint src",
-    "db:init": "node src/utils/init-memory-db.js",
-    "db:init:chat": "node src/utils/init-chat-memory-db.js",
-    "db:init:all": "npm run db:init && npm run db:init:chat",
-    "db:init:unified": "node -e \"require('./src/config/init-db').initDatabase().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); })\""
+    "db:init": "node -e \"require('./src/config/init-db').initDatabase().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); })\""
   },
   "dependencies": {
     "@koa/router": "^12.0.0",

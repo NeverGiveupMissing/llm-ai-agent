@@ -1,6 +1,6 @@
 // 记忆提取服务（多个模块共用）
 const { callAiNonStream } = require('../services/ai.service')
-const { MEMORY_TYPES } = require('../utils/memory-constants')
+const { MEMORY_TYPES } = require('../config/constants')
 
 class MemoryExtractorService {
   extractPrompt = `你是一个记忆提取专家。请分析用户和 AI 的对话内容，提取出有价值的长期记忆。

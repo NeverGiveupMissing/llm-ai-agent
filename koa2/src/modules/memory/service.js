@@ -2,7 +2,8 @@
 const { MemoryModel } = require('./model')
 const embeddingService = require('../../services/embedding.service')
 const memoryDeduplicationService = require('../../services/memory-deduplication.service')
-const { MEMORY_TYPES, DEFAULT_MEMORY_CONFIG } = require('../../utils/memory-constants')
+const { MEMORY_TYPES, DEFAULT_MEMORY_CONFIG } = require('../../config/constants')
+
 class MemoryService {
   async createMemory(data, options = {}) {
     const {

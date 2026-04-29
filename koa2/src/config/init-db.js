@@ -1,6 +1,7 @@
 // 说明：数据库初始化脚本 - 自动创建所有必需的表（仅在表不存在时创建）
 
 const { pool } = require('../config/db')
+const constants = require('./constants')
 
 /**
  * 初始化所有数据库表
@@ -20,7 +21,7 @@ async function initDatabase() {
     // ============================================
     // 2. 创建 memories 表（记忆表）
     // ============================================
-    console.log('📊 创建 memories 表...')
+    console.log(' 创建 memories 表...')
     await pool.query(`
       CREATE TABLE IF NOT EXISTS memories (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -28,8 +29,8 @@ async function initDatabase() {
         session_id VARCHAR(64),
         content TEXT NOT NULL,
         summary VARCHAR(500),
-        embedding VECTOR(1536),
-        memory_type VARCHAR(32) DEFAULT 'fact',
+        embedding VECTOR(${constants.DB_CONFIG.VECTOR_DIMENSION}),
+        memory_type VARCHAR(32) DEFAULT '${constants.MEMORY_TYPES.FACT}',
         tags TEXT[] DEFAULT '{}',
         importance INTEGER DEFAULT 5 CHECK (importance >= 1 AND importance <= 10),
         source VARCHAR(64),
@@ -58,7 +59,7 @@ async function initDatabase() {
 
         -- 向量索引（用于相似度搜索）
         IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_memories_embedding') THEN
-          CREATE INDEX idx_memories_embedding ON memories USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+          CREATE INDEX idx_memories_embedding ON memories USING ivfflat (embedding vector_cosine_ops) WITH (lists = ${constants.DB_CONFIG.IVFFLAT_LISTS});
         END IF;
 
         -- 标签索引

@@ -1,5 +1,6 @@
 const { Pool } = require('pg')
 const config = require('./index')
+const constants = require('./constants')
 
 /**
  * PostgreSQL 数据库连接池
@@ -10,9 +11,9 @@ const pool = new Pool({
   user: config.database.user,
   password: config.database.password,
   database: config.database.database,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  max: constants.DB_CONFIG.MAX_CONNECTIONS,
+  idleTimeoutMillis: constants.DB_CONFIG.IDLE_TIMEOUT,
+  connectionTimeoutMillis: constants.DB_CONFIG.CONNECTION_TIMEOUT,
 })
 
 /**
@@ -31,7 +32,7 @@ pool.on('error', (err) => {
  */
 process.on('SIGINT', async () => {
   await pool.end()
-  console.log('PostgreSQL 连接池已关闭')
+  console.log('✅ PostgreSQL 连接池已关闭')
   process.exit(0)
 })
 

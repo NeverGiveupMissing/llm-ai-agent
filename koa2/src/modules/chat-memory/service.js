@@ -2,7 +2,7 @@
 
 const memoryService = require('../memory/service')
 const aiService = require('../../services/ai.service')
-const { DEFAULT_MEMORY_CONFIG } = require('../../utils/memory-constants')
+const { DEFAULT_MEMORY_CONFIG } = require('../../config/constants')
 
 /**
  * 对话记忆服务 - 自动记忆管理（遵循 ChatGPT 逻辑）
