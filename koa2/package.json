@@ -16,7 +16,7 @@
     "pm2:monit": "pm2 monit",
     "pm2:status": "pm2 list",
     "lint": "eslint src",
-    "db:init": "psql -U postgres -d postgres -f database/create_tables.sql"
+    "db:init": "PGPASSWORD=admin123 psql -h 127.0.0.1 -p 5432 -U postgres -d postgres -f database/create_tables.sql"
   },
   "dependencies": {
     "@koa/router": "^12.0.0",
