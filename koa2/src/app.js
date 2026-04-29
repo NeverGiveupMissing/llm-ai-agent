@@ -8,20 +8,14 @@ const { errorMiddleware } = require('./middlewares/error.middleware')
 const { requestLoggerMiddleware } = require('./middlewares/request-logger.middleware')
 const config = require('./config')
 const swaggerConfig = require('./config/swagger')
-const { initDatabase } = require('./config/init-db')
 
 const app = new Koa()
 
 // ============================================
-// 初始化数据库表（仅在表不存在时创建）
+// 启动服务器
 // ============================================
 async function startServer() {
   try {
-    // 先初始化数据库
-    console.log('🔧 正在检查并初始化数据库表...')
-    await initDatabase()
-    console.log('✅ 数据库表初始化完成')
-
     // 配置中间件
     app.use(errorMiddleware)
     app.use(requestLoggerMiddleware)
