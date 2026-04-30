@@ -494,6 +494,67 @@ async function initDatabase() {
       console.log('⚠️  moderator 角色不存在，跳过权限分配')
     }
 
+    // ============================================
+    // 14. 创建默认超级管理员用户并分配角色
+    // ============================================
+    console.log('🔍 检查默认管理员用户...')
+    
+    const adminUser = await pool.query(
+      'SELECT id FROM users WHERE username = $1',
+      ['admin']
+    )
+    
+    if (adminUser.rows.length === 0) {
+      console.log('📝 创建默认管理员用户...')
+      
+      // 需要 bcrypt 来哈希密码
+      const bcrypt = require('bcrypt')
+      const passwordHash = await bcrypt.hash('admin123', 10)
+      
+      // 创建 admin 用户
+      const newUser = await pool.query(`
+        INSERT INTO users (id, username, password_hash, email, status) 
+        VALUES ('c0000000-0000-0000-0000-000000000001', 'admin', $1, 'admin@example.com', 'active')
+        RETURNING id;
+      `, [passwordHash])
+      
+      const adminUserId = newUser.rows[0].id
+      console.log('✅ 默认管理员用户创建成功')
+      
+      // 为 admin 用户分配 admin 角色
+      console.log(' 为 admin 用户分配 admin 角色...')
+      await pool.query(`
+        INSERT INTO user_roles (user_id, role_id)
+        VALUES ($1, 'a0000000-0000-0000-0000-000000000001')
+        ON CONFLICT DO NOTHING;
+      `, [adminUserId])
+      
+      console.log('✅ admin 用户角色分配成功')
+    } else {
+      console.log('ℹ️  管理员用户已存在')
+      
+      // 即使用户已存在，也确保角色分配正确
+      const adminUserId = adminUser.rows[0].id
+      
+      // 检查是否已分配 admin 角色
+      const hasAdminRole = await pool.query(`
+        SELECT COUNT(*) FROM user_roles 
+        WHERE user_id = $1 AND role_id = 'a0000000-0000-0000-0000-000000000001'
+      `, [adminUserId])
+      
+      if (parseInt(hasAdminRole.rows[0].count) === 0) {
+        console.log(' 为已存在的 admin 用户分配 admin 角色...')
+        await pool.query(`
+          INSERT INTO user_roles (user_id, role_id)
+          VALUES ($1, 'a0000000-0000-0000-0000-000000000001')
+          ON CONFLICT DO NOTHING;
+        `, [adminUserId])
+        console.log('✅ admin 用户角色补充分配成功')
+      } else {
+        console.log('ℹ️  admin 用户角色已正确分配')
+      }
+    }
+
     console.log('🎉 数据库初始化完成！所有表和初始数据已就绪')
     return true
   } catch (error) {
