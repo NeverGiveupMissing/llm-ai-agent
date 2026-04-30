@@ -68,6 +68,16 @@ const routes = [
     name: 'Login',
     component: () => import('@/views/login/index.vue'),
   },
+  {
+    path: '/403',
+    name: 'Forbidden',
+    component: () => import('@/views/error/403.vue'),
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/error/404.vue'),
+  },
 ]
 
 const router = createRouter({
