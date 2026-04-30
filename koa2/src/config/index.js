@@ -1,53 +1,5 @@
-// ==================== 系统常量定义 ====================
-
-// AI API 配置常量
-const AI_API_CONFIG = {
-  DEFAULT_BASE_URL: 'https://api.moonshot.cn/v1',
-  DEFAULT_MODEL: 'moonshot-v1-8k',
-  DEFAULT_EMBEDDING_MODEL: 'text-embedding-ada-002',
-}
-
-// 服务器配置常量
-const SERVER_CONFIG = {
-  DEFAULT_HOST: '127.0.0.1',
-  DEFAULT_PORT: 8000,
-  DEFAULT_PREFIX: '/koa2api',
-}
-
-// 日志配置常量
-const LOG_CONFIG = {
-  DEFAULT_DIR: 'logs/chat_history',
-}
-
-// 数据库配置常量
-const DB_CONFIG = {
-  DEFAULT_HOST: 'localhost',
-  DEFAULT_PORT: 5432,
-  DEFAULT_USER: 'postgres',
-  DEFAULT_NAME: 'postgres',
-}
-
-// 记忆模块配置常量
-const DEFAULT_MEMORY_CONFIG = {
-  MAX_RETRIEVE_COUNT: 5,
-  MIN_SIMILARITY: 0.7,
-  MAX_MEMORIES_PER_USER: 100,
-}
-
-// JWT 配置常量
-const JWT_CONFIG = {
-  SECRET: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
-  EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d', // 默认 7 天过期
-}
-
-module.exports = {
-  AI_API_CONFIG,
-  SERVER_CONFIG,
-  LOG_CONFIG,
-  DB_CONFIG,
-  DEFAULT_MEMORY_CONFIG,
-  JWT_CONFIG,
-}
+// ==================== 配置聚合中心 ====================
+// 职责：读取环境变量，合并 constants.js 中的默认值，导出最终配置
 const path = require('path')
 const fs = require('fs')
 const constants = require('./constants')
@@ -109,8 +61,8 @@ const config = {
   
   // JWT 配置
   jwt: {
-    secret: process.env.JWT_SECRET || constants.JWT_CONFIG.SECRET,
-    expiresIn: process.env.JWT_EXPIRES_IN || constants.JWT_CONFIG.EXPIRES_IN,
+    secret: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
 }
 
