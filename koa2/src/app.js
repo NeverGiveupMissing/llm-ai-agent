@@ -6,6 +6,7 @@ const router = require('./routes')
 const { corsMiddleware } = require('./middlewares/cors.middleware')
 const { errorMiddleware } = require('./middlewares/error.middleware')
 const { requestLoggerMiddleware } = require('./middlewares/request-logger.middleware')
+const { checkRbacInitialized } = require('./middlewares/rbac-initializer')
 const config = require('./config')
 const swaggerConfig = require('./config/swagger')
 
@@ -16,6 +17,9 @@ const app = new Koa()
 // ============================================
 async function startServer() {
   try {
+    // 检查 RBAC 系统初始化状态
+    await checkRbacInitialized()
+
     // 配置中间件
     app.use(errorMiddleware)
     app.use(requestLoggerMiddleware)

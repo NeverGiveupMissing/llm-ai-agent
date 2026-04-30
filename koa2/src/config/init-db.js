@@ -342,11 +342,12 @@ async function initDatabase() {
       console.log('📝 插入初始角色数据...')
       await pool.query(`
         INSERT INTO roles (id, name, display_name, description, is_system) VALUES
-        ('a0000000-0000-0000-0000-000000000001', 'admin', '管理员', '系统管理员，拥有所有权限', true),
-        ('a0000000-0000-0000-0000-000000000002', 'user', '普通用户', '基本使用权限', true)
+        ('a0000000-0000-0000-0000-000000000001', 'admin', '超级管理员', '系统最高权限管理员，拥有所有权限', true),
+        ('a0000000-0000-0000-0000-000000000002', 'user', '普通用户', '基本使用权限', true),
+        ('a0000000-0000-0000-0000-000000000003', 'moderator', '版主', '内容管理权限', true)
         ON CONFLICT (name) DO NOTHING;
       `)
-      console.log('✅ 初始角色数据插入成功')
+      console.log('✅ 初始角色数据插入成功（3个角色）')
     } else {
       console.log('ℹ️  角色数据已存在')
     }
@@ -385,48 +386,112 @@ async function initDatabase() {
         ('b0000000-0000-0000-0000-000000000011', 'memory:read', '查看记忆', '查看记忆数据', 'memory', 'read', 'memory'),
         ('b0000000-0000-0000-0000-000000000012', 'memory:create', '创建记忆', '创建新记忆', 'memory', 'create', 'memory'),
         ('b0000000-0000-0000-0000-000000000013', 'memory:update', '更新记忆', '更新记忆信息', 'memory', 'update', 'memory'),
-        ('b0000000-0000-0000-0000-000000000014', 'memory:delete', '删除记忆', '删除记忆', 'memory', 'delete', 'memory')
+        ('b0000000-0000-0000-0000-000000000014', 'memory:delete', '删除记忆', '删除记忆', 'memory', 'delete', 'memory'),
+        
+        -- 会话组管理权限
+        ('b0000000-0000-0000-0000-000000000015', 'session-group:read', '查看会话组', '查看会话组列表和详情', 'session-group', 'read', 'session-group'),
+        ('b0000000-0000-0000-0000-000000000016', 'session-group:create', '创建会话组', '创建新会话组', 'session-group', 'create', 'session-group'),
+        ('b0000000-0000-0000-0000-000000000017', 'session-group:update', '更新会话组', '更新会话组信息', 'session-group', 'update', 'session-group'),
+        ('b0000000-0000-0000-0000-000000000018', 'session-group:delete', '删除会话组', '删除会话组', 'session-group', 'delete', 'session-group'),
+        
+        -- 日志管理权限
+        ('b0000000-0000-0000-0000-000000000019', 'log:read', '查看日志', '查看系统日志', 'log', 'read', 'log'),
+        ('b0000000-0000-0000-0000-00000000001a', 'log:export', '导出日志', '导出系统日志', 'log', 'export', 'log')
         ON CONFLICT (code) DO NOTHING;
       `)
-      console.log('✅ 初始权限数据插入成功')
+      console.log('✅ 初始权限数据插入成功（20个权限）')
     } else {
       console.log('ℹ️  权限数据已存在')
     }
 
     // 为 admin 角色分配所有权限
-    const adminRolePermissions = await pool.query(
-      'SELECT COUNT(*) FROM role_permissions WHERE role_id = $1',
+    // 先检查 admin 角色是否存在
+    const adminRole = await pool.query(
+      'SELECT id FROM roles WHERE id = $1',
       ['a0000000-0000-0000-0000-000000000001']
     )
-    if (parseInt(adminRolePermissions.rows[0].count) === 0) {
-      console.log('📝 为 admin 角色分配所有权限...')
-      await pool.query(`
-        INSERT INTO role_permissions (role_id, permission_id)
-        SELECT 'a0000000-0000-0000-0000-000000000001', id FROM permissions
-        ON CONFLICT DO NOTHING;
-      `)
-      console.log('✅ admin 角色权限分配成功')
+    
+    if (adminRole.rows.length > 0) {
+      const adminRolePermissions = await pool.query(
+        'SELECT COUNT(*) FROM role_permissions WHERE role_id = $1',
+        ['a0000000-0000-0000-0000-000000000001']
+      )
+      if (parseInt(adminRolePermissions.rows[0].count) === 0) {
+        console.log('📝 为 admin 角色分配所有权限...')
+        await pool.query(`
+          INSERT INTO role_permissions (role_id, permission_id)
+          SELECT 'a0000000-0000-0000-0000-000000000001', id FROM permissions
+          ON CONFLICT DO NOTHING;
+        `)
+        console.log('✅ admin 角色权限分配成功')
+      } else {
+        console.log('ℹ️  admin 角色权限已存在')
+      }
     } else {
-      console.log('ℹ️  admin 角色权限已存在')
+      console.log('⚠️  admin 角色不存在，跳过权限分配')
     }
 
     // 为 user 角色分配基础权限
-    const userRolePermissions = await pool.query(
-      'SELECT COUNT(*) FROM role_permissions WHERE role_id = $1',
+    // 先检查 user 角色是否存在
+    const userRole = await pool.query(
+      'SELECT id FROM roles WHERE id = $1',
       ['a0000000-0000-0000-0000-000000000002']
     )
-    if (parseInt(userRolePermissions.rows[0].count) === 0) {
-      console.log('📝 为 user 角色分配基础权限...')
-      await pool.query(`
-        INSERT INTO role_permissions (role_id, permission_id)
-        SELECT 'a0000000-0000-0000-0000-000000000002', id 
-        FROM permissions 
-        WHERE code IN ('chat:read', 'chat:create', 'memory:read', 'memory:create')
-        ON CONFLICT DO NOTHING;
-      `)
-      console.log('✅ user 角色权限分配成功')
+    
+    if (userRole.rows.length > 0) {
+      const userRolePermissions = await pool.query(
+        'SELECT COUNT(*) FROM role_permissions WHERE role_id = $1',
+        ['a0000000-0000-0000-0000-000000000002']
+      )
+      if (parseInt(userRolePermissions.rows[0].count) === 0) {
+        console.log('📝 为 user 角色分配基础权限...')
+        await pool.query(`
+          INSERT INTO role_permissions (role_id, permission_id)
+          SELECT 'a0000000-0000-0000-0000-000000000002', id 
+          FROM permissions 
+          WHERE code IN ('chat:read', 'chat:create', 'memory:read', 'memory:create', 'session-group:read')
+          ON CONFLICT DO NOTHING;
+        `)
+        console.log('✅ user 角色权限分配成功')
+      } else {
+        console.log('ℹ️  user 角色权限已存在')
+      }
     } else {
-      console.log('ℹ️  user 角色权限已存在')
+      console.log('⚠️  user 角色不存在，跳过权限分配')
+    }
+
+    // 为 moderator 角色分配内容管理权限
+    // 先检查 moderator 角色是否存在
+    const moderatorRole = await pool.query(
+      'SELECT id FROM roles WHERE id = $1',
+      ['a0000000-0000-0000-0000-000000000003']
+    )
+    
+    if (moderatorRole.rows.length > 0) {
+      const moderatorRolePermissions = await pool.query(
+        'SELECT COUNT(*) FROM role_permissions WHERE role_id = $1',
+        ['a0000000-0000-0000-0000-000000000003']
+      )
+      if (parseInt(moderatorRolePermissions.rows[0].count) === 0) {
+        console.log('📝 为 moderator 角色分配内容管理权限...')
+        await pool.query(`
+          INSERT INTO role_permissions (role_id, permission_id)
+          SELECT 'a0000000-0000-0000-0000-000000000003', id 
+          FROM permissions 
+          WHERE code IN (
+            'chat:read', 'chat:create', 'chat:update', 'chat:delete',
+            'memory:read', 'memory:create', 'memory:update', 'memory:delete',
+            'session-group:read', 'session-group:create', 'session-group:update', 'session-group:delete',
+            'log:read'
+          )
+          ON CONFLICT DO NOTHING;
+        `)
+        console.log('✅ moderator 角色权限分配成功')
+      } else {
+        console.log('ℹ️  moderator 角色权限已存在')
+      }
+    } else {
+      console.log('⚠️  moderator 角色不存在，跳过权限分配')
     }
 
     console.log('🎉 数据库初始化完成！所有表和初始数据已就绪')
