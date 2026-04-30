@@ -5,6 +5,8 @@ const ChatMessageService = require('./message-service')
 const SessionService = require('../session/service')
 const { logChat } = require('../../utils/chat-logger')
 const ResponseUtil = require('../../utils/response')
+const { asyncHandler } = require('../../utils/async-handler')
+const { BadRequestError, NotFoundError } = require('../../utils/app-error')
 const config = require('../../config')
 
 /**
@@ -15,7 +17,7 @@ class ChatController {
    * 简单聊天接口（带记忆功能）
    * @param {import('koa').Context} ctx - Koa 上下文
    */
-  async simpleChat(ctx) {
+  simpleChat = asyncHandler(async (ctx) => {
     const requestBody = ctx.request.body
 
     const request = new ChatRequestModel({
@@ -24,9 +26,7 @@ class ChatController {
     })
 
     if (!request.validate()) {
-      ctx.status = 400
-      ctx.body = ResponseUtil.error('参数错误：messages 不能为空')
-      return
+      throw new BadRequestError('参数错误：messages 不能为空')
     }
 
     const startTime = Date.now()
@@ -190,17 +190,14 @@ ${memoryContext}
           })
         }
 
-        ctx.status = 200
         ctx.body = ResponseUtil.success({ content }, 'success')
       } catch (error) {
         const duration = (Date.now() - startTime) / 1000
         logChat(messages, '', duration, config.api.model, error.message)
-
-        ctx.status = 500
-        ctx.body = ResponseUtil.serverError(error.message)
+        throw error
       }
     }
-  }
+  })
 
   /**
    * 异步提取记忆（不阻塞主流程）
@@ -252,43 +249,26 @@ ${memoryContext}
    * 删除单条消息
    * @param {import('koa').Context} ctx - Koa 上下文
    */
-  async deleteMessage(ctx) {
+  deleteMessage = asyncHandler(async (ctx) => {
     const { messageId } = ctx.params
-
+  
     if (!messageId) {
-      ctx.status = 400
-      ctx.body = ResponseUtil.error('参数错误：messageId 不能为空')
-      return
+      throw new BadRequestError('参数错误：messageId 不能为空')
     }
-
-    try {
-      console.log('🗑️ 删除消息:', messageId)
+  
+    console.log('🗑️ 删除消息:', messageId)
       
-      // 调用 Service 层删除消息
-      const deletedMessage = await ChatMessageService.deleteMessage(messageId)
+    // 调用 Service 层删除消息
+    const deletedMessage = await ChatMessageService.deleteMessage(messageId)
       
-      if (!deletedMessage) {
-        ctx.status = 404
-        ctx.body = ResponseUtil.error('消息不存在')
-        return
-      }
-
-      console.log('✅ 消息删除成功')
-      
-      ctx.status = 200
-      ctx.body = ResponseUtil.success({ messageId }, '删除成功')
-    } catch (error) {
-      console.error('❌ 删除消息失败:', error.message)
-      
-      if (error.message === '消息不存在') {
-        ctx.status = 404
-        ctx.body = ResponseUtil.error(error.message)
-      } else {
-        ctx.status = 500
-        ctx.body = ResponseUtil.serverError(error.message)
-      }
+    if (!deletedMessage) {
+      throw new NotFoundError('消息不存在')
     }
-  }
+  
+    console.log('✅ 消息删除成功')
+      
+    ctx.body = ResponseUtil.success({ messageId }, '删除成功')
+  })
 }
 
 module.exports = new ChatController()

@@ -2,221 +2,153 @@
 
 const userService = require('../../services/userService')
 const ResponseUtil = require('../../utils/response')
+const { asyncHandler } = require('../../utils/async-handler')
+const { BadRequestError, NotFoundError } = require('../../utils/app-error')
 const { authMiddleware } = require('../../middlewares/auth.middleware')
 
 class UserController {
   /**
    * 用户注册
    */
-  async register(ctx) {
-    try {
-      const { username, password, email, avatarUrl } = ctx.request.body
+  register = asyncHandler(async (ctx) => {
+    const { username, password, email, avatarUrl } = ctx.request.body
 
-      if (!username || !password) {
-        ctx.status = 400
-        ctx.body = ResponseUtil.error('用户名和密码不能为空')
-        return
-      }
-
-      const result = await userService.createUser({
-        username,
-        password,
-        email,
-        avatarUrl,
-      })
-
-      ctx.status = 201
-      ctx.body = ResponseUtil.success(result.data, result.message)
-    } catch (err) {
-      ctx.status = 500
-      ctx.body = ResponseUtil.serverError(err.message || '用户注册失败')
+    if (!username || !password) {
+      throw new BadRequestError('用户名和密码不能为空')
     }
-  }
+
+    const result = await userService.createUser({
+      username,
+      password,
+      email,
+      avatarUrl,
+    })
+
+    ctx.body = ResponseUtil.success(result.data, result.message)
+  })
 
   /**
    * 用户登录
    */
-  async login(ctx) {
-    try {
-      const { username, password } = ctx.request.body
+  login = asyncHandler(async (ctx) => {
+    const { username, password } = ctx.request.body
 
-      if (!username || !password) {
-        ctx.status = 400
-        ctx.body = ResponseUtil.error('用户名和密码不能为空')
-        return
-      }
-
-      const result = await userService.login(username, password)
-
-      ctx.status = 200
-      ctx.body = ResponseUtil.success(result.data, result.message)
-    } catch (err) {
-      ctx.status = 401
-      ctx.body = ResponseUtil.error(err.message || '用户名或密码错误')
+    if (!username || !password) {
+      throw new BadRequestError('用户名和密码不能为空')
     }
-  }
+
+    const result = await userService.login(username, password)
+
+    ctx.body = ResponseUtil.success(result.data, result.message)
+  })
 
   /**
    * 获取当前用户信息（需要认证）
    */
-  async getCurrentUser(ctx) {
-    try {
-      const userId = ctx.state.userId
+  getCurrentUser = asyncHandler(async (ctx) => {
+    const userId = ctx.state.userId
 
-      if (!userId) {
-        ctx.status = 401
-        ctx.body = ResponseUtil.unauthorized('未登录')
-        return
-      }
-
-      const result = await userService.getUserDetail(userId)
-
-      ctx.status = 200
-      ctx.body = ResponseUtil.success(result.data)
-    } catch (err) {
-      ctx.status = 500
-      ctx.body = ResponseUtil.serverError(err.message || '获取用户信息失败')
+    if (!userId) {
+      throw new UnauthorizedError('未登录')
     }
-  }
+
+    const result = await userService.getUserDetail(userId)
+
+    ctx.body = ResponseUtil.success(result.data)
+  })
 
   /**
    * 获取用户列表
    */
-  async listUsers(ctx) {
-    try {
-      const params = {
-        page: parseInt(ctx.query.page) || 1,
-        limit: parseInt(ctx.query.limit) || 20,
-        status: ctx.query.status,
-        keyword: ctx.query.keyword,
-      }
-
-      const result = await userService.listUsers(params)
-
-      ctx.status = 200
-      ctx.body = ResponseUtil.success(result)
-    } catch (err) {
-      ctx.status = 500
-      ctx.body = ResponseUtil.serverError(err.message || '获取用户列表失败')
+  listUsers = asyncHandler(async (ctx) => {
+    const params = {
+      page: parseInt(ctx.query.page) || 1,
+      limit: parseInt(ctx.query.limit) || 20,
+      status: ctx.query.status,
+      keyword: ctx.query.keyword,
     }
-  }
+
+    const result = await userService.listUsers(params)
+
+    ctx.body = ResponseUtil.success(result)
+  })
 
   /**
    * 获取用户详情
    */
-  async getUserDetail(ctx) {
-    try {
-      const { userId } = ctx.params
+  getUserDetail = asyncHandler(async (ctx) => {
+    const { userId } = ctx.params
 
-      if (!userId) {
-        ctx.status = 400
-        ctx.body = ResponseUtil.error('缺少 userId 参数')
-        return
-      }
-
-      const result = await userService.getUserDetail(userId)
-
-      ctx.status = 200
-      ctx.body = ResponseUtil.success(result.data)
-    } catch (err) {
-      ctx.status = 500
-      ctx.body = ResponseUtil.serverError(err.message || '获取用户详情失败')
+    if (!userId) {
+      throw new BadRequestError('缺少 userId 参数')
     }
-  }
+
+    const result = await userService.getUserDetail(userId)
+
+    ctx.body = ResponseUtil.success(result.data)
+  })
 
   /**
    * 更新用户信息
    */
-  async updateUser(ctx) {
-    try {
-      const { userId } = ctx.params
-      const updates = ctx.request.body
+  updateUser = asyncHandler(async (ctx) => {
+    const { userId } = ctx.params
+    const updates = ctx.request.body
 
-      if (!userId) {
-        ctx.status = 400
-        ctx.body = ResponseUtil.error('缺少 userId 参数')
-        return
-      }
-
-      const result = await userService.updateUser(userId, updates)
-
-      ctx.status = 200
-      ctx.body = ResponseUtil.success(result.data, result.message)
-    } catch (err) {
-      ctx.status = 500
-      ctx.body = ResponseUtil.serverError(err.message || '更新用户信息失败')
+    if (!userId) {
+      throw new BadRequestError('缺少 userId 参数')
     }
-  }
+
+    const result = await userService.updateUser(userId, updates)
+
+    ctx.body = ResponseUtil.success(result.data, result.message)
+  })
 
   /**
    * 删除用户
    */
-  async deleteUser(ctx) {
-    try {
-      const { userId } = ctx.params
+  deleteUser = asyncHandler(async (ctx) => {
+    const { userId } = ctx.params
 
-      if (!userId) {
-        ctx.status = 400
-        ctx.body = ResponseUtil.error('缺少 userId 参数')
-        return
-      }
-
-      const result = await userService.deleteUser(userId)
-
-      ctx.status = 200
-      ctx.body = ResponseUtil.success(null, result.message)
-    } catch (err) {
-      ctx.status = 500
-      ctx.body = ResponseUtil.serverError(err.message || '删除用户失败')
+    if (!userId) {
+      throw new BadRequestError('缺少 userId 参数')
     }
-  }
+
+    const result = await userService.deleteUser(userId)
+
+    ctx.body = ResponseUtil.success(null, result.message)
+  })
 
   /**
    * 为用户分配角色
    */
-  async assignRole(ctx) {
-    try {
-      const { userId } = ctx.params
-      const { roleId } = ctx.request.body
+  assignRole = asyncHandler(async (ctx) => {
+    const { userId } = ctx.params
+    const { roleId } = ctx.request.body
 
-      if (!userId || !roleId) {
-        ctx.status = 400
-        ctx.body = ResponseUtil.error('缺少 userId 或 roleId 参数')
-        return
-      }
-
-      const result = await userService.assignRole(userId, roleId)
-
-      ctx.status = 200
-      ctx.body = ResponseUtil.success(null, result.message)
-    } catch (err) {
-      ctx.status = 500
-      ctx.body = ResponseUtil.serverError(err.message || '分配角色失败')
+    if (!userId || !roleId) {
+      throw new BadRequestError('缺少 userId 或 roleId 参数')
     }
-  }
+
+    const result = await userService.assignRole(userId, roleId)
+
+    ctx.body = ResponseUtil.success(null, result.message)
+  })
 
   /**
    * 移除用户角色
    */
-  async removeRole(ctx) {
-    try {
-      const { userId, roleId } = ctx.params
+  removeRole = asyncHandler(async (ctx) => {
+    const { userId, roleId } = ctx.params
 
-      if (!userId || !roleId) {
-        ctx.status = 400
-        ctx.body = ResponseUtil.error('缺少 userId 或 roleId 参数')
-        return
-      }
-
-      const result = await userService.removeRole(userId, roleId)
-
-      ctx.status = 200
-      ctx.body = ResponseUtil.success(null, result.message)
-    } catch (err) {
-      ctx.status = 500
-      ctx.body = ResponseUtil.serverError(err.message || '移除角色失败')
+    if (!userId || !roleId) {
+      throw new BadRequestError('缺少 userId 或 roleId 参数')
     }
-  }
+
+    const result = await userService.removeRole(userId, roleId)
+
+    ctx.body = ResponseUtil.success(null, result.message)
+  })
 }
 
 module.exports = new UserController()
