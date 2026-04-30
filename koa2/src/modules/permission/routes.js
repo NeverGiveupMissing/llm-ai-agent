@@ -2,6 +2,7 @@
 
 const Router = require('@koa/router')
 const permissionController = require('./controller')
+const { authMiddleware } = require('../../middlewares/auth.middleware')
 const { requirePermission } = require('../../middlewares/checkPermission')
 
 const router = new Router({
@@ -44,7 +45,7 @@ const router = new Router({
  *       200:
  *         description: 获取成功
  */
-router.get('/', requirePermission('permission:read'), permissionController.listPermissions)
+router.get('/', authMiddleware(), requirePermission('permission:read'), permissionController.listPermissions)
 
 /**
  * @swagger
@@ -58,7 +59,7 @@ router.get('/', requirePermission('permission:read'), permissionController.listP
  *       200:
  *         description: 获取成功
  */
-router.get('/by-module', requirePermission('permission:read'), permissionController.getPermissionsByModule)
+router.get('/by-module', authMiddleware(), requirePermission('permission:read'), permissionController.getPermissionsByModule)
 
 /**
  * @swagger
@@ -78,7 +79,7 @@ router.get('/by-module', requirePermission('permission:read'), permissionControl
  *       200:
  *         description: 获取成功
  */
-router.get('/:permissionId', requirePermission('permission:read'), permissionController.getPermissionDetail)
+router.get('/:permissionId', authMiddleware(), requirePermission('permission:read'), permissionController.getPermissionDetail)
 
 /**
  * @swagger
@@ -98,7 +99,7 @@ router.get('/:permissionId', requirePermission('permission:read'), permissionCon
  *       200:
  *         description: 获取成功
  */
-router.get('/user/:userId', requirePermission('permission:read'), permissionController.getUserPermissions)
+router.get('/user/:userId', authMiddleware(), requirePermission('permission:read'), permissionController.getUserPermissions)
 
 /**
  * @swagger
@@ -123,7 +124,7 @@ router.get('/user/:userId', requirePermission('permission:read'), permissionCont
  *       200:
  *         description: 检查成功
  */
-router.get('/check/:userId/:permissionCode', requirePermission('permission:read'), permissionController.checkPermission)
+router.get('/check/:userId/:permissionCode', authMiddleware(), requirePermission('permission:read'), permissionController.checkPermission)
 
 /**
  * @swagger
@@ -155,7 +156,7 @@ router.get('/check/:userId/:permissionCode', requirePermission('permission:read'
  *       200:
  *         description: 检查成功
  */
-router.post('/check-any/:userId', requirePermission('permission:read'), permissionController.checkAnyPermission)
+router.post('/check-any/:userId', authMiddleware(), requirePermission('permission:read'), permissionController.checkAnyPermission)
 
 /**
  * @swagger
@@ -187,6 +188,6 @@ router.post('/check-any/:userId', requirePermission('permission:read'), permissi
  *       200:
  *         description: 检查成功
  */
-router.post('/check-all/:userId', requirePermission('permission:read'), permissionController.checkAllPermissions)
+router.post('/check-all/:userId', authMiddleware(), requirePermission('permission:read'), permissionController.checkAllPermissions)
 
-module.exports = router.routes()
+module.exports = router

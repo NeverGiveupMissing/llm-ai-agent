@@ -2,6 +2,7 @@
 
 const Router = require('@koa/router')
 const userController = require('./controller')
+const { authMiddleware } = require('../../middlewares/auth.middleware')
 const { requirePermission } = require('../../middlewares/checkPermission')
 
 const router = new Router({
@@ -67,22 +68,25 @@ router.post('/register', userController.register)
  */
 router.post('/login', userController.login)
 
-// 需要 user:read 权限的接口
-router.get('/', requirePermission('user:read'), userController.listUsers)
+// 需要认证的接口
+router.get('/me', authMiddleware(), userController.getCurrentUser)
 
 // 需要 user:read 权限的接口
-router.get('/:userId', requirePermission('user:read'), userController.getUserDetail)
+router.get('/', authMiddleware(), requirePermission('user:read'), userController.listUsers)
+
+// 需要 user:read 权限的接口
+router.get('/:userId', authMiddleware(), requirePermission('user:read'), userController.getUserDetail)
 
 // 需要 user:update 权限的接口
-router.put('/:userId', requirePermission('user:update'), userController.updateUser)
+router.put('/:userId', authMiddleware(), requirePermission('user:update'), userController.updateUser)
 
 // 需要 user:delete 权限的接口
-router.delete('/:userId', requirePermission('user:delete'), userController.deleteUser)
+router.delete('/:userId', authMiddleware(), requirePermission('user:delete'), userController.deleteUser)
 
 // 需要 user:update 权限的接口
-router.post('/:userId/roles', requirePermission('user:update'), userController.assignRole)
+router.post('/:userId/roles', authMiddleware(), requirePermission('user:update'), userController.assignRole)
 
 // 需要 user:update 权限的接口
-router.delete('/:userId/roles/:roleId', requirePermission('user:update'), userController.removeRole)
+router.delete('/:userId/roles/:roleId', authMiddleware(), requirePermission('user:update'), userController.removeRole)
 
-module.exports = router.routes()
+module.exports = router

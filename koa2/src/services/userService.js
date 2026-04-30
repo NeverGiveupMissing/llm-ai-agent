@@ -3,6 +3,7 @@
 const userModel = require('../models/userModel')
 const roleModel = require('../models/roleModel')
 const bcrypt = require('bcrypt')
+const { generateToken } = require('../middlewares/auth.middleware')
 
 class UserService {
   /**
@@ -73,6 +74,12 @@ class UserService {
     // 获取用户角色
     const roles = await userModel.getUserRoles(user.id)
 
+    // 生成 JWT Token
+    const token = generateToken({
+      userId: user.id,
+      username: user.username,
+    })
+
     return {
       success: true,
       data: {
@@ -81,6 +88,7 @@ class UserService {
         email: user.email,
         avatarUrl: user.avatar_url,
         roles: roles.map((r) => r.name),
+        token, // 返回 JWT Token
       },
       message: '登录成功',
     }

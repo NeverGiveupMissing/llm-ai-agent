@@ -1,4 +1,4 @@
-﻿const { pool } = require('../../config/db')
+const { pool } = require('../../config/db')
 
 /**
  * 对话记忆关联模型

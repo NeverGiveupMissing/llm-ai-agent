@@ -21,7 +21,7 @@ async function initDatabase() {
     // ============================================
     // 2. 创建 memories 表（记忆表）
     // ============================================
-    console.log(' 创建 memories 表...')
+    console.log('📊 创建 memories 表...')
     await pool.query(`
       CREATE TABLE IF NOT EXISTS memories (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -190,7 +190,246 @@ async function initDatabase() {
       console.log('ℹ️  memory_ids 字段已存在')
     }
 
-    console.log('🎉 数据库初始化完成！所有表已就绪')
+    // ============================================
+    // 8. RBAC 权限系统 - 创建 users 表
+    // ============================================
+    console.log('📊 创建 users 表（RBAC 系统）...')
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        username VARCHAR(64) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        email VARCHAR(128),
+        avatar_url VARCHAR(255),
+        status VARCHAR(32) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'banned')),
+        last_login_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      -- 创建索引
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_username') THEN
+          CREATE INDEX idx_users_username ON users(username);
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_email') THEN
+          CREATE INDEX idx_users_email ON users(email);
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_status') THEN
+          CREATE INDEX idx_users_status ON users(status);
+        END IF;
+      END $$;
+    `)
+    console.log('✅ users 表创建成功')
+
+    // ============================================
+    // 9. RBAC 权限系统 - 创建 roles 表
+    // ============================================
+    console.log('📊 创建 roles 表（RBAC 系统）...')
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS roles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(64) NOT NULL UNIQUE,
+        display_name VARCHAR(128) NOT NULL,
+        description TEXT,
+        is_system BOOLEAN DEFAULT false,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      -- 创建索引
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_roles_name') THEN
+          CREATE INDEX idx_roles_name ON roles(name);
+        END IF;
+      END $$;
+    `)
+    console.log('✅ roles 表创建成功')
+
+    // ============================================
+    // 10. RBAC 权限系统 - 创建 permissions 表
+    // ============================================
+    console.log('📊 创建 permissions 表（RBAC 系统）...')
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS permissions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        code VARCHAR(128) NOT NULL UNIQUE,
+        name VARCHAR(128) NOT NULL,
+        description TEXT,
+        module VARCHAR(64) NOT NULL,
+        action VARCHAR(32) NOT NULL,
+        resource VARCHAR(64),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      -- 创建索引
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_permissions_code') THEN
+          CREATE INDEX idx_permissions_code ON permissions(code);
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_permissions_module') THEN
+          CREATE INDEX idx_permissions_module ON permissions(module);
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_permissions_action') THEN
+          CREATE INDEX idx_permissions_action ON permissions(action);
+        END IF;
+      END $$;
+    `)
+    console.log('✅ permissions 表创建成功')
+
+    // ============================================
+    // 11. RBAC 权限系统 - 创建 user_roles 关联表
+    // ============================================
+    console.log('📊 创建 user_roles 表（RBAC 系统）...')
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_roles (
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (user_id, role_id)
+      );
+
+      -- 创建索引
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_user_roles_user_id') THEN
+          CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_user_roles_role_id') THEN
+          CREATE INDEX idx_user_roles_role_id ON user_roles(role_id);
+        END IF;
+      END $$;
+    `)
+    console.log('✅ user_roles 表创建成功')
+
+    // ============================================
+    // 12. RBAC 权限系统 - 创建 role_permissions 关联表
+    // ============================================
+    console.log('📊 创建 role_permissions 表（RBAC 系统）...')
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS role_permissions (
+        role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+        permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        PRIMARY KEY (role_id, permission_id)
+      );
+
+      -- 创建索引
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_role_permissions_role_id') THEN
+          CREATE INDEX idx_role_permissions_role_id ON role_permissions(role_id);
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_role_permissions_permission_id') THEN
+          CREATE INDEX idx_role_permissions_permission_id ON role_permissions(permission_id);
+        END IF;
+      END $$;
+    `)
+    console.log('✅ role_permissions 表创建成功')
+
+    // ============================================
+    // 13. 插入 RBAC 初始数据（仅当表为空时）
+    // ============================================
+    console.log('🔍 检查 RBAC 初始数据...')
+    
+    // 检查 roles 表是否为空
+    const rolesCount = await pool.query('SELECT COUNT(*) FROM roles')
+    if (parseInt(rolesCount.rows[0].count) === 0) {
+      console.log('📝 插入初始角色数据...')
+      await pool.query(`
+        INSERT INTO roles (id, name, display_name, description, is_system) VALUES
+        ('a0000000-0000-0000-0000-000000000001', 'admin', '管理员', '系统管理员，拥有所有权限', true),
+        ('a0000000-0000-0000-0000-000000000002', 'user', '普通用户', '基本使用权限', true)
+        ON CONFLICT (name) DO NOTHING;
+      `)
+      console.log('✅ 初始角色数据插入成功')
+    } else {
+      console.log('ℹ️  角色数据已存在')
+    }
+
+    // 检查 permissions 表是否为空
+    const permissionsCount = await pool.query('SELECT COUNT(*) FROM permissions')
+    if (parseInt(permissionsCount.rows[0].count) === 0) {
+      console.log('📝 插入初始权限数据...')
+      await pool.query(`
+        INSERT INTO permissions (id, code, name, description, module, action, resource) VALUES
+        -- 用户管理权限
+        ('b0000000-0000-0000-0000-000000000001', 'user:read', '查看用户', '查看用户列表和详情', 'user', 'read', 'user'),
+        ('b0000000-0000-0000-0000-000000000002', 'user:create', '创建用户', '创建新用户', 'user', 'create', 'user'),
+        ('b0000000-0000-0000-0000-000000000003', 'user:update', '更新用户', '更新用户信息', 'user', 'update', 'user'),
+        ('b0000000-0000-0000-0000-000000000004', 'user:delete', '删除用户', '删除用户', 'user', 'delete', 'user'),
+        
+        -- 角色管理权限
+        ('b0000000-0000-0000-0000-000000000005', 'role:read', '查看角色', '查看角色列表和详情', 'role', 'read', 'role'),
+        ('b0000000-0000-0000-0000-000000000006', 'role:create', '创建角色', '创建新角色', 'role', 'create', 'role'),
+        ('b0000000-0000-0000-0000-000000000007', 'role:update', '更新角色', '更新角色信息', 'role', 'update', 'role'),
+        ('b0000000-0000-0000-0000-000000000008', 'role:delete', '删除角色', '删除角色', 'role', 'delete', 'role'),
+        
+        -- 权限管理权限
+        ('b0000000-0000-0000-0000-000000000009', 'permission:read', '查看权限', '查看权限列表和详情', 'permission', 'read', 'permission'),
+        ('b0000000-0000-0000-0000-00000000000a', 'permission:create', '创建权限', '创建新权限', 'permission', 'create', 'permission'),
+        ('b0000000-0000-0000-0000-00000000000b', 'permission:update', '更新权限', '更新权限信息', 'permission', 'update', 'permission'),
+        ('b0000000-0000-0000-0000-00000000000c', 'permission:delete', '删除权限', '删除权限', 'permission', 'delete', 'permission'),
+        
+        -- 聊天管理权限
+        ('b0000000-0000-0000-0000-00000000000d', 'chat:read', '查看聊天', '查看聊天记录', 'chat', 'read', 'chat'),
+        ('b0000000-0000-0000-0000-00000000000e', 'chat:create', '创建聊天', '创建新对话', 'chat', 'create', 'chat'),
+        ('b0000000-0000-0000-0000-00000000000f', 'chat:update', '更新聊天', '更新对话信息', 'chat', 'update', 'chat'),
+        ('b0000000-0000-0000-0000-000000000010', 'chat:delete', '删除聊天', '删除对话', 'chat', 'delete', 'chat'),
+        
+        -- 记忆管理权限
+        ('b0000000-0000-0000-0000-000000000011', 'memory:read', '查看记忆', '查看记忆数据', 'memory', 'read', 'memory'),
+        ('b0000000-0000-0000-0000-000000000012', 'memory:create', '创建记忆', '创建新记忆', 'memory', 'create', 'memory'),
+        ('b0000000-0000-0000-0000-000000000013', 'memory:update', '更新记忆', '更新记忆信息', 'memory', 'update', 'memory'),
+        ('b0000000-0000-0000-0000-000000000014', 'memory:delete', '删除记忆', '删除记忆', 'memory', 'delete', 'memory')
+        ON CONFLICT (code) DO NOTHING;
+      `)
+      console.log('✅ 初始权限数据插入成功')
+    } else {
+      console.log('ℹ️  权限数据已存在')
+    }
+
+    // 为 admin 角色分配所有权限
+    const adminRolePermissions = await pool.query(
+      'SELECT COUNT(*) FROM role_permissions WHERE role_id = $1',
+      ['a0000000-0000-0000-0000-000000000001']
+    )
+    if (parseInt(adminRolePermissions.rows[0].count) === 0) {
+      console.log('📝 为 admin 角色分配所有权限...')
+      await pool.query(`
+        INSERT INTO role_permissions (role_id, permission_id)
+        SELECT 'a0000000-0000-0000-0000-000000000001', id FROM permissions
+        ON CONFLICT DO NOTHING;
+      `)
+      console.log('✅ admin 角色权限分配成功')
+    } else {
+      console.log('ℹ️  admin 角色权限已存在')
+    }
+
+    // 为 user 角色分配基础权限
+    const userRolePermissions = await pool.query(
+      'SELECT COUNT(*) FROM role_permissions WHERE role_id = $1',
+      ['a0000000-0000-0000-0000-000000000002']
+    )
+    if (parseInt(userRolePermissions.rows[0].count) === 0) {
+      console.log('📝 为 user 角色分配基础权限...')
+      await pool.query(`
+        INSERT INTO role_permissions (role_id, permission_id)
+        SELECT 'a0000000-0000-0000-0000-000000000002', id 
+        FROM permissions 
+        WHERE code IN ('chat:read', 'chat:create', 'memory:read', 'memory:create')
+        ON CONFLICT DO NOTHING;
+      `)
+      console.log('✅ user 角色权限分配成功')
+    } else {
+      console.log('ℹ️  user 角色权限已存在')
+    }
+
+    console.log('🎉 数据库初始化完成！所有表和初始数据已就绪')
     return true
   } catch (error) {
     console.error('❌ 数据库初始化失败:', error.message)

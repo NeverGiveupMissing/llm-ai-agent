@@ -2,6 +2,7 @@
 
 const userService = require('../../services/userService')
 const ResponseUtil = require('../../utils/response')
+const { authMiddleware } = require('../../middlewares/auth.middleware')
 
 class UserController {
   /**
@@ -52,6 +53,29 @@ class UserController {
     } catch (err) {
       ctx.status = 401
       ctx.body = ResponseUtil.error(err.message || '用户名或密码错误')
+    }
+  }
+
+  /**
+   * 获取当前用户信息（需要认证）
+   */
+  async getCurrentUser(ctx) {
+    try {
+      const userId = ctx.state.userId
+
+      if (!userId) {
+        ctx.status = 401
+        ctx.body = ResponseUtil.unauthorized('未登录')
+        return
+      }
+
+      const result = await userService.getUserDetail(userId)
+
+      ctx.status = 200
+      ctx.body = ResponseUtil.success(result.data)
+    } catch (err) {
+      ctx.status = 500
+      ctx.body = ResponseUtil.serverError(err.message || '获取用户信息失败')
     }
   }
 

@@ -1,6 +1,6 @@
 // 说明：角色数据模型 - 管理角色的创建、查询、权限分配
 
-const { pool } = require('../../config/db')
+const { pool } = require('../config/db')
 const { v4: uuidv4 } = require('uuid')
 
 class RoleModel {

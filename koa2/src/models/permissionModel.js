@@ -1,6 +1,6 @@
 // 说明：权限数据模型 - 管理权限的查询和分配
 
-const { pool } = require('../../config/db')
+const { pool } = require('../config/db')
 
 class PermissionModel {
   /**

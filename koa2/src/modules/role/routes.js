@@ -2,6 +2,7 @@
 
 const Router = require('@koa/router')
 const roleController = require('./controller')
+const { authMiddleware } = require('../../middlewares/auth.middleware')
 const { requirePermission, requireAnyPermission } = require('../../middlewares/checkPermission')
 
 const router = new Router({
@@ -40,7 +41,7 @@ const router = new Router({
  *       200:
  *         description: 获取成功
  */
-router.get('/', requirePermission('role:read'), roleController.listRoles)
+router.get('/', authMiddleware(), requirePermission('role:read'), roleController.listRoles)
 
 /**
  * @swagger
@@ -70,7 +71,7 @@ router.get('/', requirePermission('role:read'), roleController.listRoles)
  *       201:
  *         description: 创建成功
  */
-router.post('/', requirePermission('role:create'), roleController.createRole)
+router.post('/', authMiddleware(), requirePermission('role:create'), roleController.createRole)
 
 /**
  * @swagger
@@ -90,7 +91,7 @@ router.post('/', requirePermission('role:create'), roleController.createRole)
  *       200:
  *         description: 获取成功
  */
-router.get('/:roleId', requirePermission('role:read'), roleController.getRoleDetail)
+router.get('/:roleId', authMiddleware(), requirePermission('role:read'), roleController.getRoleDetail)
 
 /**
  * @swagger
@@ -123,7 +124,7 @@ router.get('/:roleId', requirePermission('role:read'), roleController.getRoleDet
  *       200:
  *         description: 更新成功
  */
-router.put('/:roleId', requirePermission('role:update'), roleController.updateRole)
+router.put('/:roleId', authMiddleware(), requirePermission('role:update'), roleController.updateRole)
 
 /**
  * @swagger
@@ -143,7 +144,7 @@ router.put('/:roleId', requirePermission('role:update'), roleController.updateRo
  *       200:
  *         description: 删除成功
  */
-router.delete('/:roleId', requirePermission('role:delete'), roleController.deleteRole)
+router.delete('/:roleId', authMiddleware(), requirePermission('role:delete'), roleController.deleteRole)
 
 /**
  * @swagger
@@ -173,7 +174,7 @@ router.delete('/:roleId', requirePermission('role:delete'), roleController.delet
  *       200:
  *         description: 分配成功
  */
-router.post('/:roleId/permissions', requirePermission('role:update'), roleController.assignPermission)
+router.post('/:roleId/permissions', authMiddleware(), requirePermission('role:update'), roleController.assignPermission)
 
 /**
  * @swagger
@@ -205,7 +206,7 @@ router.post('/:roleId/permissions', requirePermission('role:update'), roleContro
  *       200:
  *         description: 批量分配成功
  */
-router.post('/:roleId/permissions/batch', requirePermission('role:update'), roleController.assignPermissions)
+router.post('/:roleId/permissions/batch', authMiddleware(), requirePermission('role:update'), roleController.assignPermissions)
 
 /**
  * @swagger
@@ -230,7 +231,7 @@ router.post('/:roleId/permissions/batch', requirePermission('role:update'), role
  *       200:
  *         description: 移除成功
  */
-router.delete('/:roleId/permissions/:permissionId', requirePermission('role:update'), roleController.removePermission)
+router.delete('/:roleId/permissions/:permissionId', authMiddleware(), requirePermission('role:update'), roleController.removePermission)
 
 /**
  * @swagger
@@ -258,6 +259,6 @@ router.delete('/:roleId/permissions/:permissionId', requirePermission('role:upda
  *       200:
  *         description: 获取成功
  */
-router.get('/:roleId/users', requirePermission('role:read'), roleController.getRoleUsers)
+router.get('/:roleId/users', authMiddleware(), requirePermission('role:read'), roleController.getRoleUsers)
 
-module.exports = router.routes()
+module.exports = router

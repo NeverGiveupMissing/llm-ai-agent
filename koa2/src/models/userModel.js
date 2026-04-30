@@ -1,6 +1,6 @@
 // 说明：用户数据模型 - 管理用户的创建、查询、更新
 
-const { pool } = require('../../config/db')
+const { pool } = require('../config/db')
 const { v4: uuidv4 } = require('uuid')
 
 class UserModel {

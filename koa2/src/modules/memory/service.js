@@ -1,4 +1,4 @@
-﻿const { pool } = require('../../config/db')
+const { pool } = require('../../config/db')
 const { MemoryModel } = require('./model')
 const embeddingService = require('../../services/embedding.service')
 const memoryDeduplicationService = require('../../services/memory-deduplication.service')

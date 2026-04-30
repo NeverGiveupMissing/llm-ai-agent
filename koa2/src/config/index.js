@@ -34,12 +34,19 @@ const DEFAULT_MEMORY_CONFIG = {
   MAX_MEMORIES_PER_USER: 100,
 }
 
+// JWT 配置常量
+const JWT_CONFIG = {
+  SECRET: process.env.JWT_SECRET || 'your-secret-key-change-in-production',
+  EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d', // 默认 7 天过期
+}
+
 module.exports = {
   AI_API_CONFIG,
   SERVER_CONFIG,
   LOG_CONFIG,
   DB_CONFIG,
   DEFAULT_MEMORY_CONFIG,
+  JWT_CONFIG,
 }
 const path = require('path')
 const fs = require('fs')
@@ -99,6 +106,12 @@ const config = {
     maxMemoriesPerUser: parseInt(process.env.MEMORY_MAX_PER_USER || String(constants.DEFAULT_MEMORY_CONFIG.MAX_MEMORIES_PER_USER), 10),
     embeddingModel: process.env.EMBEDDING_MODEL || constants.AI_API_CONFIG.DEFAULT_EMBEDDING_MODEL,
   },
+  
+  // JWT 配置
+  jwt: {
+    secret: process.env.JWT_SECRET || constants.JWT_CONFIG.SECRET,
+    expiresIn: process.env.JWT_EXPIRES_IN || constants.JWT_CONFIG.EXPIRES_IN,
+  },
 }
 
 // ==================== 配置验证 ====================
@@ -108,6 +121,11 @@ if (!config.api.apiKey) {
   console.error('尝试加载的文件:', envPath)
   console.error('文件是否存在:', fs.existsSync(envPath))
   process.exit(1)
+}
+
+// JWT 密钥安全检查（仅警告）
+if (config.jwt.secret === 'your-secret-key-change-in-production') {
+  console.warn('⚠️  警告: JWT_SECRET 使用默认值，生产环境请务必修改！')
 }
 
 module.exports = config
