@@ -28,7 +28,6 @@
     <n-data-table
       :columns="columns"
       :data="memoryList"
-      :loading="loading"
       :pagination="false"
       :scroll-x="1200"
     />
@@ -50,7 +49,7 @@
 </template>
 
 <script setup name="MemoryList">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, h } from 'vue'
 import { useMessage, useDialog } from 'naive-ui'
 import { getMemoryList, deleteMemory } from '@/api/memory'
 import ImportanceFilter from '@/views/chat/components/MemoryPanel/components/ImportanceFilter.vue'
@@ -64,12 +63,20 @@ const emit = defineEmits(['refresh', 'edit'])
 const message = useMessage()
 const dialog = useDialog()
 
-const loading = ref(false)
 const memoryList = ref([])
 const typeFilter = ref(null)
 const searchKeyword = ref('')
 const exportMemories = ref([]) // 用于导出的记忆数据
 const minImportance = ref(4)
+
+// ✅ 记忆类型选项
+const typeOptions = [
+  { label: '事实', value: 'fact' },
+  { label: '偏好', value: 'preference' },
+  { label: '目标', value: 'goal' },
+  { label: '经历', value: 'event' },
+  { label: '观点', value: 'opinion' },
+]
 
 const pagination = ref({
   page: 1,
@@ -174,7 +181,6 @@ const columns = [
 ]
 
 const fetchMemories = async () => {
-  loading.value = true
   try {
     const params = {
       limit: pagination.value.pageSize,
@@ -208,8 +214,6 @@ const fetchMemories = async () => {
     }
   } catch (error) {
     message.error(error.message || '获取记忆列表失败')
-  } finally {
-    loading.value = false
   }
 }
 
@@ -279,6 +283,28 @@ const handleDelete = async (id) => {
   })
 }
 
+const handleClearAll = () => {
+  dialog.warning({
+    title: '确认清空',
+    content: '确定要清空所有记忆吗？此操作不可恢复！',
+    positiveText: '确定清空',
+    negativeText: '取消',
+    positiveButtonProps: { type: 'error' },
+    onPositiveClick: async () => {
+      try {
+        // TODO: 调用批量删除 API
+        message.info('批量删除功能开发中...')
+        // await clearAllMemories(props.userId)
+        // message.success('清空成功')
+        // fetchMemories()
+        // emit('refresh')
+      } catch (error) {
+        message.error(error.message || '清空失败')
+      }
+    },
+  })
+}
+
 const refresh = () => {
   fetchMemories()
 }
@@ -289,31 +315,3 @@ onMounted(() => {
   fetchMemories()
 })
 </script>
-
-<style scoped>
-.memory-list-container {
-  min-height: 400px;
-}
-
-.list-header {
-  margin-bottom: 16px;
-}
-
-.filter-group {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.memory-table {
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-</style>

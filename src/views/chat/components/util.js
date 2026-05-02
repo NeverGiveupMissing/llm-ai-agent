@@ -1,7 +1,7 @@
 // 说明：聊天流式请求工具 - 处理 SSE 流式通信和记忆参数传递
 
 import { sendChatMessage } from '@/api/chat'
-import { createSSEController, streamSSE } from '@/utils/http'
+import { stream } from '@/utils/http'
 import { CHAT_CONFIG } from '@/utils/constants'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
@@ -39,7 +39,7 @@ function buildSSECallbacks(callbacks) {
  * 创建流式聊天控制器
  */
 export function createChatStream() {
-  const sseController = createSSEController()
+  const sseController = stream.controller()
 
   return {
     send: (messages, callbacks, sessionId) => {
@@ -49,16 +49,14 @@ export function createChatStream() {
       // 获取 userId
       const currentUserId = localStorage.getItem('userId') || 'anonymous'
 
-      const requestConfig = sendChatMessage({
-        messages,
-        stream: true,
-        sessionId: currentSessionId,
-        userId: currentUserId,
-      })
-
-      return streamSSE({
-        url: requestConfig.url,
-        data: requestConfig.data,
+      return stream.sse({
+        url: `${CHAT_CONFIG.API_PREFIX}/chat`,
+        data: {
+          messages,
+          stream: true,
+          sessionId: currentSessionId,
+          userId: currentUserId,
+        },
         useTypewriter:
           callbacks.useTypewriter !== undefined
             ? callbacks.useTypewriter
@@ -145,10 +143,12 @@ if (typeof window !== 'undefined') {
 
     // 提取表格文本（制表符分隔）
     const rows = Array.from(table.querySelectorAll('tr'))
-    const text = rows.map(row => {
-      const cells = Array.from(row.querySelectorAll('th, td'))
-      return cells.map(cell => cell.textContent.trim()).join('\t')
-    }).join('\n')
+    const text = rows
+      .map((row) => {
+        const cells = Array.from(row.querySelectorAll('th, td'))
+        return cells.map((cell) => cell.textContent.trim()).join('\t')
+      })
+      .join('\n')
 
     navigator.clipboard.writeText(text).then(() => {
       const btn = table.parentElement.querySelector('.table-copy-btn')
@@ -171,17 +171,21 @@ if (typeof window !== 'undefined') {
 
     // 提取表格数据
     const rows = Array.from(table.querySelectorAll('tr'))
-    const csvContent = rows.map(row => {
-      const cells = Array.from(row.querySelectorAll('th, td'))
-      return cells.map(cell => {
-        let text = cell.textContent.trim()
-        // 如果内容包含逗号或引号,需要转义
-        if (text.includes(',') || text.includes('"') || text.includes('\n')) {
-          text = '"' + text.replace(/"/g, '""') + '"'
-        }
-        return text
-      }).join(',')
-    }).join('\n')
+    const csvContent = rows
+      .map((row) => {
+        const cells = Array.from(row.querySelectorAll('th, td'))
+        return cells
+          .map((cell) => {
+            let text = cell.textContent.trim()
+            // 如果内容包含逗号或引号,需要转义
+            if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+              text = '"' + text.replace(/"/g, '""') + '"'
+            }
+            return text
+          })
+          .join(',')
+      })
+      .join('\n')
 
     // 添加BOM以支持中文
     const BOM = '\uFEFF'

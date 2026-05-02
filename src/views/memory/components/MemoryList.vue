@@ -31,7 +31,6 @@
     <n-data-table
       :columns="columns"
       :data="memoryList"
-      :loading="loading"
       :pagination="false"
       :scroll-x="1200"
       class="memory-table"
@@ -69,7 +68,6 @@ const emit = defineEmits(['refresh', 'edit'])
 const message = useMessage()
 const dialog = useDialog()
 
-const loading = ref(false)
 const memoryList = ref([])
 const searchKeyword = ref('')
 const typeFilter = ref(null)
@@ -206,7 +204,6 @@ const columns = [
   },
 ]
 const fetchMemories = async () => {
-  loading.value = true
   try {
     const params = {
       limit: pagination.value.pageSize,
@@ -237,8 +234,6 @@ const fetchMemories = async () => {
     }
   } catch (error) {
     message.error(error.message || '获取记忆列表失败')
-  } finally {
-    loading.value = false
   }
 }
 
@@ -287,31 +282,3 @@ onMounted(() => {
   fetchMemories()
 })
 </script>
-
-<style scoped>
-.memory-list-container {
-  min-height: 400px;
-}
-
-.list-header {
-  margin-bottom: 16px;
-}
-
-.filter-group {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.memory-table {
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-</style>

@@ -136,7 +136,7 @@ const router = useRouter()
   align-items: center;
   justify-content: center;
   width: 64px;
-  height: 64px;
+  height: 44px;
   border-radius: 12px;
   flex-shrink: 0;
 }

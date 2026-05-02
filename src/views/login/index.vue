@@ -43,7 +43,6 @@
             type="primary"
             size="large"
             block
-            :loading="loading"
             @click="isRegisterMode ? handleRegister() : handleLogin()"
           >
             {{ isRegisterMode ? '注册' : '登录' }}
@@ -57,6 +56,11 @@
           {{ isRegisterMode ? '立即登录' : '立即注册' }}
         </n-button>
       </div>
+
+      <div class="copyright">
+        <p>© 2026 AI Agent Platform. All rights reserved.</p>
+        <p><a href="https://beian.miit.gov.cn/" target="_blank">皖ICP备2026011051号-1</a></p>
+      </div>
     </div>
   </div>
 </template>
@@ -66,15 +70,16 @@ import { ref, reactive } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { useUserStore } from '@/stores/modules/user'
+import { usePermissionStore } from '@/stores/modules/permission'
 import { login, register } from '@/api/auth'
 
 const router = useRouter()
 const route = useRoute()
 const message = useMessage()
 const userStore = useUserStore()
+const permissionStore = usePermissionStore()
 
 const formRef = ref(null)
-const loading = ref(false)
 const isRegisterMode = ref(false) // 切换登录/注册模式
 
 const formData = reactive({
@@ -113,8 +118,6 @@ const handleLogin = () => {
       return
     }
 
-    loading.value = true
-
     try {
       const res = await login({
         username: formData.username,
@@ -123,15 +126,16 @@ const handleLogin = () => {
 
       // 保存 token
       userStore.setToken(res.data.token)
+      // 保存用户 ID 到 localStorage（用于后续查询）
+      localStorage.setItem('userId', res.data.id)
       message.success('登录成功')
-      
-      // 跳转到之前想访问的页面，或者默认首页
-      const redirect = route.query.redirect || '/'
-      router.push(redirect)
+
+      // ✅ 不再手动加载权限，交给路由守卫统一处理
+      // ✅ 直接跳转到 dashboard，避免 Layout redirect 导致的问题
+      console.log('🔐 登录成功，准备跳转到 /dashboard')
+      router.push('/dashboard')
     } catch (error) {
       message.error(error.message || '登录失败，请检查用户名和密码')
-    } finally {
-      loading.value = false
     }
   })
 }
@@ -143,8 +147,6 @@ const handleRegister = () => {
       message.error('请填写完整信息')
       return
     }
-
-    loading.value = true
 
     try {
       await register({
@@ -158,8 +160,6 @@ const handleRegister = () => {
       formData.confirmPassword = ''
     } catch (error) {
       message.error(error.message || '注册失败')
-    } finally {
-      loading.value = false
     }
   })
 }
@@ -219,5 +219,21 @@ const toggleMode = () => {
 
 .login-footer span {
   margin-right: 8px;
+}
+
+.copyright {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 12px;
+  color: #999;
+}
+
+.copyright a {
+  color: #999;
+  text-decoration: none;
+}
+
+.copyright a:hover {
+  color: #667eea;
 }
 </style>

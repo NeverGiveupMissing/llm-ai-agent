@@ -4,13 +4,7 @@
     <div class="session-sidebar" :class="{ collapsed: !showSessionList }">
       <!-- 侧边栏内容 -->
       <div class="sidebar-content" style="position: fixed">
-        <SessionList
-          ref="sessionListRef"
-          v-model:show="showSessionList"
-          :current-session-id="currentSessionId"
-          @select="handleSelectSession"
-          @create="handleCreateSession"
-        />
+        <!-- SessionList 组件已被移除 -->
       </div>
     </div>
 
@@ -68,16 +62,18 @@ import { useMessage, useDialog, NButton, NIcon } from 'naive-ui'
 import { ChevronBackOutline, ChevronForwardOutline } from '@vicons/ionicons5'
 import ChatMessageList from './components/ChatMessageList.vue'
 import ChatInput from './components/ChatInput.vue'
-import SessionList from './components/SessionList.vue'
+// SessionList 组件已被移除
 import MemoryPanel from './components/MemoryPanel/index.vue'
 import { createChatStream } from './components/util.js'
 import { generateId } from '@/utils/http'
 import { CHAT_CONFIG } from '@/utils/constants'
 import { createSession, updateSession, getSessionList } from '@/api/session'
 import { getSessionMessages, deleteMessage } from '@/api/chat'
+import { useUserStore } from '@/stores/modules/user'
 
 const msgApi = useMessage()
 const dialogApi = useDialog()
+const userStore = useUserStore()
 const messages = ref([])
 const loading = ref(false)
 const showSessionList = ref(true) // 默认展开会话历史
@@ -85,7 +81,7 @@ const showMemoryPanel = ref(false)
 const currentSessionId = ref('')
 const currentUserId = ref('')
 const memoryPanelRef = ref(null)
-const sessionListRef = ref(null)
+// SessionList 组件相关逻辑已被移除
 const editingMessage = ref(null)
 
 let chatStream = null
@@ -93,11 +89,17 @@ let aiMessageId = null
 
 const initSession = async () => {
   const saved = localStorage.getItem('current_session_id')
-  const savedUserId = localStorage.getItem('userId')
 
-  // 确保 userId 始终有值
-  currentUserId.value = savedUserId || 'user_' + Date.now()
-  if (!savedUserId) {
+  // ✅ 优先使用 userStore 中的用户 ID（已登录用户）
+  // 如果未登录，使用 localStorage 或生成临时 ID
+  currentUserId.value = userStore.userInfo?.id || localStorage.getItem('userId') || 'user_' + Date.now()
+  
+  console.log('🔍 初始化会话, userId:', currentUserId.value)
+  console.log('🔍 userStore.userInfo:', userStore.userInfo)
+  console.log('🔍 localStorage userId:', localStorage.getItem('userId'))
+  
+  // 如果没有保存 userId，存储到 localStorage
+  if (!localStorage.getItem('userId')) {
     localStorage.setItem('userId', currentUserId.value)
   }
 
@@ -105,8 +107,10 @@ const initSession = async () => {
   if (saved) {
     try {
       // 尝试获取会话列表，检查该会话是否存在
+      console.log('📡 调用 getSessionList, userId:', currentUserId.value)
       const res = await getSessionList(currentUserId.value)
-      const sessions = res.data || res || []
+      // ✅ 拦截器返回完整对象 { code, message, data }
+      const sessions = res.data || []
       const sessionExists = sessions.some((s) => s.id === saved)
 
       if (sessionExists) {
@@ -116,7 +120,8 @@ const initSession = async () => {
         // ✅ 加载该会话的消息历史
         try {
           const msgRes = await getSessionMessages(saved, 100, 0)
-          const loadedMessages = msgRes.data || msgRes || []
+          // ✅ 拦截器返回完整对象 { code, message, data }
+          const loadedMessages = msgRes.data || []
 
           messages.value = loadedMessages.map((msg) => ({
             id: msg.id.toString(),
@@ -137,11 +142,13 @@ const initSession = async () => {
         await handleCreateSession()
       }
     } catch (error) {
-      console.error('验证会话失败，创建新会话:', error)
+      console.error('❌ 验证会话失败，创建新会话:', error)
+      console.error(' 错误详情:', error.response?.data || error.message)
       localStorage.removeItem('current_session_id')
       await handleCreateSession()
     }
   } else {
+    console.log(' 无保存的会话，创建新会话')
     await handleCreateSession()
   }
 }
@@ -149,45 +156,16 @@ const initSession = async () => {
 const handleCreateSession = async () => {
   try {
     const res = await createSession(currentUserId.value)
-    const session = res.data || res
+    // ✅ 拦截器返回完整对象 { code, message, data }
+    const session = res.data
     currentSessionId.value = session.id
     localStorage.setItem('current_session_id', session.id)
     messages.value = []
     msgApi.success('已创建新会话')
 
-    // ✅ 刷新会话列表，让新会话立即显示并高亮选中
-    if (sessionListRef.value && sessionListRef.value.fetchSessions) {
-      await sessionListRef.value.fetchSessions()
-    }
+    // SessionList 组件已被移除，不再刷新会话列表
   } catch (error) {
     msgApi.error('创建会话失败')
-  }
-}
-
-const handleSelectSession = async (session) => {
-  currentSessionId.value = session.id
-  localStorage.setItem('current_session_id', session.id)
-
-  try {
-    // 从数据库加载消息历史
-    const res = await getSessionMessages(session.id, 100, 0)
-    const loadedMessages = res.data || res || []
-
-    // 转换为前端消息格式
-    messages.value = loadedMessages.map((msg) => ({
-      id: msg.id.toString(),
-      role: msg.role,
-      content: msg.content,
-      timestamp: new Date(msg.created_at).getTime(),
-      isStreaming: false,
-    }))
-
-    console.log(`✅ 已切换到会话: ${session.title}, 加载了 ${messages.value.length} 条消息`)
-    msgApi.success(`已切换到：${session.title}`)
-  } catch (error) {
-    console.error('加载消息历史失败:', error)
-    messages.value = []
-    msgApi.warning('加载消息历史失败')
   }
 }
 
@@ -372,16 +350,10 @@ const updateSessionMessageCount = async () => {
   }
 }
 
-// 🏷️ 刷新会话列表（用于显示新生成的标题）
+// 🏷️ 刷新会话列表（SessionList 组件已被移除，此函数暂时保留但无实际功能）
 const refreshSessionList = async () => {
-  try {
-    if (sessionListRef.value && sessionListRef.value.fetchSessions) {
-      await sessionListRef.value.fetchSessions()
-      console.log('✅ 会话列表已刷新')
-    }
-  } catch (error) {
-    console.error('刷新会话列表失败:', error)
-  }
+  // SessionList 组件已被移除，不再刷新会话列表
+  console.log('ℹ️ 会话列表刷新功能已被移除')
 }
 
 const handleAbort = () => {

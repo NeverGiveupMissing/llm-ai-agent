@@ -21,7 +21,6 @@
           <n-tab-pane name="all" tab="全部记忆">
             <MemoryAllTab
               :memories="allMemories"
-              :loading="loadingAll"
               @edit="handleEditMemory"
               @delete="handleDeleteMemory"
             />
@@ -65,7 +64,6 @@ const visible = ref(false)
 const usedMemories = ref([])
 const extractedMemories = ref([])
 const allMemories = ref([])
-const loadingAll = ref(false)
 const formVisible = ref(false)
 const editMemory = ref(null)
 
@@ -135,7 +133,7 @@ const fetchExtractedMemories = async (messages, options = {}) => {
   }
 
   try {
-    console.log('🔍 开始提取记忆...', {
+    console.log(' 开始提取记忆...', {
       sessionId: props.sessionId,
       userId: props.userId,
       messageCount: messages.length,
@@ -162,7 +160,7 @@ const fetchExtractedMemories = async (messages, options = {}) => {
 
       console.log(`✅ 提取完成: 创建 ${extractedMemories.value.length} 条记忆`)
     } else {
-      console.warn('⚠️ 提取记忆失败:', res)
+      console.warn('️ 提取记忆失败:', res)
       extractedMemories.value = []
     }
   } catch (error) {
@@ -181,7 +179,6 @@ const fetchAllMemories = async () => {
     return
   }
 
-  loadingAll.value = true
   try {
     console.log('🔍 获取全部记忆...', { userId: props.userId })
     const res = await getMemoryList({
@@ -202,8 +199,6 @@ const fetchAllMemories = async () => {
     console.error('❌ 获取全部记忆失败:', error)
     msgApi.error(error.message)
     allMemories.value = []
-  } finally {
-    loadingAll.value = false
   }
 }
 
@@ -255,48 +250,33 @@ defineExpose({
 .memory-panel-overlay {
   position: fixed;
   top: 0;
-  right: 0;
-  bottom: 0;
   left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0, 0, 0, 0.5);
   z-index: 1000;
   display: flex;
-  justify-content: flex-end;
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  justify-content: center;
+  align-items: center;
 }
 
 .memory-panel {
-  width: 100%;
-  max-width: 520px;
-  height: 100%;
+  width: 600px;
+  max-width: 90vw;
+  height: 80vh;
+  max-height: 700px;
   background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
   display: flex;
   flex-direction: column;
-  animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
+  overflow: hidden;
 }
 
 .panel-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid #e5e5e5;
 }
@@ -304,7 +284,6 @@ defineExpose({
 .panel-title {
   font-size: 18px;
   font-weight: 600;
-  color: #0d0d0d;
   margin: 0;
 }
 
@@ -317,48 +296,31 @@ defineExpose({
   border: none;
   background: transparent;
   border-radius: 6px;
-  color: #6e6e80;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s;
 }
 
 .close-btn:hover {
   background: #f5f5f5;
-  color: #0d0d0d;
 }
 
 .panel-content {
   flex: 1;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
 :deep(.n-tabs) {
-  flex: 1;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 :deep(.n-tabs-nav) {
-  padding: 12px 20px 0;
-  border-bottom: 1px solid #e5e5e5;
+  padding: 0 20px;
 }
 
-:deep(.n-tabs-tab) {
-  font-size: 14px;
-  color: #6e6e80;
-  padding: 8px 16px;
-}
-
-:deep(.n-tabs-tab--active) {
-  color: #0d0d0d;
-  font-weight: 500;
-}
-
-:deep(.n-tabs-pane-wrapper) {
-  flex: 1;
-  overflow: scroll;
+:deep(.n-tabs-tab-pane) {
+  height: 100%;
+  overflow: hidden;
 }
 </style>
