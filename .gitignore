@@ -52,3 +52,8 @@ Thumbs.db
 .vscode/
 .idea/
 
+# database backup files
+*.sql
+db_backup_*.sql
+db_backup_*.zip
+
