@@ -4,6 +4,7 @@ const Router = require('@koa/router')
 const userController = require('./controller')
 const { authMiddleware } = require('../../middlewares/auth.middleware')
 const { requirePermission } = require('../../middlewares/checkPermission')
+const { loginRateLimit, registerRateLimit } = require('../../middlewares/rateLimit')
 
 const router = new Router({
   prefix: '/users',
@@ -16,12 +17,16 @@ const router = new Router({
  *   description: 用户相关接口
  */
 
+// ============================================
+// ⚠️ 重要：具体路由必须放在动态路由之前
+// ============================================
+
 /**
  * @swagger
  * /users/register:
  *   post:
  *     tags: [用户管理]
- *     summary: 用户注册
+ *     summary: 用户注册（速率限制：每分钟最多3次）
  *     requestBody:
  *       required: true
  *       content:
@@ -42,14 +47,14 @@ const router = new Router({
  *       201:
  *         description: 注册成功
  */
-router.post('/register', userController.register)
+router.post('/register', registerRateLimit(), userController.register)
 
 /**
  * @swagger
  * /users/login:
  *   post:
  *     tags: [用户管理]
- *     summary: 用户登录
+ *     summary: 用户登录（速率限制：每分钟最多5次）
  *     requestBody:
  *       required: true
  *       content:
@@ -66,27 +71,127 @@ router.post('/register', userController.register)
  *       200:
  *         description: 登录成功
  */
-router.post('/login', userController.login)
+router.post('/login', loginRateLimit(), userController.login)
 
-// 需要认证的接口
+/**
+ * 获取当前用户信息（需要认证）
+ * ⚠️ 必须放在 /:userId 之前
+ */
 router.get('/me', authMiddleware(), userController.getCurrentUser)
 
-// 需要 user:read 权限的接口
+/**
+ * 修改当前用户密码（需要认证）
+ * ️ 必须放在 /:userId 之前
+ */
+router.post('/me/change-password', authMiddleware(), userController.changePassword)
+
+/**
+ * 更新当前用户信息（需要认证）
+ * ⚠️ 必须放在 /:userId 之前
+ */
+router.put('/me', authMiddleware(), userController.updateCurrentUser)
+
+/**
+ * 上传头像（需要认证）
+ * ⚠️ 必须放在 /:userId 之前
+ */
+router.post('/me/avatar', authMiddleware(), userController.uploadAvatar)
+
+// ============================================
+// 动态路由必须放在最后
+// ============================================
+
+/**
+ * 获取用户列表（需要 user:read 权限）
+ */
 router.get('/', authMiddleware(), requirePermission('user:read'), userController.listUsers)
 
-// 需要 user:read 权限的接口
-router.get('/:userId', authMiddleware(), requirePermission('user:read'), userController.getUserDetail)
+/**
+ * 更新用户状态（启用/禁用）（需要 user:update 权限）
+ * ⚠️ 必须放在 /:userId 之前
+ */
+router.put(
+  '/:userId/status',
+  authMiddleware(),
+  requirePermission('user:update'),
+  userController.updateUserStatus,
+)
 
-// 需要 user:update 权限的接口
-router.put('/:userId', authMiddleware(), requirePermission('user:update'), userController.updateUser)
+/**
+ * 为用户分配角色（需要 user:update 权限）
+ * ⚠️ 必须放在 /:userId 之前
+ */
+router.post(
+  '/:userId/roles',
+  authMiddleware(),
+  requirePermission('user:update'),
+  userController.assignRole,
+)
 
-// 需要 user:delete 权限的接口
-router.delete('/:userId', authMiddleware(), requirePermission('user:delete'), userController.deleteUser)
+/**
+ * 批量分配角色（需要 user:update 权限）
+ * ️ 必须放在 /:userId 之前
+ */
+router.put(
+  '/:userId/roles',
+  authMiddleware(),
+  requirePermission('user:update'),
+  userController.assignRoles,
+)
 
-// 需要 user:update 权限的接口
-router.post('/:userId/roles', authMiddleware(), requirePermission('user:update'), userController.assignRole)
+/**
+ * 移除用户角色（需要 user:update 权限）
+ * ⚠️ 必须放在 /:userId/:roleId 之前
+ */
+router.delete(
+  '/:userId/roles/:roleId',
+  authMiddleware(),
+  requirePermission('user:update'),
+  userController.removeRole,
+)
 
-// 需要 user:update 权限的接口
-router.delete('/:userId/roles/:roleId', authMiddleware(), requirePermission('user:update'), userController.removeRole)
+/**
+ * 重置密码（需要 user:update 权限）
+ * ⚠️ 必须放在 /:userId 之前
+ */
+router.post(
+  '/:userId/reset-password',
+  authMiddleware(),
+  requirePermission('user:update'),
+  userController.resetPassword,
+)
+
+/**
+ * 获取用户详情（需要 user:read 权限）
+ * ⚠️ 必须放在所有 /:userId/* 路由之后，作为兜底
+ */
+router.get(
+  '/:userId',
+  authMiddleware(),
+  requirePermission('user:read'),
+  userController.getUserDetail,
+)
+
+/**
+ * 更新用户信息（需要 user:update 权限）
+ * ⚠️ 必须放在所有 /:userId/* 路由之后，作为兜底
+ */
+router.put(
+  '/:userId',
+  authMiddleware(),
+  requirePermission('user:update'),
+  userController.updateUser,
+)
+
+/**
+ * 删除用户（需要 user:delete 权限）
+ * ️ 必须放在所有 /:userId/* 路由之后，作为兜底
+ */
+router.delete(
+  '/:userId',
+  authMiddleware(),
+  requirePermission('user:delete'),
+  userController.deleteUser,
+)
 
 module.exports = router
