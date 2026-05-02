@@ -47,10 +47,7 @@ class MemoryService {
     `
 
     const result = await pool.query(query, memory.toInsertParams())
-    return {
-      isDuplicate: false,
-      data: result.rows[0],
-    }
+    return result.rows[0]
   }
 
   async batchCreateMemories(memoriesData, options = {}) {
@@ -193,6 +190,8 @@ class MemoryService {
     return {
       list: result.rows,
       total,
+      page: Math.floor(offset / (limit || 20)) + 1,
+      limit: limit || 20,
     }
   }
 

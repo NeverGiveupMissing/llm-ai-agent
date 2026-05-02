@@ -27,13 +27,11 @@ class MemoryController {
     )
 
     if (result.isDuplicate) {
-      ctx.body = ResponseUtil.success(result.duplicateInfo, result.message, 200, {
-        isDuplicate: true,
-      })
+      ctx.success(result.duplicateInfo, result.message)
       return
     }
 
-    ctx.body = ResponseUtil.success(result.data, '创建成功')
+    ctx.success(result.data, '创建成功')
   })
 
   retrieveMemories = asyncHandler(async (ctx) => {
@@ -49,7 +47,7 @@ class MemoryController {
       parseInt(limit) || undefined,
     )
 
-    ctx.body = ResponseUtil.success(memories, '检索成功')
+    ctx.success(memories, '检索成功')
   })
 
   extractMemories = asyncHandler(async (ctx) => {
@@ -71,7 +69,7 @@ class MemoryController {
       },
     )
 
-    ctx.body = ResponseUtil.success(
+    ctx.success(
       {
         created: result.created,
         skipped: result.skipped,
@@ -110,7 +108,13 @@ class MemoryController {
 
     console.log('[MemoryController] Query result count:', result.total)
 
-    ctx.body = ResponseUtil.success(result, '获取成功')
+    // 使用统一的分页响应方法
+    ctx.pageSuccess(
+      result.data,
+      result.total,
+      result.page,
+      result.limit
+    )
   })
 
   getMemoryStats = asyncHandler(async (ctx) => {
@@ -118,7 +122,7 @@ class MemoryController {
 
     const stats = await memoryService.getMemoryStats(userId || null)
 
-    ctx.body = ResponseUtil.success(stats, '获取成功')
+    ctx.success(stats, '获取成功')
   })
 
   updateMemory = asyncHandler(async (ctx) => {
@@ -131,7 +135,7 @@ class MemoryController {
       throw new NotFoundError('记忆不存在')
     }
 
-    ctx.body = ResponseUtil.success(memory, '更新成功')
+    ctx.success(memory, '更新成功')
   })
 
   deleteMemory = asyncHandler(async (ctx) => {
@@ -143,7 +147,7 @@ class MemoryController {
       throw new NotFoundError('记忆不存在')
     }
 
-    ctx.body = ResponseUtil.success(null, '删除成功')
+    ctx.success(null, '删除成功')
   })
 
   clearMemories = asyncHandler(async (ctx) => {
@@ -155,7 +159,7 @@ class MemoryController {
 
     const count = await memoryService.clearUserMemories(userId)
 
-    ctx.body = ResponseUtil.success({ count }, `已清除 ${count} 条记忆`)
+    ctx.success({ count }, `已清除 ${count} 条记忆`)
   })
 }
 

@@ -22,7 +22,7 @@ class ChatMemoryController {
   
     const context = await chatMemoryService.buildMemoryContext(sessionId, userId, query)
   
-    ctx.body = ResponseUtil.success(context)
+    ctx.success(context)
   })
 
   /**
@@ -42,7 +42,7 @@ class ChatMemoryController {
       messages,
     )
   
-    ctx.body = ResponseUtil.success(
+    ctx.success(
       {
         created: result.created || [],
         statistics: {
@@ -67,7 +67,7 @@ class ChatMemoryController {
     }
   
     const result = await chatMemoryService.getSessionMemories(sessionId)
-    ctx.body = ResponseUtil.success(result.data)
+    ctx.success(result.data)
   })
 
   /**
@@ -81,7 +81,7 @@ class ChatMemoryController {
     }
   
     const result = await chatMemoryService.clearSessionMemories(sessionId)
-    ctx.body = ResponseUtil.success(null, result.message)
+    ctx.success(null, result.message)
   })
 }
 
