@@ -56,7 +56,7 @@ function authMiddleware() {
 
       if (!authHeader) {
         ctx.status = 401
-        ctx.body = ResponseUtil.unauthorized('缺少认证令牌')
+        ctx.unauthorized('缺少认证令牌')
         return
       }
 
@@ -68,7 +68,7 @@ function authMiddleware() {
 
       if (!token) {
         ctx.status = 401
-        ctx.body = ResponseUtil.unauthorized('无效的认证令牌格式')
+        ctx.unauthorized('无效的认证令牌格式')
         return
       }
 
@@ -83,8 +83,9 @@ function authMiddleware() {
       // 继续执行后续中间件
       await next()
     } catch (error) {
+      // Token 验证失败，返回 401
       ctx.status = 401
-      ctx.body = ResponseUtil.unauthorized(error.message || '认证失败')
+      ctx.unauthorized(error.message || '认证失败')
     }
   }
 }

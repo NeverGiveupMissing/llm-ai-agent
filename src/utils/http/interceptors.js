@@ -1,7 +1,6 @@
 import { showLoading, hideLoading } from './loading'
-import { createDiscreteApi } from 'naive-ui'
-
-const { message } = createDiscreteApi(['message'])
+import { message } from './message'
+import router from '@/router'
 
 /**
  * 请求拦截器
@@ -29,6 +28,7 @@ export const requestInterceptor = (config) => {
 
 /**
  * 响应拦截器
+ * 兼容 fetch Response 和 axios response 对象
  */
 export const responseInterceptor = async (response) => {
   // ✅ 隐藏 Loading（如果请求时显示了）
@@ -47,6 +47,53 @@ export const responseInterceptor = async (response) => {
     throw new Error('登录已过期，请重新登录')
   }
 
+  // 403 无权限
+  if (response.status === 403) {
+    message.error('暂无权限访问')
+    if (!window.location.pathname.includes('/403')) {
+      router.push('/403')
+    }
+    throw new Error('暂无权限访问')
+  }
+
+  // 404 资源不存在
+  if (response.status === 404) {
+    message.error('请求的资源不存在')
+    throw new Error('资源不存在')
+  }
+
+  // 429 请求过于频繁
+  if (response.status === 429) {
+    message.error('操作太频繁，请稍后再试')
+    throw new Error('请求过于频繁')
+  }
+
+  // 500 服务器错误
+  if (response.status === 500) {
+    message.error('服务器错误，请稍后重试')
+    throw new Error('服务器错误')
+  }
+
+  // ✅ 判断是否为 axios 响应（有 data 属性且没有 json 方法）
+  const isAxiosResponse = response.data !== undefined && typeof response.json !== 'function'
+
+  if (isAxiosResponse) {
+    // Axios 响应处理
+    const data = response.data
+
+    // 统一处理后端返回格式 { code, message, data }
+    if (data.code !== 200) {
+      // ✅ 自动显示错误消息
+      if (!response.config?.skipErrorMsg) {
+        message.error(data.message || '请求失败')
+      }
+      throw new Error(data.message || '请求失败')
+    }
+
+    return data
+  }
+
+  // Fetch Response 处理
   // 其他错误状态码
   if (!response.ok) {
     let errorMessage = `请求失败: ${response.status} ${response.statusText}`
@@ -85,13 +132,8 @@ export const responseInterceptor = async (response) => {
         throw new Error(data.message || '请求失败')
       }
 
-      // ✅ 成功：自动显示后端返回的成功消息（如果有）
-      if (data.message && !response.config?.skipSuccessMsg) {
-        message.success(data.message)
-      }
-
-      // ✅ 成功：直接返回 data 字段，业务层无需判断 code
-      return data.data !== undefined ? data : data
+      // ✅ 成功：返回完整的响应数据 { code, message, data }
+      return data
     } catch (error) {
       // 如果解析 JSON 失败（如网络断开或返回了非 JSON），抛出错误
       if (error.name === 'SyntaxError') {

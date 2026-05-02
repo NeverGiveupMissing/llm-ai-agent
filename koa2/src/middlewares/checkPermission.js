@@ -1,7 +1,6 @@
 // 说明：权限验证中间件 - 用于保护需要特定权限的接口
 
-const permissionModel = require('../models/permissionModel')
-const ResponseUtil = require('../utils/response')
+const permissionModel = require('../modules/permission/model')
 
 /**
  * 权限验证中间件工厂函数
@@ -20,7 +19,7 @@ function checkPermission(permissionCodes, options = {}) {
 
       if (!userId) {
         ctx.status = 401
-        ctx.body = ResponseUtil.unauthorized('未登录或登录已过期')
+        ctx.unauthorized('未登录或登录已过期')
         return
       }
 
@@ -32,7 +31,7 @@ function checkPermission(permissionCodes, options = {}) {
           hasPermission = await permissionModel.hasPermission(userId, permissionCodes)
           if (!hasPermission) {
             ctx.status = 403
-            ctx.body = ResponseUtil.forbidden(`权限不足：需要 ${permissionCodes} 权限`)
+            ctx.forbidden(`权限不足：需要 ${permissionCodes} 权限`)
             return
           }
           break
@@ -42,7 +41,7 @@ function checkPermission(permissionCodes, options = {}) {
           hasPermission = await permissionModel.hasAnyPermission(userId, permissionCodes)
           if (!hasPermission) {
             ctx.status = 403
-            ctx.body = ResponseUtil.forbidden(
+            ctx.forbidden(
               `权限不足：需要以下任一权限 [${permissionCodes.join(', ')}]`,
             )
             return
@@ -54,7 +53,7 @@ function checkPermission(permissionCodes, options = {}) {
           hasPermission = await permissionModel.hasAllPermissions(userId, permissionCodes)
           if (!hasPermission) {
             ctx.status = 403
-            ctx.body = ResponseUtil.forbidden(
+            ctx.forbidden(
               `权限不足：需要所有权限 [${permissionCodes.join(', ')}]`,
             )
             return
@@ -68,8 +67,8 @@ function checkPermission(permissionCodes, options = {}) {
       // 权限验证通过，继续执行后续中间件
       await next()
     } catch (error) {
-      ctx.status = 500
-      ctx.body = ResponseUtil.serverError(error.message || '权限验证失败')
+      // 权限验证失败，抛出错误由全局中间件捕获
+      throw error
     }
   }
 }
