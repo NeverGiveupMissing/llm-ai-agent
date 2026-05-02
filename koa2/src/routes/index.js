@@ -5,11 +5,15 @@ const memoryRoutes = require('../modules/memory/routes')
 const chatMemoryRoutes = require('../modules/chat-memory/routes')
 const sessionRoutes = require('../modules/session/routes')
 const sessionGroupRoutes = require('../modules/session-group/routes')
+const operationLogRoutes = require('../modules/operation-log/routes')
 
 // RBAC 权限系统路由
 const userRoutes = require('../modules/user/routes')
 const roleRoutes = require('../modules/role/routes')
 const permissionRoutes = require('../modules/permission/routes')
+
+// 数据库管理路由
+const databaseRoutes = require('../modules/database/routes')
 
 const config = require('../config')
 
@@ -22,11 +26,15 @@ router.use(memoryRoutes.routes(), memoryRoutes.allowedMethods())
 router.use(chatMemoryRoutes.routes(), chatMemoryRoutes.allowedMethods())
 router.use(sessionRoutes.routes(), sessionRoutes.allowedMethods())
 router.use(sessionGroupRoutes.routes(), sessionGroupRoutes.allowedMethods())
+router.use(operationLogRoutes.routes(), operationLogRoutes.allowedMethods())
 
 // RBAC 权限系统路由
 router.use(userRoutes.routes(), userRoutes.allowedMethods())
 router.use(roleRoutes.routes(), roleRoutes.allowedMethods())
 router.use(permissionRoutes.routes(), permissionRoutes.allowedMethods())
+
+// 数据库管理路由
+router.use(databaseRoutes.routes(), databaseRoutes.allowedMethods())
 
 /**
  * @swagger

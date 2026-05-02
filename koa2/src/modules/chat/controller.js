@@ -190,7 +190,7 @@ ${memoryContext}
           })
         }
 
-        ctx.body = ResponseUtil.success({ content }, 'success')
+        ctx.success({ content }, 'success')
       } catch (error) {
         const duration = (Date.now() - startTime) / 1000
         logChat(messages, '', duration, config.api.model, error.message)
@@ -267,7 +267,7 @@ ${memoryContext}
   
     console.log('✅ 消息删除成功')
       
-    ctx.body = ResponseUtil.success({ messageId }, '删除成功')
+    ctx.success({ messageId }, '删除成功')
   })
 }
 
