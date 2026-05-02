@@ -1,67 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '@/layouts/index.vue'
+import { setupRouterGuard } from './guard'
 
 const routes = [
   {
     path: '/',
+    name: 'Layout', // ✅ 添加 name，用于动态添加子路由
     component: Layout,
-    redirect: '/dashboard',
-    children: [
-      {
-        path: 'dashboard',
-        name: 'Dashboard',
-        component: () => import('@/views/dashboard/index.vue'),
-        meta: { title: '工作台' },
-      },
-      {
-        path: 'chat',
-        name: 'Chat',
-        component: () => import('@/views/chat/index.vue'),
-        meta: { title: 'AI对话' },
-      },
-      {
-        path: 'agent',
-        name: 'Agent',
-        component: () => import('@/views/agent/index.vue'),
-        meta: { title: '智能体' },
-      },
-      {
-        path: 'knowledge',
-        name: 'Knowledge',
-        component: () => import('@/views/knowledge/index.vue'),
-        meta: { title: '知识库' },
-      },
-      {
-        path: 'memory',
-        name: 'Memory',
-        component: () => import('@/views/memory/index.vue'),
-        meta: { title: '记忆管理' },
-      },
-      {
-        path: 'tools',
-        name: 'Tools',
-        component: () => import('@/views/tools/index.vue'),
-        meta: { title: '工具' },
-      },
-      {
-        path: 'settings',
-        name: 'Settings',
-        component: () => import('@/views/settings/index.vue'),
-        meta: { title: '系统设置' },
-      },
-      {
-        path: 'docs',
-        name: 'ApiDocs',
-        component: () => import('@/views/ApiDocs/index.vue'),
-        meta: { title: 'API文档' },
-      },
-      {
-        path: 'ChatLogs',
-        name: 'ChatLogs',
-        component: () => import('@/views/ChatLogs/index.vue'),
-        meta: { title: '对话日志' },
-      },
-    ],
+    redirect: '/login', // ✅ 未登录时重定向到登录页
+    children: [], // ✅ 子路由将从数据库动态加载
   },
   {
     path: '/login',
@@ -69,20 +16,24 @@ const routes = [
     component: () => import('@/views/login/index.vue'),
   },
   {
+    path: '/smithyuyi001',
+    name: 'Smithyuyi001',
+    component: () => import('@/views/smithyuyi001/index.vue'),
+  },
+  {
     path: '/403',
     name: 'Forbidden',
     component: () => import('@/views/error/403.vue'),
   },
-  {
-    path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    component: () => import('@/views/error/404.vue'),
-  },
+  // ✅ 404 路由暂时不添加，将在动态路由加载后最后添加
 ]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 })
+
+// 应用路由守卫
+setupRouterGuard(router)
 
 export default router
