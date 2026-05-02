@@ -1,31 +1,13 @@
-// 说明：角色控制器 - 处理角色的 HTTP 请求
+/**
+ * 角色控制器
+ * 位置：koa2/src/modules/role/controller.js
+ */
 
-const roleService = require('../../services/roleService')
-const ResponseUtil = require('../../utils/response')
+const roleService = require('./service')
 const { asyncHandler } = require('../../utils/async-handler')
 const { BadRequestError } = require('../../utils/app-error')
 
 class RoleController {
-  /**
-   * 创建角色
-   */
-  createRole = asyncHandler(async (ctx) => {
-    const { name, displayName, description, isSystem } = ctx.request.body
-
-    if (!name) {
-      throw new BadRequestError('角色名称不能为空')
-    }
-
-    const result = await roleService.createRole({
-      name,
-      displayName,
-      description,
-      isSystem,
-    })
-
-    ctx.body = ResponseUtil.success(result.data, result.message)
-  })
-
   /**
    * 获取角色列表
    */
@@ -38,7 +20,13 @@ class RoleController {
 
     const result = await roleService.listRoles(params)
 
-    ctx.body = ResponseUtil.success(result)
+    // 使用统一的分页响应方法
+    ctx.pageSuccess(
+      result.data,
+      result.total,
+      result.page,
+      result.limit
+    )
   })
 
   /**
@@ -52,12 +40,31 @@ class RoleController {
     }
 
     const result = await roleService.getRoleDetail(roleId)
-
-    ctx.body = ResponseUtil.success(result.data)
+    ctx.success(result.data)
   })
 
   /**
-   * 更新角色信息
+   * 创建角色
+   */
+  createRole = asyncHandler(async (ctx) => {
+    const { name, displayName, description, isSystem } = ctx.request.body
+
+    if (!name || !displayName) {
+      throw new BadRequestError('角色名称和显示名称不能为空')
+    }
+
+    const result = await roleService.createRole({
+      name,
+      displayName,
+      description,
+      isSystem: isSystem || false,
+    })
+
+    ctx.success(result.data, result.message)
+  })
+
+  /**
+   * 更新角色
    */
   updateRole = asyncHandler(async (ctx) => {
     const { roleId } = ctx.params
@@ -68,8 +75,22 @@ class RoleController {
     }
 
     const result = await roleService.updateRole(roleId, updates)
+    ctx.success(result.data, result.message)
+  })
 
-    ctx.body = ResponseUtil.success(result.data, result.message)
+  /**
+   * 更新角色状态
+   */
+  updateRoleStatus = asyncHandler(async (ctx) => {
+    const { roleId } = ctx.params
+    const { status } = ctx.request.body
+
+    if (!roleId || !status) {
+      throw new BadRequestError('缺少 roleId 或 status 参数')
+    }
+
+    const result = await roleService.updateRoleStatus(roleId, status)
+    ctx.success(result.data, result.message)
   })
 
   /**
@@ -83,12 +104,11 @@ class RoleController {
     }
 
     const result = await roleService.deleteRole(roleId)
-
-    ctx.body = ResponseUtil.success(null, result.message)
+    ctx.success(null, result.message)
   })
 
   /**
-   * 为角色分配权限
+   * 为角色分配单个权限
    */
   assignPermission = asyncHandler(async (ctx) => {
     const { roleId } = ctx.params
@@ -99,8 +119,22 @@ class RoleController {
     }
 
     const result = await roleService.assignPermission(roleId, permissionId)
+    ctx.success(result.data, result.message)
+  })
 
-    ctx.body = ResponseUtil.success(null, result.message)
+  /**
+   * 批量为角色分配权限
+   */
+  assignPermissions = asyncHandler(async (ctx) => {
+    const { roleId } = ctx.params
+    const { permissionIds } = ctx.request.body
+
+    if (!roleId || !permissionIds) {
+      throw new BadRequestError('缺少 roleId 或 permissionIds 参数')
+    }
+
+    const result = await roleService.assignPermissions(roleId, permissionIds)
+    ctx.success(result.data, result.message)
   })
 
   /**
@@ -114,24 +148,21 @@ class RoleController {
     }
 
     const result = await roleService.removePermission(roleId, permissionId)
-
-    ctx.body = ResponseUtil.success(null, result.message)
+    ctx.success(null, result.message)
   })
 
   /**
-   * 批量为角色分配权限
+   * 获取角色的所有权限
    */
-  assignPermissions = asyncHandler(async (ctx) => {
+  getRolePermissions = asyncHandler(async (ctx) => {
     const { roleId } = ctx.params
-    const { permissionIds } = ctx.request.body
 
-    if (!roleId || !permissionIds || !Array.isArray(permissionIds)) {
-      throw new BadRequestError('缺少 roleId 或 permissionIds 参数')
+    if (!roleId) {
+      throw new BadRequestError('缺少 roleId 参数')
     }
 
-    const result = await roleService.assignPermissions(roleId, permissionIds)
-
-    ctx.body = ResponseUtil.success(null, result.message)
+    const result = await roleService.getRolePermissions(roleId)
+    ctx.success(result.data)
   })
 
   /**
@@ -150,7 +181,13 @@ class RoleController {
 
     const result = await roleService.getRoleUsers(roleId, params)
 
-    ctx.body = ResponseUtil.success(result)
+    // 使用统一的分页响应方法
+    ctx.pageSuccess(
+      result.data,
+      result.total,
+      result.page,
+      result.limit
+    )
   })
 }
 

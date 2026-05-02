@@ -75,30 +75,10 @@ router.post('/', authMiddleware(), requirePermission('role:create'), roleControl
 
 /**
  * @swagger
- * /roles/{roleId}:
- *   get:
- *     tags: [角色管理]
- *     summary: 获取角色详情
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: roleId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: 获取成功
- */
-router.get('/:roleId', authMiddleware(), requirePermission('role:read'), roleController.getRoleDetail)
-
-/**
- * @swagger
- * /roles/{roleId}:
+ * /roles/{roleId}/status:
  *   put:
  *     tags: [角色管理]
- *     summary: 更新角色信息
+ *     summary: 更新角色状态（启用/禁用）
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -113,38 +93,16 @@ router.get('/:roleId', authMiddleware(), requirePermission('role:read'), roleCon
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [status]
  *             properties:
- *               name:
+ *               status:
  *                 type: string
- *               displayName:
- *                 type: string
- *               description:
- *                 type: string
+ *                 enum: [active, inactive]
  *     responses:
  *       200:
  *         description: 更新成功
  */
-router.put('/:roleId', authMiddleware(), requirePermission('role:update'), roleController.updateRole)
-
-/**
- * @swagger
- * /roles/{roleId}:
- *   delete:
- *     tags: [角色管理]
- *     summary: 删除角色
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: roleId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: 删除成功
- */
-router.delete('/:roleId', authMiddleware(), requirePermission('role:delete'), roleController.deleteRole)
+router.put('/:roleId/status', authMiddleware(), requirePermission('role:update'), roleController.updateRoleStatus.bind(roleController))
 
 /**
  * @swagger
@@ -260,5 +218,78 @@ router.delete('/:roleId/permissions/:permissionId', authMiddleware(), requirePer
  *         description: 获取成功
  */
 router.get('/:roleId/users', authMiddleware(), requirePermission('role:read'), roleController.getRoleUsers)
+
+/**
+ * @swagger
+ * /roles/{roleId}:
+ *   get:
+ *     tags: [角色管理]
+ *     summary: 获取角色详情
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 获取成功
+ */
+router.get('/:roleId', authMiddleware(), requirePermission('role:read'), roleController.getRoleDetail)
+
+/**
+ * @swagger
+ * /roles/{roleId}:
+ *   put:
+ *     tags: [角色管理]
+ *     summary: 更新角色信息
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               displayName:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: 更新成功
+ */
+router.put('/:roleId', authMiddleware(), requirePermission('role:update'), roleController.updateRole)
+
+/**
+ * @swagger
+ * /roles/{roleId}:
+ *   delete:
+ *     tags: [角色管理]
+ *     summary: 删除角色（软删除）
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roleId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 删除成功
+ */
+router.delete('/:roleId', authMiddleware(), requirePermission('role:delete'), roleController.deleteRole)
 
 module.exports = router
