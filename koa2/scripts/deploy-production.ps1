@@ -1,80 +1,78 @@
 # ============================================
-# 生产环境部署脚本
-# 使用前请修改 SERVER_CONFIG 中的服务器信息
+# 生产环境部署脚本 (PowerShell)
 # ============================================
 
-# 服务器配置
-$SERVER_USER = "root"
-$SERVER_HOST = "api.yumanyi.top"
-$SERVER_PATH = "/www/wwwroot/api.yumanyi.top"
-$PM2_APP_NAME = "ai-api"
+Write-Host "🚀 开始部署到生产环境..." -ForegroundColor Yellow
+Write-Host ""
 
-Write-Host "🚀 开始部署到生产环境..." -ForegroundColor Green
+# 配置
+$SERVER = "root@iZuf6j7o0kttc816hmtt1zZ"
+$REMOTE_PATH = "/www/wwwroot/api.yumanyi.top"
+$PM2_NAME = "ai-api"
 
-# 步骤 1: 清理本地构建产物
-Write-Host "`n📦 步骤 1: 清理本地文件..." -ForegroundColor Yellow
-if (Test-Path "dist") {
-    Remove-Item -Recurse -Force "dist"
+Write-Host "Step 1: 同步代码到服务器" -ForegroundColor Cyan
+Write-Host "----------------------------------------"
+
+# 检查是否有未提交的更改
+$gitStatus = git status --porcelain
+if ($gitStatus) {
+    Write-Host "⚠️  检测到未提交的更改，是否提交？(y/n)" -ForegroundColor Yellow
+    $response = Read-Host
+    if ($response -eq "y" -or $response -eq "Y") {
+        git add .
+        git commit -m "deploy: 自动部署 $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+        git push
+        Write-Host "✅ 代码已提交并推送" -ForegroundColor Green
+    } else {
+        Write-Host "⚠️  跳过提交，继续部署..." -ForegroundColor Yellow
+    }
 }
 
-# 步骤 2: 压缩项目文件（排除 node_modules 和 .git）
-Write-Host "📦 步骤 2: 压缩项目文件..." -ForegroundColor Yellow
-$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$archiveName = "deploy_$timestamp.zip"
+# 上传文件到服务器
+Write-Host "📤 上传文件..." -ForegroundColor Cyan
+scp -r src/config/init-db.js ${SERVER}:${REMOTE_PATH}/src/config/
 
-# 创建临时目录并复制文件
-$tempDir = "temp_deploy"
-if (Test-Path $tempDir) {
-    Remove-Item -Recurse -Force $tempDir
-}
-New-Item -ItemType Directory -Path $tempDir | Out-Null
-
-# 复制所有文件（排除不需要的目录）
-Get-ChildItem -Path "." -Exclude "node_modules", ".git", "logs", "temp_deploy", "*.zip" | 
-    Copy-Item -Destination $tempDir -Recurse -Force
-
-# 压缩
-Compress-Archive -Path "$tempDir\*" -DestinationPath $archiveName -Force
-Remove-Item -Recurse -Force $tempDir
-
-Write-Host "✅ 压缩完成: $archiveName" -ForegroundColor Green
-
-# 步骤 3: 上传到服务器
-Write-Host "`n📤 步骤 3: 上传到服务器..." -ForegroundColor Yellow
-Write-Host "⚠️  请手动执行以下命令上传文件：" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "scp $archiveName ${SERVER_USER}@${SERVER_HOST}:/tmp/" -ForegroundColor White
-Write-Host ""
-Write-Host "按任意键继续..." -ForegroundColor Gray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-
-# 步骤 4: 服务器端操作指南
-Write-Host "`n🔧 步骤 4: 在服务器上执行以下命令：" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "# 1. SSH 连接到服务器" -ForegroundColor Cyan
-Write-Host "ssh ${SERVER_USER}@${SERVER_HOST}" -ForegroundColor White
-Write-Host ""
-Write-Host "# 2. 解压并替换文件" -ForegroundColor Cyan
-Write-Host "cd $SERVER_PATH" -ForegroundColor White
-Write-Host "unzip -o /tmp/$archiveName -d ." -ForegroundColor White
-Write-Host "rm /tmp/$archiveName" -ForegroundColor White
-Write-Host ""
-Write-Host "# 3. 安装依赖" -ForegroundColor Cyan
-Write-Host "npm install --production" -ForegroundColor White
-Write-Host ""
-Write-Host "# 4. 初始化数据库（如果需要）" -ForegroundColor Cyan
-Write-Host "npm run db:init" -ForegroundColor White
-Write-Host ""
-Write-Host "# 5. 重启 PM2 服务" -ForegroundColor Cyan
-Write-Host "pm2 restart $PM2_APP_NAME" -ForegroundColor White
-Write-Host ""
-Write-Host "# 6. 查看日志" -ForegroundColor Cyan
-Write-Host "pm2 logs $PM2_APP_NAME --lines 50" -ForegroundColor White
+Write-Host "✅ 代码同步完成" -ForegroundColor Green
 Write-Host ""
 
-Write-Host "🎉 部署指南已完成！" -ForegroundColor Green
-Write-Host "⚠️  重要提示：" -ForegroundColor Red
-Write-Host "  1. 确保服务器已安装 Node.js 和 PM2" -ForegroundColor Yellow
-Write-Host "  2. 确保 .env.production 配置文件正确" -ForegroundColor Yellow
-Write-Host "  3. 检查防火墙是否开放端口 65432" -ForegroundColor Yellow
-Write-Host "  4. 部署后测试 API 是否正常响应" -ForegroundColor Yellow
+# Step 2: 在服务器上执行操作
+Write-Host "Step 2: 服务器端操作" -ForegroundColor Cyan
+Write-Host "----------------------------------------"
+
+ssh ${SERVER} @"
+    cd ${REMOTE_PATH}
+    
+    echo '📦 安装依赖...'
+    npm install --production
+    
+    echo ''
+    echo '🔄 重启服务...'
+    pm2 restart ${PM2_NAME} --update-env
+    
+    echo ''
+    echo '⏳ 等待服务启动...'
+    sleep 3
+    
+    echo ''
+    echo '📊 服务状态:'
+    pm2 status ${PM2_NAME}
+    
+    echo ''
+    echo '📝 最新日志（最后20行）:'
+    pm2 logs ${PM2_NAME} --lines 20 --nostream
+    
+    echo ''
+    echo '❌ 错误日志（最后20行）:'
+    tail -20 logs/${PM2_NAME}-error.log 2>/dev/null || echo '无错误日志'
+"@
+
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Green
+Write-Host "✅ 部署完成！" -ForegroundColor Green
+Write-Host "========================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "💡 提示：" -ForegroundColor Cyan
+Write-Host "  - 查看实时日志: ssh ${SERVER} 'pm2 logs ${PM2_NAME}'"
+Write-Host "  - 查看服务状态: ssh ${SERVER} 'pm2 status'"
+Write-Host "  - 重启服务: ssh ${SERVER} 'pm2 restart ${PM2_NAME}'"
+Write-Host ""
