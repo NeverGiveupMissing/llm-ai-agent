@@ -1,4 +1,4 @@
-import { get } from '@/utils/http'
+import { rest } from '@/utils/http'
 import { API_PREFIX } from '@/utils/constants'
 
 /**
@@ -6,7 +6,7 @@ import { API_PREFIX } from '@/utils/constants'
  * @param {Object} params - 查询参数
  */
 export function getLogs(params) {
-  return get(`${API_PREFIX}/logs`, params)
+  return rest.get(`${API_PREFIX}/logs`, params)
 }
 
 /**
@@ -14,5 +14,5 @@ export function getLogs(params) {
  * @param {Object} params - 查询参数
  */
 export function getLogsStats(params) {
-  return get(`${API_PREFIX}/logs/stats`, params)
+  return rest.get(`${API_PREFIX}/logs/stats`, params)
 }
