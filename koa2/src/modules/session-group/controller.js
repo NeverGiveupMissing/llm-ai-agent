@@ -7,6 +7,7 @@ const SessionGroupModel = require('./model')
 const sessionModel = require('../session/model')
 const { asyncHandler } = require('../../utils/async-handler')
 const { BadRequestError, NotFoundError } = require('../../utils/app-error')
+const ResponseUtil = require('../../utils/response')
 
 class SessionGroupController {
   /**
@@ -32,11 +33,7 @@ class SessionGroupController {
       })
     )
 
-    ctx.body = {
-      code: 200,
-      message: '', // 静默成功，不显示提示
-      data: groupWithCount,
-    }
+    ctx.success(groupWithCount)
   })
 
   /**
@@ -55,11 +52,7 @@ class SessionGroupController {
       user_id,
     })
 
-    ctx.body = {
-      code: 200,
-      message: '创建成功',
-      data: group,
-    }
+    ctx.success(group, '创建成功')
   })
 
   /**
@@ -80,11 +73,7 @@ class SessionGroupController {
 
     const updated = await SessionGroupModel.update(id, { name, icon })
 
-    ctx.body = {
-      code: 200,
-      message: '更新成功',
-      data: updated,
-    }
+    ctx.success(updated, '更新成功')
   })
 
   /**
@@ -104,13 +93,9 @@ class SessionGroupController {
     // 删除分组（级联设置会话的 group_id 为 NULL）
     await SessionGroupModel.delete(id)
 
-    ctx.body = {
-      code: 200,
-      message: '删除成功',
-      data: {
-        session_count: sessionCount,
-      },
-    }
+    ctx.success({
+      session_count: sessionCount,
+    }, '删除成功')
   })
 
   /**
@@ -148,11 +133,7 @@ class SessionGroupController {
 
     console.log('✅ [移动分组] 更新成功:', updated)
 
-    ctx.body = {
-      code: 200,
-      message: '移动成功',
-      data: updated,
-    }
+    ctx.success(updated, '移动成功')
   })
 
   /**
@@ -168,11 +149,7 @@ class SessionGroupController {
   
     const updated = await SessionGroupModel.pin(id)
   
-    ctx.body = {
-      code: 200,
-      message: '操作成功',
-      data: updated,
-    }
+    ctx.success(updated, '操作成功')
   })
 }
 

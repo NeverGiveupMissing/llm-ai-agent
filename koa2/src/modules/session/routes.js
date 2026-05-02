@@ -49,35 +49,6 @@ router.post('/', sessionController.createSession)
 
 /**
  * @swagger
- * /sessions/{sessionId}:
- *   put:
- *     summary: 更新会话
- *     tags: [Sessions]
- *     parameters:
- *       - in: path
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               title:
- *                 type: string
- *               message_count:
- *                 type: integer
- *     responses:
- *       200:
- *         description: 更新成功
- */
-router.put('/:sessionId', sessionController.updateSession)
-
-/**
- * @swagger
  * /sessions/{sessionId}/pin:
  *   post:
  *     summary: 置顶/取消置顶会话
@@ -129,6 +100,35 @@ router.get('/:sessionId/share', sessionController.getShareInfo)
  *         description: 获取成功
  */
 router.get('/:sessionId/detail', sessionController.getSessionDetail)
+
+/**
+ * @swagger
+ * /sessions/{sessionId}:
+ *   put:
+ *     summary: 更新会话
+ *     tags: [Sessions]
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               message_count:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: 更新成功
+ */
+router.put('/:sessionId', sessionController.updateSession)
 
 /**
  * @swagger
