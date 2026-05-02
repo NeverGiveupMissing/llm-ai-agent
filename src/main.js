@@ -6,6 +6,16 @@ import naive from 'naive-ui'
 import { registerGlobalComponents } from './components'
 import permissionDirective from './directives/permission'
 
+// ✅ 静默 Vue Router 的警告（仅在开发环境下保留其他警告）
+const originalWarn = console.warn
+console.warn = (...args) => {
+  // 过滤掉动态路由未注册的警告
+  if (args[0]?.includes?.('[Vue Router warn]') && args[0]?.includes?.('No match found')) {
+    return
+  }
+  originalWarn.apply(console, args)
+}
+
 // 引入全局样式
 import './styles/markdown-styles.css'
 
