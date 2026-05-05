@@ -14,7 +14,7 @@ async function operationLogger(ctx, next) {
   const duration = Date.now() - startTime
   
   // 只记录需要认证的路由（跳过登录、注册等公开接口）
-  if (!ctx.state.userId) {
+  if (!ctx.state.user_id) {
     return
   }
   
@@ -27,7 +27,7 @@ async function operationLogger(ctx, next) {
   // 获取用户信息
   let username = 'unknown'
   try {
-    const user = await getUserById(ctx.state.userId)
+    const user = await getUserById(ctx.state.user_id)
     if (user) {
       username = user.username || user.email || 'unknown'
     }
@@ -37,7 +37,7 @@ async function operationLogger(ctx, next) {
   
   // 构建日志数据
   const logData = {
-    userId: ctx.state.userId,
+    user_id: ctx.state.user_id,
     username,
     operation: getOperationName(ctx),
     module: getModuleName(ctx),

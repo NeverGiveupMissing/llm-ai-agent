@@ -12,15 +12,15 @@ class ChatMemoryService {
    * 构建记忆上下文（对话前调用）
    * ChatGPT 逻辑：检索用户的所有相关记忆，注入到对话上下文
    */
-  async buildMemoryContext(sessionId, userId, query = null) {
+  async buildMemoryContext(sessionId, user_id, query = null) {
     let relevantMemories = []
 
     // ChatGPT 逻辑：始终基于用户的所有记忆进行向量检索
     if (query) {
-      relevantMemories = await memoryService.retrieveMemories(userId, query, 5)
+      relevantMemories = await memoryService.retrieveMemories(user_id, query, 5)
     } else {
       // 如果没有查询内容，获取用户最近的重要记忆作为上下文
-      const memoriesResult = await memoryService.getUserMemories(userId, 10, 0)
+      const memoriesResult = await memoryService.getUserMemories(user_id, 10, 0)
       relevantMemories = memoriesResult.list.slice(0, 5)
     }
 
@@ -40,7 +40,7 @@ class ChatMemoryService {
    * 自动从对话中提取记忆（对话后调用）
    * ChatGPT 逻辑：提取的记忆属于用户，不绑定特定会话
    */
-  async autoExtractFromConversation(sessionId, userId, messages) {
+  async autoExtractFromConversation(sessionId, user_id, messages) {
     // 只处理用户消息
     const userMessages = messages
       .filter((m) => m.role === 'user')
@@ -173,7 +173,7 @@ ${userMessages}
           // ✅ ChatGPT 逻辑：记忆属于用户，不绑定特定会话
           const result = await memoryService.createMemory(
             {
-              userId,
+              user_id,
               sessionId: null, // 不绑定会话，成为全局长期记忆
               content: memory.content,
               memoryType: memory.type || 'fact',

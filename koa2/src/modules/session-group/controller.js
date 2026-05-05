@@ -14,14 +14,14 @@ class SessionGroupController {
    * 获取用户的所有分组
    */
   static getGroups = asyncHandler(async (ctx) => {
-    const userId = ctx.request.body.userId || ctx.request.query.userId
-    
-    if (!userId) {
-      throw new BadRequestError('userId 不能为空')
+    const user_id = ctx.request.body.user_id || ctx.request.query.user_id
+
+    if (!user_id) {
+      throw new BadRequestError('user_id 不能为空')
     }
 
-    const groups = await SessionGroupModel.list(userId)
-    
+    const groups = await SessionGroupModel.list(user_id)
+
     // 为每个分组添加会话数量
     const groupWithCount = await Promise.all(
       groups.map(async (group) => {
@@ -30,7 +30,7 @@ class SessionGroupController {
           ...group,
           session_count: count,
         }
-      })
+      }),
     )
 
     ctx.success(groupWithCount)
@@ -93,9 +93,12 @@ class SessionGroupController {
     // 删除分组（级联设置会话的 group_id 为 NULL）
     await SessionGroupModel.delete(id)
 
-    ctx.success({
-      session_count: sessionCount,
-    }, '删除成功')
+    ctx.success(
+      {
+        session_count: sessionCount,
+      },
+      '删除成功',
+    )
   })
 
   /**
@@ -141,14 +144,14 @@ class SessionGroupController {
    */
   static pinGroup = asyncHandler(async (ctx) => {
     const { id } = ctx.params
-  
+
     const group = await SessionGroupModel.findById(id)
     if (!group) {
       throw new NotFoundError('分组不存在')
     }
-  
+
     const updated = await SessionGroupModel.pin(id)
-  
+
     ctx.success(updated, '操作成功')
   })
 }

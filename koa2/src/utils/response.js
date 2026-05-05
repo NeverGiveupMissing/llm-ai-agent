@@ -65,7 +65,6 @@ const ResponseUtil = {
    * @param {string} message - 自定义消息
    */
   pageSuccess(list = [], total = 0, page = 1, pageSize = 10, message) {
-    const totalPages = Math.ceil(total / pageSize)
     return createResponse(
       CODES.success,
       {
@@ -74,7 +73,6 @@ const ResponseUtil = {
           total,
           page,
           pageSize,
-          totalPages,
         },
       },
       message,
@@ -149,6 +147,10 @@ function mountToContext(ctx) {
 
   ctx.forbidden = (message) => {
     ctx.body = ResponseUtil.forbidden(message)
+  }
+
+  ctx.tooManyRequests = (message) => {
+    ctx.body = ResponseUtil.tooManyRequests(message)
   }
 }
 

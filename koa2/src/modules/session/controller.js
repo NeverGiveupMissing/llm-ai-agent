@@ -9,12 +9,12 @@ class SessionController {
    * 获取会话列表
    */
   listSessions = asyncHandler(async (ctx) => {
-    const { userId } = ctx.query
-    if (!userId) {
-      throw new BadRequestError('缺少 userId 参数')
+    const { user_id } = ctx.query
+    if (!user_id) {
+      throw new BadRequestError('缺少 user_id 参数')
     }
 
-    const result = await sessionService.listSessions(userId)
+    const result = await sessionService.listSessions(user_id)
     ctx.success(result.data)
   })
 
@@ -22,12 +22,12 @@ class SessionController {
    * 创建新会话
    */
   createSession = asyncHandler(async (ctx) => {
-    const { userId, title } = ctx.request.body
-    if (!userId) {
-      throw new BadRequestError('缺少 userId 参数')
+    const { user_id, title } = ctx.request.body
+    if (!user_id) {
+      throw new BadRequestError('缺少 user_id 参数')
     }
 
-    const result = await sessionService.createSession(userId, title)
+    const result = await sessionService.createSession(user_id, title)
     ctx.success(result.data, result.message)
   })
 

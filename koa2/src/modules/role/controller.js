@@ -14,7 +14,7 @@ class RoleController {
   listRoles = asyncHandler(async (ctx) => {
     const params = {
       page: parseInt(ctx.query.page) || 1,
-      limit: parseInt(ctx.query.limit) || 20,
+      limit: parseInt(ctx.query.pageSize) || 10,
       keyword: ctx.query.keyword,
     }
 
@@ -172,7 +172,7 @@ class RoleController {
     const { roleId } = ctx.params
     const params = {
       page: parseInt(ctx.query.page) || 1,
-      limit: parseInt(ctx.query.limit) || 20,
+      limit: parseInt(ctx.query.pageSize) || 10,
     }
 
     if (!roleId) {
@@ -188,6 +188,39 @@ class RoleController {
       result.page,
       result.limit
     )
+  })
+
+  /**
+   * 获取角色的菜单权限 ID 列表
+   */
+  getRoleMenuIds = asyncHandler(async (ctx) => {
+    const { roleId } = ctx.params
+
+    if (!roleId) {
+      throw new BadRequestError('缺少 roleId 参数')
+    }
+
+    const result = await roleService.getRoleMenuIds(roleId)
+    ctx.success(result.data)
+  })
+
+  /**
+   * 保存角色的菜单权限（覆盖更新）
+   */
+  saveRoleMenus = asyncHandler(async (ctx) => {
+    const { roleId } = ctx.params
+    const { menuIds } = ctx.request.body
+
+    if (!roleId) {
+      throw new BadRequestError('缺少 roleId 参数')
+    }
+
+    if (!Array.isArray(menuIds)) {
+      throw new BadRequestError('menuIds 必须为数组')
+    }
+
+    const result = await roleService.saveRoleMenus(roleId, menuIds)
+    ctx.success(null, result.message)
   })
 }
 

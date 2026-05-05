@@ -5,7 +5,7 @@ const { DEFAULT_MEMORY_CONFIG } = require('../config/constants')
 
 class MemoryDeduplicationService {
   async checkDuplicate(
-    userId,
+    user_id,
     content,
     similarityThreshold = DEFAULT_MEMORY_CONFIG.MIN_SIMILARITY_FOR_DEDUP,
   ) {
@@ -24,7 +24,7 @@ class MemoryDeduplicationService {
       LIMIT 1
     `
 
-    const result = await pool.query(query, [embeddingArray, userId])
+    const result = await pool.query(query, [embeddingArray, user_id])
 
     if (result.rows.length === 0) {
       return { isDuplicate: false, similarMemory: null, similarity: 0 }
@@ -50,14 +50,14 @@ class MemoryDeduplicationService {
   }
 
   async batchCheckDuplicates(
-    userId,
+    user_id,
     contents,
     similarityThreshold = DEFAULT_MEMORY_CONFIG.MIN_SIMILARITY_FOR_DEDUP,
   ) {
     const results = []
 
     for (const content of contents) {
-      const duplicateInfo = await this.checkDuplicate(userId, content, similarityThreshold)
+      const duplicateInfo = await this.checkDuplicate(user_id, content, similarityThreshold)
       results.push({
         content,
         ...duplicateInfo,

@@ -1,4 +1,4 @@
-﻿// 说明：会话路由 - 提供会话管理的 HTTP 接口
+// 说明：会话路由 - 提供会话管理的 HTTP 接口
 
 const Router = require('@koa/router')
 const sessionController = require('./controller')
@@ -13,7 +13,7 @@ const router = new Router({ prefix: '/sessions' })
  *     tags: [Sessions]
  *     parameters:
  *       - in: query
- *         name: userId
+ *         name: user_id
  *         required: true
  *         schema:
  *           type: string
@@ -35,9 +35,9 @@ router.get('/', sessionController.listSessions)
  *         application/json:
  *           schema:
  *             type: object
- *             required: [userId]
+ *             required: [user_id]
  *             properties:
- *               userId:
+ *               user_id:
  *                 type: string
  *               title:
  *                 type: string

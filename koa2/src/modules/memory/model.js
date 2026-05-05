@@ -1,10 +1,10 @@
-﻿const { v4: uuidv4 } = require('uuid')
+const { v4: uuidv4 } = require('uuid')
 const { MEMORY_TYPES } = require('../../config/constants')
 
 class MemoryModel {
   constructor(data = {}) {
     this.id = data.id || uuidv4()
-    this.userId = data.userId
+    this.user_id = data.user_id
     this.sessionId = data.sessionId || null
     this.content = data.content
     this.summary = data.summary || null
@@ -20,8 +20,8 @@ class MemoryModel {
   }
 
   validate() {
-    if (!this.userId) {
-      return { valid: false, error: 'userId 不能为空' }
+    if (!this.user_id) {
+      return { valid: false, error: 'user_id 不能为空' }
     }
     if (!this.content || this.content.trim().length === 0) {
       return { valid: false, error: 'content 不能为空' }
@@ -38,7 +38,7 @@ class MemoryModel {
   toInsertParams() {
     return [
       this.id,
-      this.userId,
+      this.user_id,
       this.sessionId,
       this.content,
       this.summary,
@@ -54,7 +54,7 @@ class MemoryModel {
   toJSON() {
     return {
       id: this.id,
-      userId: this.userId,
+      user_id: this.user_id,
       sessionId: this.sessionId,
       content: this.content,
       summary: this.summary,

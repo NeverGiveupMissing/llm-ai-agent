@@ -9,6 +9,7 @@
     "prod": "NODE_ENV=production node src/app.js",
     "psql": "sudo -u postgres psql",
     "db:init": "NODE_ENV=production node src/config/sql/init-db.js",
+    "health:check": "node scripts/test-db-health.js",
     "pm2:start": "pm2 start src/config/ecosystem.config.js --env production",
     "pm2:restart": "pm2 restart src/config/ecosystem.config.js --env production --update-env",
     "pm2:reload": "pm2 reload src/config/ecosystem.config.js --env production --update-env",
@@ -17,7 +18,11 @@
     "pm2:logs": "pm2 logs ai-api --lines 100 --nostream",
     "pm2:monit": "pm2 monit",
     "pm2:status": "pm2 list",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test": "echo \"运行特定测试：node tests/{module}.test.js\" && echo \"例如：node tests/api/auth.test.js\"",
+    "test:auth": "node tests/api/auth.test.js",
+    "test:user": "node tests/api/user.test.js",
+    "test:db": "node tests/database/connection.test.js"
   },
   "dependencies": {
     "@koa/multer": "^4.0.0",
@@ -35,6 +40,7 @@
     "multer": "^2.1.1",
     "pg": "^8.20.0",
     "swagger-jsdoc": "^6.2.8",
+    "ua-parser-js": "^2.0.9",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

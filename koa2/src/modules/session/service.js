@@ -7,8 +7,8 @@ class SessionService {
   /**
    * 创建新会话
    */
-  async createSession(userId, title) {
-    const session = await sessionModel.create(userId, title)
+  async createSession(user_id, title) {
+    const session = await sessionModel.create(user_id, title)
     return {
       success: true,
       data: session,
@@ -64,8 +64,8 @@ class SessionService {
   /**
    * 获取用户会话列表
    */
-  async listSessions(userId, limit = 20) {
-    const sessions = await sessionModel.list(userId, limit)
+  async listSessions(user_id, limit = 20) {
+    const sessions = await sessionModel.list(user_id, limit)
     return {
       success: true,
       data: sessions,

@@ -89,7 +89,7 @@ class PermissionModel {
   /**
    * 获取用户的所有权限（通过角色）
    */
-  async getUserPermissions(userId) {
+  async getUserPermissions(user_id) {
     const query = `
       SELECT DISTINCT p.id, p.code, p.name, p.description, p.module, p.action, p.resource,
              p.type, p.parent_id, p.path, p.icon, p.sort_order
@@ -99,7 +99,7 @@ class PermissionModel {
       WHERE ur.user_id = $1
       ORDER BY p.sort_order, p.module, p.action
     `
-    const result = await pool.query(query, [userId])
+    const result = await pool.query(query, [user_id])
     return result.rows
   }
 
@@ -180,7 +180,7 @@ class PermissionModel {
   /**
    * 检查用户是否拥有指定权限
    */
-  async hasPermission(userId, permissionCode) {
+  async hasPermission(user_id, permissionCode) {
     const query = `
       SELECT COUNT(*) as count
       FROM permissions p
@@ -188,14 +188,14 @@ class PermissionModel {
       INNER JOIN user_roles ur ON rp.role_id = ur.role_id
       WHERE ur.user_id = $1 AND p.code = $2
     `
-    const result = await pool.query(query, [userId, permissionCode])
+    const result = await pool.query(query, [user_id, permissionCode])
     return parseInt(result.rows[0].count) > 0
   }
 
   /**
    * 检查用户是否拥有任一权限
    */
-  async hasAnyPermission(userId, permissionCodes) {
+  async hasAnyPermission(user_id, permissionCodes) {
     const query = `
       SELECT COUNT(*) as count
       FROM permissions p
@@ -203,14 +203,14 @@ class PermissionModel {
       INNER JOIN user_roles ur ON rp.role_id = ur.role_id
       WHERE ur.user_id = $1 AND p.code = ANY($2)
     `
-    const result = await pool.query(query, [userId, permissionCodes])
+    const result = await pool.query(query, [user_id, permissionCodes])
     return parseInt(result.rows[0].count) > 0
   }
 
   /**
    * 检查用户是否拥有所有权限
    */
-  async hasAllPermissions(userId, permissionCodes) {
+  async hasAllPermissions(user_id, permissionCodes) {
     const query = `
       SELECT COUNT(DISTINCT p.code) as count
       FROM permissions p
@@ -218,7 +218,7 @@ class PermissionModel {
       INNER JOIN user_roles ur ON rp.role_id = ur.role_id
       WHERE ur.user_id = $1 AND p.code = ANY($2)
     `
-    const result = await pool.query(query, [userId, permissionCodes])
+    const result = await pool.query(query, [user_id, permissionCodes])
     return parseInt(result.rows[0].count) === permissionCodes.length
   }
 }

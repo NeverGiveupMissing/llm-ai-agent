@@ -25,15 +25,15 @@ async function executeSQL(ctx) {
     }
 
     // 获取用户信息
-    const userId = ctx.state.user?.id
-    const username = ctx.state.user?.username
+    const user_id = ctx.state.user_id  // ✅ 使用 ctx.state.user_id
+    const user_name = ctx.state.user_name  // ✅ 使用 ctx.state.user_name
     const ipAddress = ctx.ip || ctx.request.ip
 
     // 执行 SQL（包含安全检查和日志记录）
     const result = await databaseService.executeSQL(
       sql.trim(),
-      userId,
-      username,
+      user_id,
+      user_name,
       ipAddress
     )
 
@@ -53,12 +53,12 @@ async function executeSQL(ctx) {
 async function exportDatabase(ctx) {
   try {
     // 获取用户信息
-    const userId = ctx.state.user?.id
-    const username = ctx.state.user?.username
+    const user_id = ctx.state.user_id  // ✅ 使用 ctx.state.user_id
+    const user_name = ctx.state.user_name  // ✅ 使用 ctx.state.user_name
     const ipAddress = ctx.ip || ctx.request.ip
 
     // 执行导出
-    const result = await databaseService.exportDatabase(userId, username, ipAddress)
+    const result = await databaseService.exportDatabase(user_id, user_name, ipAddress)
 
     // 设置响应头
     ctx.set('Content-Type', 'application/zip')
@@ -118,16 +118,16 @@ async function importDatabase(ctx) {
     }
 
     // 获取用户信息
-    const userId = ctx.state.user?.id
-    const username = ctx.state.user?.username
+    const user_id = ctx.state.user_id  // ✅ 使用 ctx.state.user_id
+    const user_name = ctx.state.user_name  // ✅ 使用 ctx.state.user_name
     const ipAddress = ctx.ip || ctx.request.ip
 
     // 执行导入
     const result = await databaseService.importDatabase(
       file.path,
       file.originalname,
-      userId,
-      username,
+      user_id,
+      user_name,
       ipAddress
     )
 
@@ -155,7 +155,7 @@ async function getTableList(ctx) {
 }
 
 /**
- * 获取指定表的结构
+ * 获取指定表的结构（旧接口，保留兼容）
  * GET /api/database/tables/:name
  */
 async function getTableStructure(ctx) {
@@ -174,6 +174,29 @@ async function getTableStructure(ctx) {
     console.error('获取表结构失败:', err)
     ctx.status = 500
     ctx.body = { code: 500, message: err.message || '获取表结构失败', data: null }
+  }
+}
+
+/**
+ * 获取表详细信息（字段 + 注释 + 索引）
+ * GET /api/database/tables/:name/detail
+ */
+async function getTableDetail(ctx) {
+  try {
+    const { name } = ctx.params
+    
+    if (!name) {
+      ctx.status = 400
+      ctx.body = { code: 400, message: '表名不能为空', data: null }
+      return
+    }
+
+    const detail = await databaseService.getTableDetail(name)
+    ctx.body = { code: 200, message: 'success', data: detail }
+  } catch (err) {
+    console.error('获取表详细信息失败:', err)
+    ctx.status = 500
+    ctx.body = { code: 500, message: err.message || '获取表详细信息失败', data: null }
   }
 }
 
@@ -255,7 +278,9 @@ module.exports = {
   importDatabase,
   getTableList,
   getTableStructure,
+  getTableDetail,
   getTableData,
   updateTableRow,
   deleteTableRow,
 }
+

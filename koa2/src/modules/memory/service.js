@@ -20,7 +20,7 @@ class MemoryService {
 
     if (!skipDeduplication && memory.content) {
       const duplicateInfo = await memoryDeduplicationService.checkDuplicate(
-        memory.userId,
+        memory.user_id,
         memory.content,
         similarityThreshold,
       )
@@ -77,7 +77,7 @@ class MemoryService {
     }
   }
 
-  async retrieveMemories(userId, query, limit = DEFAULT_MEMORY_CONFIG.MAX_RETRIEVE_COUNT) {
+  async retrieveMemories(user_id, query, limit = DEFAULT_MEMORY_CONFIG.MAX_RETRIEVE_COUNT) {
     const queryEmbedding = await embeddingService.getEmbedding(query)
     const embeddingArray = `[${queryEmbedding.join(',')}]`
 
@@ -93,7 +93,7 @@ class MemoryService {
       LIMIT $3
     `
 
-    const result = await pool.query(sql, [embeddingArray, userId, limit])
+    const result = await pool.query(sql, [embeddingArray, user_id, limit])
 
     return result.rows.map((row) => ({
       ...row,
@@ -101,7 +101,7 @@ class MemoryService {
     }))
   }
 
-  async searchByTags(userId, tags, limit = 10) {
+  async searchByTags(user_id, tags, limit = 10) {
     const query = `
       SELECT id, user_id, content, summary, memory_type, tags, importance, source, metadata, created_at
       FROM memories
@@ -112,7 +112,7 @@ class MemoryService {
       LIMIT $3
     `
 
-    const result = await pool.query(query, [userId, tags, limit])
+    const result = await pool.query(query, [user_id, tags, limit])
     return result.rows
   }
 
@@ -127,14 +127,14 @@ class MemoryService {
     return result.rows[0] || null
   }
 
-  async getUserMemories(userId = null, limit = 20, offset = 0, type = null, keyword = null) {
+  async getUserMemories(user_id = null, limit = 20, offset = 0, type = null, keyword = null) {
     const conditions = ['is_active = true']
     const values = []
     let paramIndex = 1
 
-    if (userId) {
+    if (user_id) {
       conditions.push(`user_id = $${paramIndex}`)
-      values.push(userId)
+      values.push(user_id)
       paramIndex++
     }
 
@@ -255,7 +255,7 @@ class MemoryService {
     return result.rows.map((row) => row.id)
   }
 
-  async getMemoryStats(userId) {
+  async getMemoryStats(user_id) {
     const query = `
       SELECT
         COUNT(*) AS total,
@@ -269,7 +269,7 @@ class MemoryService {
     `
 
     const result = await pool.query(query, [
-      userId,
+      user_id,
       MEMORY_TYPES.FACT,
       MEMORY_TYPES.PREFERENCE,
       MEMORY_TYPES.GOAL,
@@ -279,13 +279,13 @@ class MemoryService {
     return result.rows[0]
   }
 
-  async clearUserMemories(userId) {
+  async clearUserMemories(user_id) {
     const query = `
       DELETE FROM memories WHERE user_id = $1
       RETURNING id
     `
 
-    const result = await pool.query(query, [userId])
+    const result = await pool.query(query, [user_id])
     return result.rows.length
   }
 }

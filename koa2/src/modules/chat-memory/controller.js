@@ -14,13 +14,13 @@ class ChatMemoryController {
    * 自动检索与当前会话相关的记忆，用于注入到 AI 上下文
    */
   getSessionMemoryContext = asyncHandler(async (ctx) => {
-    const { sessionId, userId, query } = ctx.query
+    const { sessionId, user_id, query } = ctx.query
   
-    if (!sessionId || !userId) {
-      throw new BadRequestError('缺少 sessionId 或 userId 参数')
+    if (!sessionId || !user_id) {
+      throw new BadRequestError('缺少 sessionId 或 user_id 参数')
     }
   
-    const context = await chatMemoryService.buildMemoryContext(sessionId, userId, query)
+    const context = await chatMemoryService.buildMemoryContext(sessionId, user_id, query)
   
     ctx.success(context)
   })
@@ -30,15 +30,15 @@ class ChatMemoryController {
    * 从对话中自动提取有价值的长期记忆
    */
   autoExtractMemories = asyncHandler(async (ctx) => {
-    const { sessionId, userId, messages } = ctx.request.body
+    const { sessionId, user_id, messages } = ctx.request.body
   
-    if (!sessionId || !userId || !messages) {
+    if (!sessionId || !user_id || !messages) {
       throw new BadRequestError('缺少必要参数')
     }
   
     const result = await chatMemoryService.autoExtractFromConversation(
       sessionId,
-      userId,
+      user_id,
       messages,
     )
   

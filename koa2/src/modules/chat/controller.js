@@ -32,19 +32,19 @@ class ChatController {
     const startTime = Date.now()
     const { messages, stream } = request
     const sessionId = requestBody.sessionId
-    const userId = requestBody.userId
+    const user_id = requestBody.user_id
 
-    // 第一步：对话前检索记忆（如果有 sessionId 和 userId）
+    // 第一步：对话前检索记忆（如果有 sessionId 和 user_id）
     let memoryContext = ''
     let relevantMemories = []
 
-    if (sessionId && userId) {
+    if (sessionId && user_id) {
       try {
         // 获取最后一条用户消息作为查询词
         const lastUserMessage = [...messages].reverse().find((m) => m.role === 'user')
         const query = lastUserMessage ? lastUserMessage.content : null
 
-        const memoryResult = await chatMemoryService.buildMemoryContext(sessionId, userId, query)
+        const memoryResult = await chatMemoryService.buildMemoryContext(sessionId, user_id, query)
 
         memoryContext = memoryResult.context
         relevantMemories = memoryResult.memories
@@ -56,7 +56,7 @@ class ChatController {
         console.error('⚠️ 检索记忆失败:', err.message)
       }
     }
-    
+
     // 第二步：将记忆注入到系统提示词中
     let processedMessages = [...messages]
 
@@ -155,12 +155,12 @@ ${memoryContext}
         }
 
         // 第四步：对话后自动提取记忆和生成标题（异步执行，不阻塞响应）
-        if (sessionId && userId && messages.length > 0) {
+        if (sessionId && user_id && messages.length > 0) {
           // 异步提取记忆
-          this.extractMemoriesAsync(sessionId, userId, messages).catch((err) => {
+          this.extractMemoriesAsync(sessionId, user_id, messages).catch((err) => {
             console.error('⚠️ 异步提取记忆失败:', err.message)
           })
-          
+
           // 🏷️ 异步生成会话标题
           this.generateSessionTitleAsync(sessionId).catch((err) => {
             console.error('⚠️ 生成会话标题失败:', err.message)
@@ -184,8 +184,8 @@ ${memoryContext}
         }
 
         // 对话后自动提取记忆（异步执行）
-        if (sessionId && userId && messages.length > 0) {
-          this.extractMemoriesAsync(sessionId, userId, messages).catch((err) => {
+        if (sessionId && user_id && messages.length > 0) {
+          this.extractMemoriesAsync(sessionId, user_id, messages).catch((err) => {
             console.error('⚠️ 异步提取记忆失败:', err.message)
           })
         }
@@ -202,12 +202,12 @@ ${memoryContext}
   /**
    * 异步提取记忆（不阻塞主流程）
    */
-  async extractMemoriesAsync(sessionId, userId, messages) {
+  async extractMemoriesAsync(sessionId, user_id, messages) {
     try {
       console.log('🧠 开始提取记忆...')
       const extractedMemories = await chatMemoryService.autoExtractFromConversation(
         sessionId,
-        userId,
+        user_id,
         messages,
       )
 
@@ -228,10 +228,10 @@ ${memoryContext}
   async generateSessionTitleAsync(sessionId) {
     try {
       console.log('🏷️ 开始生成会话标题...')
-      
+
       // 从数据库获取完整的历史消息
       const allMessages = await ChatMessageService.getSessionMessages(sessionId, 50, 0)
-      
+
       if (allMessages && allMessages.length > 0) {
         const title = SessionService.extractTitleFromMessages(allMessages)
         console.log('🏷️ 自动生成会话标题:', title)
@@ -251,22 +251,22 @@ ${memoryContext}
    */
   deleteMessage = asyncHandler(async (ctx) => {
     const { messageId } = ctx.params
-  
+
     if (!messageId) {
       throw new BadRequestError('参数错误：messageId 不能为空')
     }
-  
+
     console.log('🗑️ 删除消息:', messageId)
-      
+
     // 调用 Service 层删除消息
     const deletedMessage = await ChatMessageService.deleteMessage(messageId)
-      
+
     if (!deletedMessage) {
       throw new NotFoundError('消息不存在')
     }
-  
+
     console.log('✅ 消息删除成功')
-      
+
     ctx.success({ messageId }, '删除成功')
   })
 }

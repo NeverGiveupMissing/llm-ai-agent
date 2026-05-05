@@ -6,7 +6,7 @@ class OperationLogModel {
    */
   async create(logData) {
     const {
-      userId,
+      user_id,
       username,
       operation,
       module,
@@ -34,7 +34,7 @@ class OperationLogModel {
     `
 
     const values = [
-      userId,
+      user_id,
       username,
       operation,
       module,
@@ -62,7 +62,7 @@ class OperationLogModel {
     const {
       page = 1,
       limit = 20,
-      userId,
+      user_id,
       username,
       module,
       operation,
@@ -78,9 +78,9 @@ class OperationLogModel {
     let paramIndex = 1
 
     // 构建查询条件
-    if (userId) {
+    if (user_id) {
       whereConditions.push(`user_id = $${paramIndex}`)
-      values.push(userId)
+      values.push(user_id)
       paramIndex++
     }
 
@@ -243,7 +243,7 @@ class OperationLogModel {
       SELECT username, COUNT(*) as count
       FROM operation_logs
       ${whereClause}
-      GROUP BY username
+      GROUP BY user_name
       ORDER BY count DESC
       LIMIT 10
     `

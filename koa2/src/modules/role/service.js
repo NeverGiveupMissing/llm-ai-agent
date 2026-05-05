@@ -203,6 +203,36 @@ class RoleService {
       limit: params.limit || 20,
     }
   }
+
+  /**
+   * 获取角色的菜单权限 ID 列表
+   */
+  async getRoleMenuIds(roleId) {
+    const menuIds = await roleModel.getRoleMenuIds(roleId)
+    return {
+      success: true,
+      data: menuIds,
+    }
+  }
+
+  /**
+   * 保存角色的菜单权限（覆盖更新，使用事务）
+   */
+  async saveRoleMenus(roleId, menuIds) {
+    // 验证角色是否存在
+    const role = await roleModel.getById(roleId)
+    if (!role) {
+      throw new Error('角色不存在')
+    }
+
+    // 使用 model 层的事务方法
+    await roleModel.assignMenus(roleId, menuIds)
+
+    return {
+      success: true,
+      message: '菜单权限分配成功',
+    }
+  }
 }
 
 module.exports = new RoleService()

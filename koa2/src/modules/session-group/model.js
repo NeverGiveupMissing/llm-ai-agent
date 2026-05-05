@@ -24,7 +24,7 @@ class SessionGroupModel {
   /**
    * 获取用户的所有分组（按置顶和时间排序）
    */
-  async list(userId) {
+  async list(user_id) {
     // 先检查 is_pinned 字段是否存在
     try {
       const query = `
@@ -37,7 +37,7 @@ class SessionGroupModel {
           COALESCE(is_pinned, false) DESC,
           updated_at DESC
       `
-      const result = await pool.query(query, [userId])
+      const result = await pool.query(query, [user_id])
       return result.rows
     } catch (error) {
       // 如果 is_pinned 字段不存在，使用降级查询
@@ -51,7 +51,7 @@ class SessionGroupModel {
           WHERE user_id = $1
           ORDER BY updated_at DESC
         `
-        const result = await pool.query(fallbackQuery, [userId])
+        const result = await pool.query(fallbackQuery, [user_id])
         return result.rows
       }
       throw error

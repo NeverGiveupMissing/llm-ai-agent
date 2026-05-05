@@ -13,9 +13,20 @@ async function errorMiddleware(ctx, next) {
     
     // 构建标准响应格式
     ctx.status = status
+    
+    // 特殊处理数据库连接错误
+    let errorMessage = error.message || '服务器内部错误'
+    if (error.code === 'ECONNREFUSED' && error.message.includes('5432')) {
+      errorMessage = '数据库连接失败，请检查数据库服务是否正常运行'
+    } else if (error.code === 'ETIMEDOUT') {
+      errorMessage = '数据库连接超时，请稍后重试'
+    } else if (error.message.includes('connect ECONNREFUSED')) {
+      errorMessage = '服务连接失败，请联系管理员'
+    }
+    
     ctx.body = {
       code: status,
-      message: error.message || '服务器内部错误',
+      message: errorMessage,
       data: null,
     }
 
@@ -24,7 +35,7 @@ async function errorMiddleware(ctx, next) {
       ctx.body.stack = error.stack
       console.error('❌ 错误详情:', error)
     } else {
-      console.error(`❌ [${status}] ${error.message}`)
+      console.error(`❌ [${status}] ${errorMessage}`)
     }
   }
 }

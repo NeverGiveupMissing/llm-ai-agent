@@ -1,4 +1,4 @@
-﻿// 说明：对话记忆路由 - 提供记忆上下文获取和自动提取接口
+// 说明：对话记忆路由 - 提供记忆上下文获取和自动提取接口
 
 const Router = require('@koa/router')
 const ChatMemoryController = require('./controller')
@@ -25,7 +25,7 @@ const router = new Router({ prefix: '/chat-memory' })
  *         schema:
  *           type: string
  *       - in: query
- *         name: userId
+ *         name: user_id
  *         required: true
  *         schema:
  *           type: string
@@ -51,11 +51,11 @@ router.get('/context', ChatMemoryController.getSessionMemoryContext)
  *         application/json:
  *           schema:
  *             type: object
- *             required: [sessionId, userId, messages]
+ *             required: [sessionId, user_id, messages]
  *             properties:
  *               sessionId:
  *                 type: string
- *               userId:
+ *               user_id:
  *                 type: string
  *               messages:
  *                 type: array

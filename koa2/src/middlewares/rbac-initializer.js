@@ -8,11 +8,11 @@ const { pool } = require('../config/db')
  */
 async function checkRbacInitialized() {
   try {
-    // 检查 roles 表是否存在且有数据
+    // 检查 sys_role 表是否存在且有数据
     const result = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
-        WHERE table_name = 'roles'
+        WHERE table_name = 'sys_role'
       ) AS table_exists;
     `)
     
@@ -26,8 +26,8 @@ async function checkRbacInitialized() {
       return false
     }
     
-    // 检查是否有角色数据
-    const rolesCount = await pool.query('SELECT COUNT(*) FROM roles')
+    // 检查是否已有角色数据（使用 sys_role 表）
+    const rolesCount = await pool.query('SELECT COUNT(*) FROM sys_role WHERE del_flag = \'0\'')
     const roleCount = parseInt(rolesCount.rows[0].count)
     
     if (roleCount === 0) {

@@ -33,9 +33,9 @@ const router = new Router({
  *         application/json:
  *           schema:
  *             type: object
- *             required: [username, password]
+ *             required: [user_name, password]
  *             properties:
- *               username:
+ *               user_name:
  *                 type: string
  *               password:
  *                 type: string
@@ -61,9 +61,9 @@ router.post('/register', registerRateLimit(), userController.register)
  *         application/json:
  *           schema:
  *             type: object
- *             required: [username, password]
+ *             required: [user_name, password]
  *             properties:
- *               username:
+ *               user_name:
  *                 type: string
  *               password:
  *                 type: string
@@ -75,27 +75,21 @@ router.post('/login', loginRateLimit(), userController.login)
 
 /**
  * 获取当前用户信息（需要认证）
- * ⚠️ 必须放在 /:userId 之前
+ * ⚠️ 必须放在 /:user_id 之前
  */
 router.get('/me', authMiddleware(), userController.getCurrentUser)
 
 /**
  * 修改当前用户密码（需要认证）
- * ️ 必须放在 /:userId 之前
+ * ️ 必须放在 /:user_id 之前
  */
 router.post('/me/change-password', authMiddleware(), userController.changePassword)
 
 /**
  * 更新当前用户信息（需要认证）
- * ⚠️ 必须放在 /:userId 之前
+ * ⚠️ 必须放在 /:user_id 之前
  */
 router.put('/me', authMiddleware(), userController.updateCurrentUser)
-
-/**
- * 上传头像（需要认证）
- * ⚠️ 必须放在 /:userId 之前
- */
-router.post('/me/avatar', authMiddleware(), userController.uploadAvatar)
 
 // ============================================
 // 动态路由必须放在最后
@@ -107,11 +101,22 @@ router.post('/me/avatar', authMiddleware(), userController.uploadAvatar)
 router.get('/', authMiddleware(), requirePermission('user:read'), userController.listUsers)
 
 /**
+ * 批量删除用户（需要 user:delete 权限）
+ * ⚠️ 必须放在 /:user_id 之前
+ */
+router.post(
+  '/batch-delete',
+  authMiddleware(),
+  requirePermission('user:delete'),
+  userController.batchDeleteUsers,
+)
+
+/**
  * 更新用户状态（启用/禁用）（需要 user:update 权限）
- * ⚠️ 必须放在 /:userId 之前
+ * ⚠️ 必须放在 /:user_id 之前
  */
 router.put(
-  '/:userId/status',
+  '/:user_id/status',
   authMiddleware(),
   requirePermission('user:update'),
   userController.updateUserStatus,
@@ -119,10 +124,10 @@ router.put(
 
 /**
  * 为用户分配角色（需要 user:update 权限）
- * ⚠️ 必须放在 /:userId 之前
+ * ⚠️ 必须放在 /:user_id 之前
  */
 router.post(
-  '/:userId/roles',
+  '/:user_id/roles',
   authMiddleware(),
   requirePermission('user:update'),
   userController.assignRole,
@@ -130,10 +135,10 @@ router.post(
 
 /**
  * 批量分配角色（需要 user:update 权限）
- * ️ 必须放在 /:userId 之前
+ * ️ 必须放在 /:user_id 之前
  */
 router.put(
-  '/:userId/roles',
+  '/:user_id/roles',
   authMiddleware(),
   requirePermission('user:update'),
   userController.assignRoles,
@@ -141,10 +146,10 @@ router.put(
 
 /**
  * 移除用户角色（需要 user:update 权限）
- * ⚠️ 必须放在 /:userId/:roleId 之前
+ * ⚠️ 必须放在 /:user_id/:roleId 之前
  */
 router.delete(
-  '/:userId/roles/:roleId',
+  '/:user_id/roles/:roleId',
   authMiddleware(),
   requirePermission('user:update'),
   userController.removeRole,
@@ -152,10 +157,10 @@ router.delete(
 
 /**
  * 重置密码（需要 user:update 权限）
- * ⚠️ 必须放在 /:userId 之前
+ * ⚠️ 必须放在 /:user_id 之前
  */
 router.post(
-  '/:userId/reset-password',
+  '/:user_id/reset-password',
   authMiddleware(),
   requirePermission('user:update'),
   userController.resetPassword,
@@ -163,10 +168,10 @@ router.post(
 
 /**
  * 获取用户详情（需要 user:read 权限）
- * ⚠️ 必须放在所有 /:userId/* 路由之后，作为兜底
+ * ⚠️ 必须放在所有 /:user_id/* 路由之后，作为兜底
  */
 router.get(
-  '/:userId',
+  '/:user_id',
   authMiddleware(),
   requirePermission('user:read'),
   userController.getUserDetail,
@@ -174,10 +179,10 @@ router.get(
 
 /**
  * 更新用户信息（需要 user:update 权限）
- * ⚠️ 必须放在所有 /:userId/* 路由之后，作为兜底
+ * ⚠️ 必须放在所有 /:user_id/* 路由之后，作为兜底
  */
 router.put(
-  '/:userId',
+  '/:user_id',
   authMiddleware(),
   requirePermission('user:update'),
   userController.updateUser,
@@ -185,10 +190,10 @@ router.put(
 
 /**
  * 删除用户（需要 user:delete 权限）
- * ️ 必须放在所有 /:userId/* 路由之后，作为兜底
+ * ️ 必须放在所有 /:user_id/* 路由之后，作为兜底
  */
 router.delete(
-  '/:userId',
+  '/:user_id',
   authMiddleware(),
   requirePermission('user:delete'),
   userController.deleteUser,

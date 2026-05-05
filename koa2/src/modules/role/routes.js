@@ -292,4 +292,56 @@ router.put('/:roleId', authMiddleware(), requirePermission('role:update'), roleC
  */
 router.delete('/:roleId', authMiddleware(), requirePermission('role:delete'), roleController.deleteRole)
 
+/**
+ * @swagger
+ * /roles/{roleId}/menu-ids:
+ *   get:
+ *     tags: [角色管理]
+ *     summary: 获取角色的菜单权限 ID 列表
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roleId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: 获取成功
+ */
+router.get('/:roleId/menu-ids', authMiddleware(), requirePermission('role:read'), roleController.getRoleMenuIds.bind(roleController))
+
+/**
+ * @swagger
+ * /roles/{roleId}/menus:
+ *   put:
+ *     tags: [角色管理]
+ *     summary: 保存角色的菜单权限（覆盖更新）
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roleId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [menuIds]
+ *             properties:
+ *               menuIds:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       200:
+ *         description: 保存成功
+ */
+router.put('/:roleId/menus', authMiddleware(), requirePermission('role:update'), roleController.saveRoleMenus.bind(roleController))
+
 module.exports = router

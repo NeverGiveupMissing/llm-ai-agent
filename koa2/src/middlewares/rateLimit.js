@@ -79,6 +79,12 @@ function rateLimit(options = {}) {
     } catch (error) {
       // 速率限制失败不影响业务流程，记录错误并继续
       console.error('❌ 速率限制中间件错误:', error.message)
+      
+      // 如果是数据库连接错误，提供更明确的提示
+      if (error.code === 'ECONNREFUSED' && error.message.includes('5432')) {
+        console.error('⚠️  检测到数据库连接失败，请检查PostgreSQL服务是否正常运行')
+      }
+      
       // 不要再次调用 next()，让错误向上传递到错误处理中间件
       throw error
     }

@@ -1,4 +1,4 @@
-﻿const Router = require('@koa/router')
+const Router = require('@koa/router')
 const memoryController = require('./controller')
 
 const router = new Router({ prefix: '/memory' })
@@ -17,10 +17,10 @@ const router = new Router({ prefix: '/memory' })
  *           schema:
  *             type: object
  *             required:
- *               - userId
+ *               - user_id
  *               - content
  *             properties:
- *               userId:
+ *               user_id:
  *                 type: string
  *                 description: 用户唯一标识
  *                 example: "user_123"
@@ -79,10 +79,10 @@ router.post('/create', memoryController.createMemory)
  *           schema:
  *             type: object
  *             required:
- *               - userId
+ *               - user_id
  *               - query
  *             properties:
- *               userId:
+ *               user_id:
  *                 type: string
  *                 description: 用户唯一标识
  *                 example: "user_123"
@@ -148,10 +148,10 @@ router.post('/retrieve', memoryController.retrieveMemories)
  *           schema:
  *             type: object
  *             required:
- *               - userId
+ *               - user_id
  *               - messages
  *             properties:
- *               userId:
+ *               user_id:
  *                 type: string
  *                 description: 用户唯一标识
  *                 example: "user_123"
@@ -202,7 +202,7 @@ router.post('/extract', memoryController.extractMemories)
  *     tags: [记忆管理]
  *     parameters:
  *       - in: query
- *         name: userId
+ *         name: user_id
  *         required: true
  *         schema:
  *           type: string
@@ -268,7 +268,7 @@ router.get('/list', memoryController.getMemories)
  *     tags: [记忆管理]
  *     parameters:
  *       - in: query
- *         name: userId
+ *         name: user_id
  *         required: true
  *         schema:
  *           type: string
@@ -418,9 +418,9 @@ router.delete('/:id', memoryController.deleteMemory)
  *           schema:
  *             type: object
  *             required:
- *               - userId
+ *               - user_id
  *             properties:
- *               userId:
+ *               user_id:
  *                 type: string
  *                 description: 用户唯一标识
  *                 example: "user_123"

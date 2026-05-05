@@ -6,15 +6,15 @@ const { BadRequestError, NotFoundError } = require('../../utils/app-error')
 
 class MemoryController {
   createMemory = asyncHandler(async (ctx) => {
-    const { userId, content, memoryType, importance, tags, skipDeduplication } = ctx.request.body
+    const { user_id, content, memoryType, importance, tags, skipDeduplication } = ctx.request.body
 
-    if (!userId || !content) {
-      throw new BadRequestError('参数错误：userId 和 content 不能为空')
+    if (!user_id || !content) {
+      throw new BadRequestError('参数错误：user_id 和 content 不能为空')
     }
 
     const result = await memoryService.createMemory(
       {
-        userId,
+        user_id,
         content,
         memoryType,
         importance,
@@ -35,14 +35,14 @@ class MemoryController {
   })
 
   retrieveMemories = asyncHandler(async (ctx) => {
-    const { userId, query, limit } = ctx.request.body
+    const { user_id, query, limit } = ctx.request.body
 
-    if (!userId || !query) {
-      throw new BadRequestError('参数错误：userId 和 query 不能为空')
+    if (!user_id || !query) {
+      throw new BadRequestError('参数错误：user_id 和 query 不能为空')
     }
 
     const memories = await memoryService.retrieveMemories(
-      userId,
+      user_id,
       query,
       parseInt(limit) || undefined,
     )
@@ -51,10 +51,10 @@ class MemoryController {
   })
 
   extractMemories = asyncHandler(async (ctx) => {
-    const { userId, messages, skipDeduplication } = ctx.request.body
+    const { user_id, messages, skipDeduplication } = ctx.request.body
 
-    if (!userId || !messages || !Array.isArray(messages)) {
-      throw new BadRequestError('参数错误：userId 和 messages 不能为空')
+    if (!user_id || !messages || !Array.isArray(messages)) {
+      throw new BadRequestError('参数错误：user_id 和 messages 不能为空')
     }
 
     const extractedMemories = await memoryExtractorService.extractFromConversation(messages)
@@ -62,7 +62,7 @@ class MemoryController {
     const result = await memoryService.batchCreateMemories(
       extractedMemories.map((m) => ({
         ...m,
-        userId,
+        user_id,
       })),
       {
         skipDeduplication: skipDeduplication || false,
@@ -84,9 +84,9 @@ class MemoryController {
   })
 
   getMemories = asyncHandler(async (ctx) => {
-    const { userId, limit, offset, type, keyword } = ctx.query
+    const { user_id, limit, offset, type, keyword } = ctx.query
 
-    console.log('[MemoryController] Query params:', { userId, limit, offset, type, keyword })
+    console.log('[MemoryController] Query params:', { user_id, limit, offset, type, keyword })
 
     let finalLimit = 20
     if (limit !== undefined && limit !== null) {
@@ -99,7 +99,7 @@ class MemoryController {
     }
 
     const result = await memoryService.getUserMemories(
-      userId || null,
+      user_id || null,
       finalLimit,
       parseInt(offset) || 0,
       type || null,
@@ -118,9 +118,9 @@ class MemoryController {
   })
 
   getMemoryStats = asyncHandler(async (ctx) => {
-    const { userId } = ctx.query
+    const { user_id } = ctx.query
 
-    const stats = await memoryService.getMemoryStats(userId || null)
+    const stats = await memoryService.getMemoryStats(user_id || null)
 
     ctx.success(stats, '获取成功')
   })
@@ -151,13 +151,13 @@ class MemoryController {
   })
 
   clearMemories = asyncHandler(async (ctx) => {
-    const { userId } = ctx.request.body
+    const { user_id } = ctx.request.body
 
-    if (!userId) {
-      throw new BadRequestError('参数错误：userId 不能为空')
+    if (!user_id) {
+      throw new BadRequestError('参数错误：user_id 不能为空')
     }
 
-    const count = await memoryService.clearUserMemories(userId)
+    const count = await memoryService.clearUserMemories(user_id)
 
     ctx.success({ count }, `已清除 ${count} 条记忆`)
   })

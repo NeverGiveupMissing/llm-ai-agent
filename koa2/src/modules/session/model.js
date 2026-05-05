@@ -6,20 +6,20 @@ class SessionModel {
   /**
    * 创建新会话
    */
-  async create(userId, title = '新对话') {
+  async create(user_id, title = '新对话') {
     const query = `
       INSERT INTO chat_sessions (user_id, title, message_count)
       VALUES ($1, $2, 0)
       RETURNING *
     `
-    const result = await pool.query(query, [userId, title])
+    const result = await pool.query(query, [user_id, title])
     return result.rows[0]
   }
 
   /**
    * 获取用户的会话列表（按置顶和时间倒序）
    */
-  async list(userId, limit = 20) {
+  async list(user_id, limit = 20) {
     const query = `
       SELECT id, user_id, title, message_count, is_pinned, share_token, group_id, created_at, updated_at
       FROM chat_sessions
@@ -29,7 +29,7 @@ class SessionModel {
         updated_at DESC
       LIMIT $2
     `
-    const result = await pool.query(query, [userId, limit])
+    const result = await pool.query(query, [user_id, limit])
     return result.rows
   }
 

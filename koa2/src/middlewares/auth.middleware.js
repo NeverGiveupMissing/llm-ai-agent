@@ -1,16 +1,16 @@
 // 说明：JWT 认证中间件 - 用于验证用户身份和 Token
 
 const jwt = require('jsonwebtoken')
-const ResponseUtil = require('../utils/response')
+const { mountToContext } = require('../utils/response')
 const config = require('../config')
 
-// JWT 密钥（从环境变量获取，生产环境应使用更安全的密钥管理方式）
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production'
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d' // 默认 7 天过期
+// ✅ 从配置文件获取 JWT 密钥（确保每次重启都使用相同的密钥）
+const JWT_SECRET = config.jwt.secret
+const JWT_EXPIRES_IN = config.jwt.expiresIn
 
 /**
  * 生成 JWT Token
- * @param {Object} payload - 要编码的数据（通常包含 userId、username 等）
+ * @param {Object} payload - 要编码的数据（通常包含 user_id、user_name 等）
  * @param {Object} options - 可选配置
  * @returns {string} JWT Token
  */
@@ -53,8 +53,13 @@ function authMiddleware() {
     try {
       // 从请求头获取 Token
       const authHeader = ctx.headers.authorization
+      
+      // ✅ 调试日志
+      console.log('🔍 [Auth Debug] 请求路径:', ctx.path)
+      console.log('🔍 [Auth Debug] Authorization 头:', authHeader ? `${authHeader.substring(0, 20)}...` : '无')
 
       if (!authHeader) {
+        console.log('❌ [Auth] 缺少 Authorization 头')
         ctx.status = 401
         ctx.unauthorized('缺少认证令牌')
         return
@@ -67,6 +72,7 @@ function authMiddleware() {
       }
 
       if (!token) {
+        console.log('❌ [Auth] Token 为空')
         ctx.status = 401
         ctx.unauthorized('无效的认证令牌格式')
         return
@@ -74,16 +80,18 @@ function authMiddleware() {
 
       // 验证 Token
       const decoded = verifyToken(token)
+      console.log('✅ [Auth] Token 验证成功, user_id:', decoded.user_id, '路径:', ctx.path)
 
       // 将用户信息存储到 ctx.state，供后续中间件和控制器使用
-      ctx.state.userId = decoded.userId
-      ctx.state.username = decoded.username
+      ctx.state.user_id = decoded.user_id
+      ctx.state.user_name = decoded.user_name
       ctx.state.user = decoded
 
       // 继续执行后续中间件
       await next()
     } catch (error) {
       // Token 验证失败，返回 401
+      console.error('❌ [Auth] Token 验证失败:', error.message, '路径:', ctx.path)
       ctx.status = 401
       ctx.unauthorized(error.message || '认证失败')
     }
@@ -109,8 +117,8 @@ function optionalAuth() {
         if (token) {
           try {
             const decoded = verifyToken(token)
-            ctx.state.userId = decoded.userId
-            ctx.state.username = decoded.username
+            ctx.state.user_id = decoded.user_id
+            ctx.state.user_name = decoded.user_name
             ctx.state.user = decoded
           } catch (error) {
             // Token 无效时不抛出错误，继续执行（视为未登录状态）
@@ -137,8 +145,8 @@ function optionalAuth() {
 function refreshToken(oldToken, extraPayload = {}) {
   const decoded = verifyToken(oldToken)
   const newPayload = {
-    userId: decoded.userId,
-    username: decoded.username,
+    user_id: decoded.user_id,
+    user_name: decoded.user_name,
     ...extraPayload,
   }
   return generateToken(newPayload)
