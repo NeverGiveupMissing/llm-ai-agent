@@ -8,9 +8,9 @@
   >
     <div class="user-dropdown">
       <n-avatar :size="32" color="#667eea">
-        {{ userInfo.name?.charAt(0) || '张' }}
+        {{ getUserInitial() }}
       </n-avatar>
-      <span class="user-name">{{ userInfo.name }}</span>
+      <span class="user-name">{{ userInfo.userName || userInfo.nickName || '用户' }}</span>
     </div>
   </n-dropdown>
 </template>
@@ -19,11 +19,23 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/modules/user'
+import { usePermissionStore } from '@/stores/modules/permission'
+import { useMessage } from 'naive-ui'
 
 const router = useRouter()
+const message = useMessage()
 const userStore = useUserStore()
+const permissionStore = usePermissionStore()
 
 const userInfo = computed(() => userStore.userInfo)
+
+// 获取用户名称首字母
+const getUserInitial = () => {
+  const name = userInfo.value.userName || userInfo.value.nickName || '用户'
+  // 取第一个字符，如果是中文取第一个字，如果是英文取第一个字母并大写
+  const firstChar = name.charAt(0)
+  return /[a-zA-Z]/.test(firstChar) ? firstChar.toUpperCase() : firstChar
+}
 
 const userOptions = ref([
   { label: '个人中心', key: 'profile' },
@@ -35,14 +47,26 @@ const userOptions = ref([
 const handleSelect = (key) => {
   switch (key) {
     case 'profile':
-      router.push({ name: 'Profile' })
+      // ✅ 优化：先检查路由是否存在，避免直接跳转导致死循环
+      const profileRoute = router.getRoutes().find(r => r.path === '/profile')
+      if (profileRoute) {
+        router.push('/profile')
+      } else {
+        message.warning('个人中心功能暂未开放')
+      }
       break
     case 'settings':
-      router.push({ name: 'Settings' })
+      // 检查用户是否有 system-access:view 权限
+      if (permissionStore.hasPermission('system-access:view')) {
+        router.push('/settings')
+      } else {
+        message.warning('您没有权限访问系统设置')
+        router.push('/403')
+      }
       break
     case 'logout':
       userStore.logout()
-      router.push({ name: 'Login' })
+      router.push('/login')
       break
   }
 }

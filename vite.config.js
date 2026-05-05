@@ -7,8 +7,8 @@ import Components from 'unplugin-vue-components/vite'
 import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
 import VueSetupExtend from 'vite-plugin-vue-setup-extend'
 
-const target = 'http://8.153.193.2:65432'
-// const target = 'http://127.0.0.1:65432'
+// const target = 'http://8.153.193.2:65432'
+const target = 'http://127.0.0.1:65432'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -26,6 +26,10 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/koa2api-docs': {
+        target,
+        changeOrigin: true,
+      },
+      '/uploads': {
         target,
         changeOrigin: true,
       },

@@ -1,9 +1,35 @@
 <template>
   <div class="sidebar-menu-container">
+    <!-- 直接使用 store 状态判断 -->
+    <div
+      v-if="!permissionStore.isLoaded"
+      style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 200px;
+        color: white;
+      "
+    >
+      权限加载中...
+    </div>
+    <div
+      v-else-if="menuStore.menuOptions?.length === 0"
+      style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 200px;
+        color: white;
+      "
+    >
+      菜单数据为空
+    </div>
     <n-menu
+      v-else
       :value="activeMenu"
       :collapsed="appStore.collapsed"
-      :options="menuOptions"
+      :options="menuStore.menuOptions"
       :default-value="activeMenu"
       @update:value="handleMenuClick"
     />
@@ -11,61 +37,76 @@
 </template>
 
 <script setup name="SidebarMenu">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/modules/app'
 import { useMenuStore } from '@/stores/modules/menu'
+import { usePermissionStore } from '@/stores/modules/permission'
 
 const router = useRouter()
 const route = useRoute()
 const appStore = useAppStore()
 const menuStore = useMenuStore()
+const permissionStore = usePermissionStore()
 
 // 当前激活的菜单
 const activeMenu = computed(() => route.path)
 
-// 菜单选项（从 store 获取）
-const menuOptions = computed(() => menuStore.menuOptions)
-
 const handleMenuClick = (key) => {
   router.push(key)
 }
+
+// 组件挂载时调试
+onMounted(() => {
+  console.log(' [侧边栏组件] SidebarMenu 已挂载')
+  console.log(' [调试] permissionStore.isLoaded:', permissionStore.isLoaded)
+  console.log(' [调试] menuStore.menuOptions:', menuStore.menuOptions)
+  console.log(' [调试] menuStore.menuOptions?.length:', menuStore.menuOptions?.length)
+
+  if (menuStore.menuOptions && menuStore.menuOptions.length > 0) {
+    console.log('✅ [侧边栏] 菜单数据正常！')
+    console.log('📋 [侧边栏] 第一个菜单:', menuStore.menuOptions[0])
+  } else {
+    console.error('❌ [侧边栏] 菜单数据为空！')
+  }
+})
 </script>
 
 <style scoped>
 .sidebar-menu-container {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden; /* 禁止菜单容器自身滚动 */
   background: #001529;
-}
-
-/* 自定义滚动条样式 */
-.sidebar-menu-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.sidebar-menu-container::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-menu-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-  transition: background 0.3s ease;
-}
-
-.sidebar-menu-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
 }
 
 /* 菜单容器背景色 */
 :deep(.n-menu) {
   background: #001529 !important;
+  height: 100%;
+  overflow-y: auto !important; /* 让 Naive UI 内部处理滚动 */
+  overflow-x: hidden;
 }
 
-/* 子菜单样式（themeOverrides 未覆盖的部分）*/
+/* 自定义滚动条样式 - 修改 .n-menu 的滚动条 */
+:deep(.n-menu::-webkit-scrollbar) {
+  width: 6px;
+}
+
+:deep(.n-menu::-webkit-scrollbar-track) {
+  background: transparent;
+}
+
+:deep(.n-menu::-webkit-scrollbar-thumb) {
+  background: #001529; /* 测试用红色 */
+  border-radius: 3px;
+}
+
+:deep(.n-menu::-webkit-scrollbar-thumb:hover) {
+  background: #001529;
+}
+
+/* 子菜单样式 */
 :deep(.n-menu-item-children) {
   background: rgba(0, 0, 0, 0.2) !important;
   margin: 0 8px;

@@ -12,7 +12,7 @@ import SidebarMenu from './SidebarMenu.vue'
 
 <style scoped>
 .sidebar {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: #001529;

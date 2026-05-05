@@ -66,7 +66,7 @@ export const autoMsg = (fn) => {
  * // <div v-for="item in data?.list">{{ item.content }}</div>
  *
  * onMounted(() => {
- *   fetchList({ userId: 'xxx', limit: 10 })
+ *   fetchList({ page: 1, pageSize: 10 })
  * })
  */
 export const useRequest = (apiFn, options = {}) => {

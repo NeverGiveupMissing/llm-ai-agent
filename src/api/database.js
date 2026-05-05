@@ -3,7 +3,7 @@
  * 路径：src/api/database.js
  */
 
-import { rest, fileDownload, axiosUpload } from '@/utils/http'
+import { axios } from '@/utils/http'
 import { API_PREFIX } from '@/utils/constants'
 
 /**
@@ -12,7 +12,7 @@ import { API_PREFIX } from '@/utils/constants'
  * @returns {Promise} 执行结果
  */
 export function executeSQL(sql) {
-  return rest.post(`${API_PREFIX}/database/execute`, { sql })
+  return axios.post(`${API_PREFIX}/database/execute`, { sql })
 }
 
 /**
@@ -20,16 +20,25 @@ export function executeSQL(sql) {
  * @returns {Promise} 表名数组
  */
 export function getTableList() {
-  return rest.get(`${API_PREFIX}/database/tables`)
+  return axios.get(`${API_PREFIX}/database/tables`)
 }
 
 /**
- * 获取指定表的字段结构
+ * 获取指定表的字段结构（旧接口，保留兼容）
  * @param {string} tableName - 表名
  * @returns {Promise} 字段结构数组
  */
 export function getTableStructure(tableName) {
-  return rest.get(`${API_PREFIX}/database/tables/${tableName}`)
+  return axios.get(`${API_PREFIX}/database/tables/${tableName}`)
+}
+
+/**
+ * 获取表详细信息（字段 + 注释 + 索引）
+ * @param {string} tableName - 表名
+ * @returns {Promise} 表详细信息 { tableName, columns, indexes }
+ */
+export function getTableDetail(tableName) {
+  return axios.get(`${API_PREFIX}/database/tables/${tableName}/detail`)
 }
 
 /**
@@ -37,7 +46,7 @@ export function getTableStructure(tableName) {
  * @returns {Promise} 数据库备份文件（Blob）
  */
 export function exportDatabase() {
-  return fileDownload.get(`${API_PREFIX}/database/export`)
+  return axios.download.get(`${API_PREFIX}/database/export`)
 }
 
 /**
@@ -48,7 +57,7 @@ export function exportDatabase() {
 export function importDatabase(file) {
   const formData = new FormData()
   formData.append('file', file)
-  return axiosUpload(`${API_PREFIX}/database/import`, formData)
+  return axios.upload(`${API_PREFIX}/database/import`, formData)
 }
 
 /**
@@ -58,7 +67,7 @@ export function importDatabase(file) {
  * @returns {Promise} 表数据
  */
 export function getTableData(tableName, params = {}) {
-  return rest.get(`${API_PREFIX}/database/tables/${tableName}/data`, {
+  return axios.get(`${API_PREFIX}/database/tables/${tableName}/data`, {
     params,
   })
 }
@@ -70,7 +79,7 @@ export function getTableData(tableName, params = {}) {
  * @returns {Promise} 更新结果
  */
 export function updateTableRow(tableName, data) {
-  return rest.put(`${API_PREFIX}/database/tables/${tableName}/row`, data)
+  return axios.put(`${API_PREFIX}/database/tables/${tableName}/row`, data)
 }
 
 /**
@@ -80,5 +89,5 @@ export function updateTableRow(tableName, data) {
  * @returns {Promise} 删除结果
  */
 export function deleteTableRow(tableName, data) {
-  return rest.delete(`${API_PREFIX}/database/tables/${tableName}/row`, { data })
+  return axios.delete(`${API_PREFIX}/database/tables/${tableName}/row`, { data })
 }

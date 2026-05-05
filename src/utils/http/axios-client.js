@@ -20,8 +20,8 @@ const axiosInstance = axios.create({
 // 请求拦截器
 axiosInstance.interceptors.request.use(
   (config) => {
-    requestInterceptor(config)
-    return config
+    // ✅ 正确返回修改后的 config
+    return requestInterceptor(config)
   },
   (error) => Promise.reject(error),
 )
@@ -70,7 +70,7 @@ axiosInstance.interceptors.response.use(
 export default axiosInstance
 
 // 便捷的 HTTP 方法
-export const axiosGet = (url, config = {}) => axiosInstance.get(url, config)
+export const axiosGet = (url, params = {}, config = {}) => axiosInstance.get(url, { ...config, params })
 export const axiosPost = (url, data = {}, config = {}) => axiosInstance.post(url, data, config)
 export const axiosPut = (url, data = {}, config = {}) => axiosInstance.put(url, data, config)
 export const axiosDelete = (url, config = {}) => axiosInstance.delete(url, config)
@@ -79,12 +79,13 @@ export const axiosPatch = (url, data = {}, config = {}) => axiosInstance.patch(u
 // 文件上传方法
 // ⚠️ 注意：不要手动设置 Content-Type，让浏览器自动生成 boundary
 export const axiosUpload = (url, formData, config = {}) => {
-  // 删除默认的 Content-Type，让浏览器自动生成 multipart/form-data 和 boundary
   return axiosInstance.post(url, formData, {
     ...config,
+    // 关键：删除 Content-Type，让浏览器自动设置 multipart/form-data + boundary
     headers: {
-      ...config.headers,
-      'Content-Type': undefined, // 关键：删除 Content-Type
+      // 先展开 config.headers，再删除 Content-Type
+      ...(config.headers || {}),
+      'Content-Type': undefined, // 使用 undefined 删除默认 header
     },
   })
 }

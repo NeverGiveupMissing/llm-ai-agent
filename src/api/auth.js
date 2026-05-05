@@ -1,6 +1,6 @@
 // 说明：用户认证 API
 
-import { base, rest } from '@/utils/http'
+import { axios } from '@/utils/http'
 import { API_PREFIX } from '@/utils/constants'
 
 /**
@@ -10,7 +10,7 @@ import { API_PREFIX } from '@/utils/constants'
  * @param {string} data.password - 密码
  */
 export const login = (data) => {
-  return rest.post(`${API_PREFIX}/users/login`, data)
+  return axios.post(`${API_PREFIX}/users/login`, data)
 }
 
 /**
@@ -20,14 +20,14 @@ export const login = (data) => {
  * @param {string} data.password - 密码
  */
 export const register = (data) => {
-  return rest.post(`${API_PREFIX}/users/register`, data)
+  return axios.post(`${API_PREFIX}/users/register`, data)
 }
 
 /**
  * 获取当前用户信息
  */
 export const getCurrentUser = () => {
-  return rest.get(`${API_PREFIX}/users/me`)
+  return axios.get(`${API_PREFIX}/users/me`)
 }
 
 /**
@@ -37,7 +37,7 @@ export const getCurrentUser = () => {
  * @param {string} data.newPassword - 新密码
  */
 export const changePassword = (data) => {
-  return rest.post(`${API_PREFIX}/users/me/change-password`, data)
+  return axios.post(`${API_PREFIX}/users/me/change-password`, data)
 }
 
 /**
@@ -45,5 +45,5 @@ export const changePassword = (data) => {
  * @param {Object} data - 用户信息
  */
 export const updateUserInfo = (data) => {
-  return rest.put(`${API_PREFIX}/users/me`, data)
+  return axios.put(`${API_PREFIX}/users/me`, data)
 }

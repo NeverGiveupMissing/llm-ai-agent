@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '@/layouts/index.vue'
 import { setupRouterGuard } from './guard'
+import { commonRoutes } from './routes'
 
 const routes = [
   {
@@ -8,7 +9,10 @@ const routes = [
     name: 'Layout', // ✅ 添加 name，用于动态添加子路由
     component: Layout,
     redirect: '/login', // ✅ 未登录时重定向到登录页
-    children: [], // ✅ 子路由将从数据库动态加载
+    children: [
+      // ✅ 注册通用路由（所有登录用户都能访问）
+      ...commonRoutes,
+    ],
   },
   {
     path: '/login',

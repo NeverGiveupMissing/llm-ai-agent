@@ -15,40 +15,75 @@ export const useMenuStore = defineStore('menu', {
      * 从后端菜单树生成菜单配置
      */
     setMenuFromTree(menuTree) {
-      this.menuOptions = this.buildMenuOptions(menuTree)
+      // console.log('🌲 [MenuStore] setMenuFromTree 被调用')
+      // console.log('🌲 [MenuStore] 原始菜单树:', menuTree)
+      // console.log('🌲 [MenuStore] 菜单树长度:', menuTree?.length)
+
+      const options = this.buildMenuOptions(menuTree)
+
+      // console.log('✅ [MenuStore] 构建后的菜单选项:', options)
+      // console.log('✅ [MenuStore] 菜单选项数量:', options?.length)
+
+      this.menuOptions = options
     },
 
     /**
-     * 递归构建菜单选项
+     * 递归构建菜单选项（下划线字段，与后端保持一致）
      */
     buildMenuOptions(menus) {
       if (!menus || menus.length === 0) return []
 
-      return menus.map((menu) => {
-        const menuPath = menu.path
-          ? menu.path.startsWith('/')
-            ? menu.path
-            : `/${menu.path}`
-          : null
-        const option = {
-          label: menu.name,
-          key: menuPath || menu.code || menu.name,
-          icon: this.getIconComponent(menu.icon),
-        }
+      return menus
+        .map((menu) => {
+          // ✅ 统一使用下划线命名（与后端数据库保持一致）
+          const { menu_id, menu_name, menu_type, path, visible, status, icon, perms, children } = menu
 
-        if (menu.children && menu.children.length > 0) {
-          option.children = this.buildMenuOptions(menu.children)
-        }
+          // 跳过按钮类型（F）
+          if (menu_type === 'F') {
+            return null
+          }
 
-        return option
-      })
+          // 跳过隐藏菜单（visible !== '0'）
+          if (String(visible) !== '0') {
+            return null
+          }
+
+          // 跳过停用菜单（status !== '0'）
+          if (String(status) !== '0') {
+            return null
+          }
+
+          const menuPath = path ? (path.startsWith('/') ? path : `/${path}`) : null
+
+          const option = {
+            label: menu_name, // ✅ 使用下划线
+            key: menuPath || perms || menu_name, // ✅ 使用下划线
+            icon: this.getIconComponent(icon), // ✅ 使用下划线
+          }
+
+          // ✅ 只有目录（M）才能折叠，菜单（C）即使有子节点也不显示为可折叠
+          if (menu_type === 'M' && children && children.length > 0) {
+            const childOptions = this.buildMenuOptions(children)
+            const validChildren = childOptions.filter((child) => child !== null)
+            if (validChildren.length > 0) {
+              option.children = validChildren
+            }
+          }
+
+          return option
+        })
+        .filter((item) => item !== null)
     },
 
     /**
      * 获取图标组件
      */
     getIconComponent(iconType) {
+      // ✅ 图标键名映射（数据库中的 icon 字段值）
       const iconMap = {
+        home: this.createSvgIcon(
+          `<rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>`,
+        ),
         dashboard: this.createSvgIcon(
           `<rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>`,
         ),

@@ -3,9 +3,12 @@
 
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getMenuTree, getMyPermissions } from '@/api/permission'
+import { getUserMenus } from '@/api/menu'
 import { useMenuStore } from './menu'
 import router from '@/router'
+
+// ✅ Promise 缓存，防止并发请求
+let loadingPromise = null
 
 // ✅ 使用 Vite 的 glob 自动扫描 views 目录下所有 index.vue 文件
 const modules = import.meta.glob('@/views/**/index.vue')
@@ -19,8 +22,11 @@ const modules = import.meta.glob('@/views/**/index.vue')
 function loadComponent(path) {
   if (!path) return null
   
+  // ✅ 修复：移除前导斜杠，避免路径变成 //profile
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path
+  
   // 构建完整路径：/src/views/{path}/index.vue
-  const fullPath = `/src/views/${path}/index.vue`
+  const fullPath = `/src/views/${cleanPath}/index.vue`
   
   if (modules[fullPath]) {
     return modules[fullPath]
@@ -33,6 +39,39 @@ function loadComponent(path) {
   console.warn(`   3. 路径深度是否为 views/{path}/index.vue`)
   
   return null
+}
+
+/**
+ * 从菜单树中提取所有权限标识
+ * @param {Array} menus - 菜单树
+ * @returns {Array} 权限标识数组
+ */
+function extractPermissionsFromMenu(menus) {
+  const permissions = []
+  
+  const traverse = (items) => {
+    if (!items || items.length === 0) return
+    
+    items.forEach(menu => {
+      // 兼容驼峰和下划线
+      const perms = menu.perms
+      
+      // 如果有权限标识，添加到数组
+      if (perms) {
+        permissions.push(perms)
+      }
+      
+      // 递归处理子菜单
+      if (menu.children && menu.children.length > 0) {
+        traverse(menu.children)
+      }
+    })
+  }
+  
+  traverse(menus)
+  
+  console.log('🔍 提取到的权限标识:', permissions)
+  return permissions
 }
 
 export const usePermissionStore = defineStore('permission', () => {
@@ -51,8 +90,28 @@ export const usePermissionStore = defineStore('permission', () => {
   // 是否已生成动态路由
   const isRoutesGenerated = ref(false)
 
-  // 是否已加载权限数据
+  // 权限加载状态：true=已加载, false=未加载, 'loading'=加载中
   const isPermissionLoaded = ref(false)
+
+  // Getters
+  const isLoaded = computed(() => isPermissionLoaded.value === true)
+  const isLoading = computed(() => isPermissionLoaded.value === 'loading')
+  const isNotLoaded = computed(() => isPermissionLoaded.value === false)
+
+  // 设置加载状态
+  function setLoading() {
+    isPermissionLoaded.value = 'loading'
+  }
+
+  // 设置加载完成
+  function setLoaded() {
+    isPermissionLoaded.value = true
+  }
+
+  // 设置加载失败
+  function setFailed() {
+    isPermissionLoaded.value = false
+  }
 
   // 计算属性：检查是否拥有某个权限
   const hasPermission = computed(() => {
@@ -98,44 +157,89 @@ export const usePermissionStore = defineStore('permission', () => {
    * 登录后调用此方法
    */
   async function fetchUserPermissions() {
-    try {
-      // 获取 menuStore 实例
-      const menuStore = useMenuStore()
-
-      // 并行请求菜单树和权限列表
-      const [menuTreeRes, permissionsRes] = await Promise.all([
-        getMenuTree(),
-        getMyPermissions(),
-      ])
-
-      // 设置菜单树
-      // ✅ 拦截器返回完整对象 { code, message, data }
-      if (menuTreeRes?.data) {
-        setMenuTree(menuTreeRes.data)
-        // 将菜单树传递给 menuStore，生成菜单配置
-        menuStore.setMenuFromTree(menuTreeRes.data)
-        console.log('✅ 菜单树加载成功:', menuTreeRes.data)
-        
-        // ✅ 动态注册路由
-        await registerDynamicRoutes(menuTreeRes.data)
-      }
-
-      // 设置权限列表（提取权限 code）
-      // ✅ 拦截器返回完整对象 { code, message, data }
-      if (permissionsRes?.data) {
-        // permissionsRes.data 是权限数组
-        const permissionCodes = permissionsRes.data.map((p) => p.code)
-        setPermissions(permissionCodes)
-        console.log('✅ 权限列表加载成功:', permissionCodes)
-      }
-
-      isPermissionLoaded.value = true
+    // ✅ 防止重复加载：如果已加载，直接返回
+    if (isPermissionLoaded.value === true) {
+      console.log('✅ 权限已加载，跳过')
       return true
-    } catch (error) {
-      console.error('❌ 获取用户权限失败:', error)
-      isPermissionLoaded.value = false
-      throw error
     }
+    
+    // ✅ 如果正在加载，返回缓存的 Promise（防止并发请求）
+    if (loadingPromise) {
+      console.log('🔄 权限加载中，等待完成...')
+      return loadingPromise
+    }
+    
+    // ✅ 创建新的加载 Promise
+    loadingPromise = (async () => {
+      try {
+        // 设置加载中状态
+        setLoading()
+        
+        // 获取 menuStore 实例
+        const menuStore = useMenuStore()
+        
+        // ✅ 不使用缓存，每次刷新都从后端获取最新数据
+        console.log('📡 从后端获取菜单和权限...')
+        const menuTreeRes = await getUserMenus()
+
+        // 设置菜单树
+        if (menuTreeRes?.data) {
+          setMenuTree(menuTreeRes.data)
+          menuStore.setMenuFromTree(menuTreeRes.data)
+          console.log('✅ 菜单树加载成功:', menuTreeRes.data)
+          
+          // ✅ 从菜单树中提取所有权限标识
+          const permissionCodes = extractPermissionsFromMenu(menuTreeRes.data)
+          setPermissions(permissionCodes)
+          console.log('✅ 权限列表加载成功:', permissionCodes)
+          
+          // ✅ 动态注册路由
+          await registerDynamicRoutes(menuTreeRes.data)
+        }
+
+        isPermissionLoaded.value = true
+        setLoaded()
+        return true
+      } catch (error) {
+        console.error('❌ 获取用户权限失败:', error)
+        isPermissionLoaded.value = false
+        setFailed()
+        throw error
+      } finally {
+        // ✅ 清除 Promise 缓存，允许下次重新加载
+        loadingPromise = null
+      }
+    })()
+    
+    return loadingPromise
+  }
+  
+  /**
+   * 后台异步刷新权限缓存
+   * ❌ 已禁用：避免并发请求导致空数据问题
+   * 用户退出重新登录即可获取最新数据
+   */
+  async function refreshPermissionsCache() {
+    // 暂不启用，避免并发请求问题
+    // try {
+    //   console.log('🔄 后台刷新权限缓存...')
+    //   const [menuTreeRes, permissionsRes] = await Promise.all([
+    //     getMenuTree(),
+    //     getMyPermissions(),
+    //   ])
+    //   
+    //   if (menuTreeRes?.data) {
+    //     localStorage.setItem('menuTree', JSON.stringify(menuTreeRes.data))
+    //   }
+    //   
+    //   if (permissionsRes?.data) {
+    //     localStorage.setItem('permissions', JSON.stringify(permissionsRes.data))
+    //   }
+    //   
+    //   console.log('✅ 权限缓存刷新完成')
+    // } catch (error) {
+    //   console.warn('⚠️ 后台刷新权限缓存失败:', error)
+    // }
   }
 
   /**
@@ -158,15 +262,24 @@ export const usePermissionStore = defineStore('permission', () => {
         router.addRoute('Layout', route)
       })
       
-      // ✅ 关键：在所有动态路由添加完成后，最后添加 404 路由
-      // 这样 404 路由会在所有有效路由之后匹配
+      // ✅ 关键：在所有动态路由添加完成后，最后添加通配路由
+      // 这样通配路由会在所有有效路由之后匹配，不会误拦截正常路由
+      
+      // 先删除旧的通配路由（防止重复注册）
+      if (router.hasRoute('CatchAll')) {
+        router.removeRoute('CatchAll')
+        console.log('🗑️ 已删除旧的通配路由')
+      }
+      
+      // 注册新的通配路由
       router.addRoute({
         path: '/:pathMatch(.*)*',
-        name: 'NotFound',
-        component: () => import('@/views/error/404.vue'),
+        name: 'CatchAll',
+        redirect: '/404',
+        meta: { hidden: true },
       })
       
-      console.log(`✅ 成功注册 ${validRoutes.length} 个动态路由 + 404 路由`)
+      console.log(`✅ 成功注册 ${validRoutes.length} 个动态路由 + 通配路由`)
     } catch (error) {
       console.error('❌ 注册动态路由失败:', error)
       throw error
@@ -175,54 +288,95 @@ export const usePermissionStore = defineStore('permission', () => {
 
   /**
    * 从菜单树构建路由配置
-   * @param {Array} menus - 菜单树
+   * @param {Array} menus - 菜单树（可能是 snake_case 或 camelCase）
+   * @param {String} parentPath - 父级路径（用于调试）
+   * @param {Set} visited - 已访问的菜单 ID 集合（防止循环引用）
    * @returns {Array} 路由配置数组
    */
-  function buildRoutesFromMenu(menus) {
-    if (!menus || menus.length === 0) return []
+  function buildRoutesFromMenu(menus, parentPath = '', visited = new Set()) {
+    if (!menus || menus.length === 0) {
+      console.warn('⚠️ [buildRoutesFromMenu] 菜单数据为空')
+      return []
+    }
 
-    return menus
-      .flatMap((menu) => {
-        // ✅ 如果有 path，注册为路由
-        if (menu.path) {
-          const routePath = menu.path.startsWith('/') ? menu.path : `/${menu.path}`
-          
-          // ✅ 动态加载组件，无需维护映射表
-          const component = loadComponent(menu.path)
-          
-          // 如果组件加载失败，警告但跳过
-          if (!component) {
-            console.warn(`⚠️ 未找到组件: @/views/${menu.path}/index.vue`)
-            return null
-          }
+    console.log(` [buildRoutesFromMenu] 开始处理 ${menus.length} 个菜单项`)
+    console.log('🔍 第一个菜单项示例:', menus[0])
 
-          const route = {
-            path: routePath,
-            name: menu.name || menu.path,
-            component,
-            meta: {
-              title: menu.name,
-              icon: menu.icon,
-            },
-          }
+    const routes = []
 
-          // 递归处理子菜单
-          if (menu.children && menu.children.length > 0) {
-            route.children = buildRoutesFromMenu(menu.children)
-          }
+    menus.forEach((menu) => {
+      // ✅ 兼容驼峰和下划线命名
+      const menuId = menu.menuId || menu.menu_id
+      const menuName = menu.menuName || menu.menu_name
+      const menuType = menu.menuType || menu.menu_type
+      const path = menu.path
+      const visible = menu.visible
+      const status = menu.status
+      const component = menu.component
+      const routeName = menu.routeName || menu.route_name
+      const icon = menu.icon
+      const perms = menu.perms
+      const children = menu.children
 
-          return route
-        } else {
-          // ✅ 父菜单（无 path），将其子菜单提升到顶层
-          if (menu.children && menu.children.length > 0) {
-            console.log(`  父菜单 "${menu.name}" 的子菜单将提升到顶层注册`)
-            return buildRoutesFromMenu(menu.children)
-          }
-          return null
+      // ✅ 防止循环引用导致的栈溢出
+      if (menuId && visited.has(menuId)) {
+        console.warn(`⚠️ 检测到菜单循环引用或重复 ID: ${menuId} (${menuName})，已跳过`)
+        return
+      }
+      if (menuId) visited.add(menuId)
+
+      // ✅ 过滤按钮类型、隐藏菜单、停用菜单
+      if (menuType === 'F') return
+      if (visible === '1') return
+      if (status === '1') return
+
+      // 安全 path 处理
+      let routePath = ''
+      if (path && path !== '/' && path !== '') {
+        routePath = path.startsWith('/') ? path.slice(1) : path
+      } else {
+        routePath = (menuName || 'unknown').toLowerCase().replace(/\s+/g, '-')
+        console.warn(`️ 菜单 ${menuName} 无有效 path，使用后备: ${routePath}`)
+      }
+
+      // 目录类型 (M) - 不注册为路由，仅用于菜单树结构
+      if (menuType === 'M') {
+        console.log(`    ℹ️ 目录 ${menuName} 不注册为路由，仅用于菜单结构`)
+        // 不将目录注册为路由，只处理其子菜单
+        if (children?.length) {
+          const childRoutes = buildRoutesFromMenu(children, parentPath, visited)
+          routes.push(...childRoutes)
         }
-      })
-      .flat() // ✅ 扁平化数组
-      .filter(Boolean) // 过滤掉 null
+        return
+      }
+
+      // 菜单类型 (C)
+      if (menuType === 'C') {
+        const componentKey = component ? component.replace(/\/index$/, '') : path
+        const vueComponent = loadComponent(componentKey)
+        if (!vueComponent) {
+          console.error(`❌ 菜单 ${menuName} 组件加载失败: ${componentKey}`)
+          return
+        }
+        const uniqueName = routeName || `${parentPath.replace(/\//g, '-')}-${menuName}`
+        console.log(`    📄 菜单 ${menuName} -> path: ${routePath}, name: ${uniqueName}`)
+        routes.push({
+          path: routePath,
+          name: uniqueName,
+          component: vueComponent,
+          meta: {
+            title: menuName,
+            icon: icon,
+            menuId: menuId,
+            menuType: menuType,
+            perms: perms ? (Array.isArray(perms) ? perms : [perms]) : [],
+          },
+        })
+      }
+    })
+
+    console.log(`📊 [buildRoutesFromMenu] 返回 ${routes.length} 个路由:`, routes.map(r => ({ path: r.path, name: r.name })))
+    return routes
   }
 
   // 根据权限过滤路由
@@ -261,22 +415,28 @@ export const usePermissionStore = defineStore('permission', () => {
     isRoutesGenerated.value = false
     isPermissionLoaded.value = false
     
+    // ✅ 不再使用缓存，所以不需要清除 localStorage
+    // localStorage.removeItem('menuTree')
+    // localStorage.removeItem('permissions')
+    console.log('🗑️ 已重置权限状态')
+    
     // ✅ 移除 Layout 下的所有动态子路由
     // 通过重新创建 Layout 路由来清除所有子路由
-    if (router.hasRoute('Layout')) {
-      router.removeRoute('Layout')
+    if (router.hasRoute('LayoutRoot')) {
+      router.removeRoute('LayoutRoot')
       router.addRoute({
         path: '/',
-        name: 'Layout',
+        name: 'LayoutRoot',
         component: () => import('@/layouts/index.vue'),
         redirect: '/login', // ✅ 重置后重定向到登录页
         children: [],
       })
     }
     
-    // ✅ 移除 404 路由（如果存在）
-    if (router.hasRoute('NotFound')) {
-      router.removeRoute('NotFound')
+    // ✅ 移除通配路由（如果存在）
+    if (router.hasRoute('CatchAll')) {
+      router.removeRoute('CatchAll')
+      console.log('🗑️ 已清除通配路由')
     }
     
     // 同时重置 menuStore
@@ -292,6 +452,10 @@ export const usePermissionStore = defineStore('permission', () => {
     dynamicRoutes,
     isRoutesGenerated,
     isPermissionLoaded,
+    // Getters
+    isLoaded,
+    isLoading,
+    isNotLoaded,
     // Computed
     hasPermission,
     hasAnyPermission,
@@ -300,6 +464,9 @@ export const usePermissionStore = defineStore('permission', () => {
     setPermissions,
     setRoles,
     setMenuTree,
+    setLoading,
+    setLoaded,
+    setFailed,
     fetchUserPermissions,
     filterRoutesByPermission,
     generateRoutes,

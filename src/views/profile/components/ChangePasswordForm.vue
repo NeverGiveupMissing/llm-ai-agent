@@ -1,18 +1,17 @@
 <template>
-  <n-card title="修改密码" size="small" :bordered="false">
+  <div class="max-w-xl">
     <n-form
       ref="formRef"
       :model="formData"
       :rules="formRules"
       label-placement="left"
       label-width="100"
-      style="max-width: 500px"
     >
-      <n-form-item label="旧密码" path="oldPassword">
+      <n-form-item label="当前密码" path="oldPassword">
         <n-input
           v-model:value="formData.oldPassword"
           type="password"
-          placeholder="请输入旧密码"
+          placeholder="请输入当前密码"
           show-password-on="click"
         />
       </n-form-item>
@@ -23,8 +22,12 @@
           type="password"
           placeholder="请输入新密码（至少6位）"
           show-password-on="click"
+          @input="handlePasswordInput"
         />
       </n-form-item>
+
+      <!-- 密码强度指示器 -->
+      <PasswordStrength :password="formData.newPassword" />
 
       <n-form-item label="确认密码" path="confirmPassword">
         <n-input
@@ -36,26 +39,27 @@
       </n-form-item>
 
       <n-form-item>
-        <n-button type="primary" @click="handleSubmit">
+        <n-button type="primary" @click="handleSubmit" :loading="submitLoading">
           修改密码
         </n-button>
       </n-form-item>
     </n-form>
-  </n-card>
+  </div>
 </template>
 
 <script setup>
 import { ref, reactive } from 'vue'
 import { useMessage } from 'naive-ui'
 import { changePassword } from '@/api/auth'
+import PasswordStrength from './PasswordStrength.vue'
 
 const message = useMessage()
 
-// Emits
-const emit = defineEmits(['password-changed'])
-
 // 表单引用
 const formRef = ref(null)
+
+// 提交加载状态
+const submitLoading = ref(false)
 
 // 表单数据
 const formData = reactive({
@@ -79,7 +83,7 @@ const validateConfirmPassword = (rule, value) => {
 const formRules = {
   oldPassword: {
     required: true,
-    message: '请输入旧密码',
+    message: '请输入当前密码',
     trigger: 'blur',
   },
   newPassword: [
@@ -101,12 +105,22 @@ const formRules = {
   },
 }
 
+// 处理密码输入
+const handlePasswordInput = () => {
+  // 如果确认密码已输入，重新验证
+  if (formData.confirmPassword && formRef.value) {
+    formRef.value.validate(['confirmPassword'])
+  }
+}
+
 // 提交表单
 const handleSubmit = async () => {
   if (!formRef.value) return
 
   try {
     await formRef.value.validate()
+
+    submitLoading.value = true
 
     const res = await changePassword({
       oldPassword: formData.oldPassword,
@@ -121,8 +135,10 @@ const handleSubmit = async () => {
       formData.newPassword = ''
       formData.confirmPassword = ''
       
-      // 通知父组件
-      emit('password-changed')
+      // 延迟退出登录
+      setTimeout(() => {
+        window.location.href = '/login'
+      }, 1500)
     } else {
       message.error(res.message || '密码修改失败')
     }
@@ -132,7 +148,9 @@ const handleSubmit = async () => {
       // 表单验证错误
       return
     }
-    message.error(error.response?.data?.message || '密码修改失败')
+    message.error(error.message || '密码修改失败')
+  } finally {
+    submitLoading.value = false
   }
 }
 </script>

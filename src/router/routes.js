@@ -26,14 +26,31 @@ export const constantRoutes = [
     component: () => import('@/views/error/403.vue'),
     meta: { hidden: true, public: true },
   },
-
   {
-    path: '/:pathMatch(.*)*',
+    path: '/404',
     name: 'NotFound',
     component: () => import('@/views/error/404.vue'),
     meta: { hidden: true, public: true },
   },
+  // ✅ 关键：添加 Layout 路由，作为动态路由的容器
+  // ✅ 优化：重定向逻辑交由路由守卫处理，这里仅作为占位符
+  {
+    path: '/',
+    name: 'LayoutRoot', // ✅ 改名避免冲突
+    component: Layout,
+    redirect: '/dashboard', // 默认重定向，实际跳转由守卫控制
+    children: [],
+  },
+  // ✅ 注意：通配路由 /:pathMatch(.*)* 不在这里注册
+  // 它将在动态路由注册完成后最后添加，确保不会误拦截正常路由
 ]
+
+/**
+ * 通用路由（所有登录用户都能访问）
+ * 注意：dashboard 和 profile 现在通过数据库菜单动态生成，不需要在这里定义
+ * 这里只保留真正的静态路由（如分享链接等）
+ */
+export const commonRoutes = []
 
 /**
  * ⚠️ 重要说明：

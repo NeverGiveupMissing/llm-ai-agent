@@ -54,6 +54,7 @@ Thumbs.db
 
 # database backup files
 *.sql
+*.zip
 db_backup_*.sql
 db_backup_*.zip
 

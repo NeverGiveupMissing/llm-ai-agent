@@ -1,5 +1,5 @@
 // 说明：用户管理 API
-import { rest } from '@/utils/http'
+import { axios } from '@/utils/http'
 import { API_PREFIX } from '@/utils/constants'
 
 /**
@@ -11,14 +11,14 @@ import { API_PREFIX } from '@/utils/constants'
  * @param {string} params.keyword - 搜索关键词
  * @returns {Promise} 返回用户列表
  */
-export const getUserList = (params) => rest.get(`${API_PREFIX}/users`, params)
+export const getUserList = (params) => axios.get(`${API_PREFIX}/users`, params)
 
 /**
  * 获取用户详情
- * @param {string} userId - 用户ID
+ * @param {string} user_id - 用户ID
  * @returns {Promise} 返回用户详情
  */
-export const getUserDetail = (userId) => rest.get(`${API_PREFIX}/users/${userId}`)
+export const getUserDetail = (user_id) => axios.get(`${API_PREFIX}/users/${user_id}`)
 
 /**
  * 创建用户
@@ -29,71 +29,73 @@ export const getUserDetail = (userId) => rest.get(`${API_PREFIX}/users/${userId}
  * @param {string} data.avatarUrl - 头像URL
  * @returns {Promise} 返回创建的用户
  */
-export const createUser = (data) => rest.post(`${API_PREFIX}/users/register`, data)
+export const createUser = (data) => axios.post(`${API_PREFIX}/users/register`, data)
 
 /**
  * 更新用户信息
- * @param {string} userId - 用户ID
+ * @param {string} user_id - 用户ID
  * @param {Object} data - 更新数据
  * @returns {Promise} 返回更新结果
  */
-export const updateUser = (userId, data) => rest.put(`${API_PREFIX}/users/${userId}`, data)
+export const updateUser = (user_id, data) => axios.put(`${API_PREFIX}/users/${user_id}`, data)
 
 /**
  * 删除用户
- * @param {string} userId - 用户ID
+ * @param {string} user_id - 用户ID
  * @returns {Promise} 返回删除结果
  */
-export const deleteUser = (userId) => rest.delete(`${API_PREFIX}/users/${userId}`)
+export const deleteUser = (user_id) => axios.delete(`${API_PREFIX}/users/${user_id}`)
+
+/**
+ * 批量删除用户
+ * @param {Array} user_ids - 用户ID数组
+ * @returns {Promise} 返回删除结果
+ */
+export const batchDeleteUser = (user_ids) =>
+  axios.post(`${API_PREFIX}/users/batch-delete`, { ids: user_ids })
 
 /**
  * 为用户分配角色
- * @param {string} userId - 用户ID
+ * @param {string} user_id - 用户ID
  * @param {Object} data - 角色数据
  * @param {string} data.roleId - 角色ID
  * @returns {Promise} 返回分配结果
  */
-export const assignRole = (userId, data) => rest.post(`${API_PREFIX}/users/${userId}/roles`, data)
+export const assignRole = (user_id, data) =>
+  axios.post(`${API_PREFIX}/users/${user_id}/roles`, data)
 
 /**
  * 移除用户角色
- * @param {string} userId - 用户ID
+ * @param {string} user_id - 用户ID
  * @param {string} roleId - 角色ID
  * @returns {Promise} 返回移除结果
  */
-export const removeRole = (userId, roleId) => rest.delete(`${API_PREFIX}/users/${userId}/roles/${roleId}`)
+export const removeRole = (user_id, roleId) =>
+  axios.delete(`${API_PREFIX}/users/${user_id}/roles/${roleId}`)
 
 /**
  * 获取用户的所有角色
- * @param {string} userId - 用户ID
+ * @param {string} user_id - 用户ID
  * @returns {Promise} 返回角色列表
  */
-export const getUserRoles = (userId) => rest.get(`${API_PREFIX}/users/${userId}/roles`)
-
-/**
- * 更新用户头像
- * @param {string} userId - 用户ID
- * @param {FormData} formData - 头像文件
- * @returns {Promise} 返回更新结果
- */
-export const updateUserAvatar = (userId, formData) => {
-  return rest.upload(`${API_PREFIX}/users/${userId}/avatar`, formData)
-}
+export const getUserRoles = (user_id) => axios.get(`${API_PREFIX}/users/${user_id}/roles`)
 
 /**
  * 重置用户密码（管理员操作）
- * @param {string} userId - 用户ID
+ * @param {string} user_id - 用户ID
  * @param {Object} data - 密码数据
  * @param {string} data.newPassword - 新密码
  * @returns {Promise} 返回重置结果
  */
-export const resetPassword = (userId, data) => rest.post(`${API_PREFIX}/users/${userId}/reset-password`, data)
+export const resetPassword = (user_id, data) =>
+  axios.post(`${API_PREFIX}/users/${user_id}/reset-password`, data)
 
 /**
  * 更新用户状态
- * @param {string} userId - 用户ID
+ * @param {string} user_id - 用户ID
  * @param {Object} data - 状态数据
  * @param {string} data.status - 新状态（active/banned）
  * @returns {Promise} 返回更新结果
  */
-export const updateUserStatus = (userId, data) => rest.put(`${API_PREFIX}/users/${userId}/status`, data)
+export const updateUserStatus = (user_id, data) =>
+  axios.put(`${API_PREFIX}/users/${user_id}/status`, data)
