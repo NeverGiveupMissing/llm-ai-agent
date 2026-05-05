@@ -102,7 +102,7 @@
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useDialog } from 'naive-ui'
 import ChatMessage from './ChatMessage/index.vue'
-import { scrollToBottom } from '@/utils/http'
+import { utils } from '@/utils/http'
 
 const props = defineProps({
   messages: { type: Array, default: () => [] },
@@ -120,7 +120,7 @@ let observer = null
 
 const scrollToEnd = () => {
   nextTick(() => {
-    scrollToBottom(messageListRef.value)
+    utils.scrollToBottom(messageListRef.value)
     if (props.messages.length > 0)
       lastMessageId.value = props.messages[props.messages.length - 1].id
   })

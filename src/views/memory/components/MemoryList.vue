@@ -60,7 +60,7 @@ import { SearchOutline } from '@vicons/ionicons5'
 import { getMemoryList, deleteMemory } from '@/api/memory'
 
 const props = defineProps({
-  userId: { type: String, required: true },
+  user_id: { type: String, required: true },
 })
 
 const emit = defineEmits(['refresh', 'edit'])
@@ -210,8 +210,8 @@ const fetchMemories = async () => {
       offset: (pagination.value.page - 1) * pagination.value.pageSize,
     }
 
-    if (props.userId) {
-      params.userId = props.userId
+    if (props.user_id) {
+      params.user_id = props.user_id
     }
 
     if (typeFilter.value) {

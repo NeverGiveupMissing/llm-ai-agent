@@ -34,7 +34,7 @@ import { useMessage } from 'naive-ui'
 import { getMemoryStats } from '@/api/memory'
 
 const props = defineProps({
-  userId: { type: String, required: true },
+  user_id: { type: String, required: true },
 })
 
 const message = useMessage()
@@ -42,7 +42,7 @@ const stats = ref({})
 
 const fetchStats = async () => {
   try {
-    const res = await getMemoryStats({ userId: props.userId })
+    const res = await getMemoryStats({ user_id: props.user_id })
 
     // ✅ 拦截器已返回 data 字段内容 { total, facts, preferences, ... }
     if (res) {

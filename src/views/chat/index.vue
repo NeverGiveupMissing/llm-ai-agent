@@ -16,6 +16,7 @@
           circle
           size="small"
           :type="showSessionList ? 'primary' : 'default'"
+          :style="toggleBtnStyle"
           @click="toggleSessionList"
         >
           <template #icon>
@@ -51,13 +52,13 @@
       ref="memoryPanelRef"
       v-model:show="showMemoryPanel"
       :session-id="currentSessionId"
-      :user-id="currentUserId"
+      :user-id="currentuser_id"
     />
   </div>
 </template>
 
 <script setup name="ChatMessageIndex">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useMessage, useDialog, NButton, NIcon } from 'naive-ui'
 import { ChevronBackOutline, ChevronForwardOutline } from '@vicons/ionicons5'
 import ChatMessageList from './components/ChatMessageList.vue'
@@ -65,24 +66,47 @@ import ChatInput from './components/ChatInput.vue'
 // SessionList 组件已被移除
 import MemoryPanel from './components/MemoryPanel/index.vue'
 import { createChatStream } from './components/util.js'
-import { generateId } from '@/utils/http'
+import { utils } from '@/utils/http'
 import { CHAT_CONFIG } from '@/utils/constants'
 import { createSession, updateSession, getSessionList } from '@/api/session'
 import { getSessionMessages, deleteMessage } from '@/api/chat'
 import { useUserStore } from '@/stores/modules/user'
+import { useAppStore } from '@/stores/modules/app'
+
+// 常量
+const SIDEBAR_WIDTH = 210
+const COLLAPSED_SIDEBAR_WIDTH = 64
+const SESSION_SIDEBAR_WIDTH = 233
 
 const msgApi = useMessage()
 const dialogApi = useDialog()
 const userStore = useUserStore()
+const appStore = useAppStore()
 const messages = ref([])
 const loading = ref(false)
 const showSessionList = ref(true) // 默认展开会话历史
 const showMemoryPanel = ref(false)
 const currentSessionId = ref('')
-const currentUserId = ref('')
+const currentuser_id = ref('')
 const memoryPanelRef = ref(null)
 // SessionList 组件相关逻辑已被移除
 const editingMessage = ref(null)
+
+// 计算会话列表切换按钮的位置
+const toggleBtnStyle = computed(() => {
+  const mainSidebarWidth = appStore.collapsed ? COLLAPSED_SIDEBAR_WIDTH : SIDEBAR_WIDTH
+  const offset = showSessionList.value
+    ? mainSidebarWidth + SESSION_SIDEBAR_WIDTH - 10 // 展开时：主侧边栏 + 会话侧边栏
+    : mainSidebarWidth + 10 // 折叠时：主侧边栏 + 小偏移
+
+  return {
+    position: 'fixed',
+    top: '76px',
+    left: `${offset}px`,
+    zIndex: 100,
+    transition: 'left 0.3s ease',
+  }
+})
 
 let chatStream = null
 let aiMessageId = null
@@ -92,23 +116,24 @@ const initSession = async () => {
 
   // ✅ 优先使用 userStore 中的用户 ID（已登录用户）
   // 如果未登录，使用 localStorage 或生成临时 ID
-  currentUserId.value = userStore.userInfo?.id || localStorage.getItem('userId') || 'user_' + Date.now()
-  
-  console.log('🔍 初始化会话, userId:', currentUserId.value)
+  currentuser_id.value =
+    userStore.userInfo?.id || localStorage.getItem('user_id') || 'user_' + Date.now()
+
+  console.log('🔍 初始化会话, user_id:', currentuser_id.value)
   console.log('🔍 userStore.userInfo:', userStore.userInfo)
-  console.log('🔍 localStorage userId:', localStorage.getItem('userId'))
-  
-  // 如果没有保存 userId，存储到 localStorage
-  if (!localStorage.getItem('userId')) {
-    localStorage.setItem('userId', currentUserId.value)
+  console.log('🔍 localStorage user_id:', localStorage.getItem('user_id'))
+
+  // 如果没有保存 user_id，存储到 localStorage
+  if (!localStorage.getItem('user_id')) {
+    localStorage.setItem('user_id', currentuser_id.value)
   }
 
   // ✅ 验证保存的会话ID是否有效
   if (saved) {
     try {
       // 尝试获取会话列表，检查该会话是否存在
-      console.log('📡 调用 getSessionList, userId:', currentUserId.value)
-      const res = await getSessionList(currentUserId.value)
+      console.log('📡 调用 getSessionList, user_id:', currentuser_id.value)
+      const res = await getSessionList(currentuser_id.value)
       // ✅ 拦截器返回完整对象 { code, message, data }
       const sessions = res.data || []
       const sessionExists = sessions.some((s) => s.id === saved)
@@ -155,7 +180,7 @@ const initSession = async () => {
 
 const handleCreateSession = async () => {
   try {
-    const res = await createSession(currentUserId.value)
+    const res = await createSession(currentuser_id.value)
     // ✅ 拦截器返回完整对象 { code, message, data }
     const session = res.data
     currentSessionId.value = session.id
@@ -190,10 +215,10 @@ const handleSend = async (content) => {
     }
   }
 
-  const userId = generateId()
-  messages.value.push({ id: userId, role: 'user', content: trimmed, timestamp: Date.now() })
+  const user_id = utils.generateId()
+  messages.value.push({ id: user_id, role: 'user', content: trimmed, timestamp: Date.now() })
 
-  aiMessageId = generateId()
+  aiMessageId = utils.generateId()
   messages.value.push({
     id: aiMessageId,
     role: 'assistant',
@@ -398,13 +423,9 @@ onMounted(() => initSession())
   border-right: none;
 }
 
-/* 展开/收起按钮（使用Naive UI样式，固定定位） */
+/* 展开/收起按钮（使用Naive UI样式，位置由JS动态计算） */
 .sidebar-toggle-btn {
-  position: fixed !important;
-  top: 76px !important;
-  left: 212px !important;
-  z-index: 100 !important;
-  transition: left 0.3s ease !important;
+  /* 位置属性已移至 inline style (toggleBtnStyle) 以支持动态计算 */
 }
 
 .sidebar-content {

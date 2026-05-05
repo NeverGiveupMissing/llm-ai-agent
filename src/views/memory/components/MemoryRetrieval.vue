@@ -70,7 +70,7 @@ import { SearchOutline } from '@vicons/ionicons5'
 import { retrieveMemories } from '@/api/memory'
 
 const props = defineProps({
-  userId: { type: String, required: true },
+  user_id: { type: String, required: true },
 })
 
 const message = useMessage()
@@ -99,7 +99,7 @@ const handleRetrieve = async () => {
   retrieving.value = true
   try {
     const res = await retrieveMemories({
-      userId: props.userId,
+      user_id: props.user_id,
       query: queryText.value,
       limit: 5,
     })

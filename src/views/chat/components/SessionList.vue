@@ -620,23 +620,20 @@ const handlePin = async (session) => {
   try {
     // 保存原始置顶状态
     const originalPinnedState = session.is_pinned
-    
+
     // 先切换本地状态（优化用户体验）
     session.is_pinned = !originalPinnedState
-    
+
     // 调用后端 API
     await pinSession(session.id)
     msgApi.success(originalPinnedState ? '已取消置顶' : '已置顶')
-    
+
     // 同时刷新会话列表和分组列表（确保 group_id 数据完整）
-    await Promise.all([
-      fetchSessions(),
-      fetchGroups()
-    ])
+    await Promise.all([fetchSessions(), fetchGroups()])
   } catch (error) {
     console.error('置顶操作失败:', error)
     // 如果失败，恢复原状态
-    const sessionToRestore = sessions.value.find(s => s.id === session.id)
+    const sessionToRestore = sessions.value.find((s) => s.id === session.id)
     if (sessionToRestore) {
       sessionToRestore.is_pinned = session.is_pinned
     }
@@ -688,13 +685,13 @@ const handleCreateGroup = async () => {
   }
 
   try {
-    const userId = localStorage.getItem('userId') || 'anonymous'
+    const user_id = localStorage.getItem('user_id') || 'anonymous'
 
     // 调用后端 API 创建分组
     const res = await createGroup({
       name: newGroupName.value.trim(),
       icon: selectedGroupIcon.value?.name || 'FolderOutline',
-      user_id: userId,
+      user_id: user_id, // ✅ 使用驼峰命名，由后端中间件自动转换为 user_id
     })
 
     if (res.code === 200) {
@@ -735,10 +732,7 @@ const moveSessionToGroupAPI = async (sessionId, groupId) => {
       }
 
       // 同时刷新会话列表和分组列表（确保 group_id 数据完整）
-      await Promise.all([
-        fetchSessions(),
-        fetchGroups()
-      ])
+      await Promise.all([fetchSessions(), fetchGroups()])
 
       msgApi.success('已移动到分组')
     } else {
@@ -1054,8 +1048,8 @@ watch(
 
 const fetchSessions = async () => {
   try {
-    const userId = localStorage.getItem('userId') || 'anonymous'
-    const res = await getSessionList(userId)
+    const user_id = localStorage.getItem('user_id') || 'anonymous'
+    const res = await getSessionList(user_id)
     console.log('获取会话列表成功:', res.data)
     sessions.value = res.data || []
   } catch (error) {
@@ -1067,8 +1061,8 @@ const fetchSessions = async () => {
 // 加载分组列表
 const fetchGroups = async () => {
   try {
-    const userId = localStorage.getItem('userId') || 'anonymous'
-    const res = await getGroupList(userId)
+    const user_id = localStorage.getItem('user_id') || 'anonymous'
+    const res = await getGroupList(user_id)
 
     if (res.code === 200) {
       groups.value = res.data || []

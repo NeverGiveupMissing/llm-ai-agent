@@ -32,7 +32,7 @@
 
   <MemoryForm
     v-model:visible="formVisible"
-    :userId="userId"
+    :user_id="user_id"
     :editData="editMemory"
     @success="handleFormSuccess"
   />
@@ -52,7 +52,7 @@ import MemoryForm from '@/views/memory/components/MemoryForm.vue'
 const props = defineProps({
   show: { type: Boolean, default: false },
   sessionId: { type: String, default: '' },
-  userId: { type: String, default: '' },
+  user_id: { type: String, default: '' },
 })
 
 const emit = defineEmits(['update:show'])
@@ -89,16 +89,16 @@ const handleClose = () => {
  * ChatGPT 逻辑：显示用户的所有记忆，AI 会从中检索相关内容
  */
 const fetchUsedMemories = async () => {
-  if (!props.userId) {
-    console.warn('⚠️ userId 为空，无法获取使用的记忆')
+  if (!props.user_id) {
+    console.warn('⚠️ user_id 为空，无法获取使用的记忆')
     return
   }
 
   try {
-    console.log('🔍 获取使用的记忆（用户全局记忆）...', { userId: props.userId })
+    console.log('🔍 获取使用的记忆（用户全局记忆）...', { user_id: props.user_id })
 
     const res = await getMemoryList({
-      userId: props.userId,
+      user_id: props.user_id,
       limit: 10,
     })
 
@@ -123,10 +123,10 @@ const fetchUsedMemories = async () => {
  * ChatGPT 逻辑：提取的记忆属于用户，存入全局记忆库
  */
 const fetchExtractedMemories = async (messages, options = {}) => {
-  if (!props.sessionId || !props.userId || !messages) {
+  if (!props.sessionId || !props.user_id || !messages) {
     console.warn('⚠️ 参数不完整，无法提取记忆', {
       sessionId: props.sessionId,
-      userId: props.userId,
+      user_id: props.user_id,
       hasMessages: !!messages,
     })
     return
@@ -135,14 +135,14 @@ const fetchExtractedMemories = async (messages, options = {}) => {
   try {
     console.log(' 开始提取记忆...', {
       sessionId: props.sessionId,
-      userId: props.userId,
+      user_id: props.user_id,
       messageCount: messages.length,
     })
 
     const res = await autoExtractMemories(
       {
         sessionId: props.sessionId,
-        userId: props.userId,
+        user_id: props.user_id,
         messages,
       },
       options,
@@ -174,15 +174,15 @@ const fetchExtractedMemories = async (messages, options = {}) => {
  * 获取用户全部记忆
  */
 const fetchAllMemories = async () => {
-  if (!props.userId) {
-    console.warn('⚠️ userId 为空，无法获取全部记忆')
+  if (!props.user_id) {
+    console.warn('⚠️ user_id 为空，无法获取全部记忆')
     return
   }
 
   try {
-    console.log('🔍 获取全部记忆...', { userId: props.userId })
+    console.log('🔍 获取全部记忆...', { user_id: props.user_id })
     const res = await getMemoryList({
-      userId: props.userId,
+      user_id: props.user_id,
       limit: 50,
     })
 

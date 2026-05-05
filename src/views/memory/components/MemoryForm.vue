@@ -61,7 +61,7 @@ import { useMessage } from 'naive-ui'
 import { createMemory, updateMemory } from '@/api/memory'
 
 const props = defineProps({
-  userId: { type: String, required: true },
+  user_id: { type: String, required: true },
   visible: { type: Boolean, default: false },
   editData: { type: Object, default: null },
 })
@@ -120,7 +120,7 @@ const handleSubmit = async () => {
 
     const res = isEdit.value
       ? await updateMemory(props.editData.id, formData.value)
-      : await createMemory({ userId: props.userId, ...formData.value })
+      : await createMemory({ user_id: props.user_id, ...formData.value })
 
     if (res) {
       message.success(res.message || (isEdit.value ? '更新成功' : '创建成功'))

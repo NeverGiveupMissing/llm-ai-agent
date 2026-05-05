@@ -22,19 +22,19 @@
       </template>
 
       <n-space vertical :size="16">
-        <MemoryStats ref="statsRef" :userId="userId" />
+        <MemoryStats ref="statsRef" :user_id="user_id" />
 
         <n-tabs type="line" animated>
           <n-tab-pane name="list" tab="📋 记忆列表">
             <MemoryList
               ref="listRef"
-              :userId="userId"
+              :user_id="user_id"
               @refresh="handleRefresh"
               @edit="handleEdit"
             />
           </n-tab-pane>
           <n-tab-pane name="retrieval" tab="🔍 检索测试">
-            <MemoryRetrieval :userId="userId" />
+            <MemoryRetrieval :user_id="user_id" />
           </n-tab-pane>
           <n-tab-pane name="usage" tab="📊 使用统计">
             <n-alert type="info" :show-icon="false">
@@ -49,7 +49,7 @@
 
     <MemoryForm
       v-model:visible="formVisible"
-      :userId="userId"
+      :user_id="user_id"
       :editData="editData"
       @success="handleFormSuccess"
     />
@@ -67,7 +67,7 @@ import MemoryForm from './components/MemoryForm.vue'
 
 const msgApi = useMessage()
 const userStore = useUserStore()
-const userId = ref(userStore.userInfo?.id || 'user_001')
+const user_id = ref(userStore.userInfo?.id || 'user_001')
 
 const statsRef = ref(null)
 const listRef = ref(null)

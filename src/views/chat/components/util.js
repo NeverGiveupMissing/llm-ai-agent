@@ -2,15 +2,15 @@
 
 import { sendChatMessage } from '@/api/chat'
 import { stream } from '@/utils/http'
-import { CHAT_CONFIG } from '@/utils/constants'
+import { CHAT_CONFIG, API_PREFIX } from '@/utils/constants'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github-dark.css'
 
-// 生成默认 userId（实际项目中应从登录信息获取）
+// 生成默认 user_id（实际项目中应从登录信息获取）
 const DEFAULT_USER_ID =
-  'user_' + (localStorage.getItem('userId') || Math.random().toString(36).substr(2, 9))
-localStorage.setItem('userId', DEFAULT_USER_ID.replace('user_', ''))
+  'user_' + (localStorage.getItem('user_id') || Math.random().toString(36).substr(2, 9))
+localStorage.setItem('user_id', DEFAULT_USER_ID.replace('user_', ''))
 
 /**
  * 构建 SSE 回调处理器
@@ -46,16 +46,16 @@ export function createChatStream() {
       // 获取 sessionId
       const currentSessionId = sessionId || localStorage.getItem('current_session_id') || 'default'
 
-      // 获取 userId
-      const currentUserId = localStorage.getItem('userId') || 'anonymous'
+      // 获取 user_id
+      const currentuser_id = localStorage.getItem('user_id') || 'anonymous'
 
       return stream.sse({
-        url: `${CHAT_CONFIG.API_PREFIX}/chat`,
+        url: `${API_PREFIX}/chat`,
         data: {
           messages,
           stream: true,
           sessionId: currentSessionId,
-          userId: currentUserId,
+          user_id: currentuser_id,
         },
         useTypewriter:
           callbacks.useTypewriter !== undefined

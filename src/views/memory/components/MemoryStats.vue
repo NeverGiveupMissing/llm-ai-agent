@@ -51,7 +51,7 @@ import { LayersOutline, DocumentTextOutline, HeartOutline, StarOutline } from '@
 import { getMemoryStats } from '@/api/memory'
 
 const props = defineProps({
-  userId: { type: String, required: true },
+  user_id: { type: String, required: true },
 })
 
 const stats = ref({
@@ -65,7 +65,7 @@ const stats = ref({
 
 const fetchStats = async () => {
   try {
-    const res = await getMemoryStats({ userId: props.userId })
+    const res = await getMemoryStats({ user_id: props.user_id })
     const result = res.data
     if (res) {
       stats.value = {

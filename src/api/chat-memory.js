@@ -1,28 +1,28 @@
 // 说明：对话记忆 API - 提供记忆上下文、自动提取和手动管理接口
 
-import { rest } from '@/utils/http'
+import { axios } from '@/utils/http'
 import { API_PREFIX } from '@/utils/constants'
 
 /**
  * 获取会话记忆上下文（对话前调用）
  * @param {Object} params
  * @param {string} params.sessionId - 会话ID
- * @param {string} params.userId - 用户ID
+ * @param {string} params.user_id - 用户ID
  * @param {string} params.query - 查询内容（用于检索相关记忆）
  */
 export const getSessionMemoryContext = (params) => {
-  return rest.get(`${API_PREFIX}/chat-memory/context`, params)
+  return axios.get(`${API_PREFIX}/chat-memory/context`, params)
 }
 
 /**
  * 自动提取对话记忆（对话后调用）
  * @param {Object} data
  * @param {string} data.sessionId - 会话ID
- * @param {string} data.userId - 用户ID
+ * @param {string} data.user_id - 用户ID
  * @param {Array} data.messages - 对话消息数组
  */
 export const autoExtractMemories = (data, options = {}) => {
-  return rest.post(`${API_PREFIX}/chat-memory/extract`, data, options)
+  return axios.post(`${API_PREFIX}/chat-memory/extract`, data, options)
 }
 
 /**
@@ -30,7 +30,7 @@ export const autoExtractMemories = (data, options = {}) => {
  * @param {string} sessionId - 会话ID
  */
 export const getSessionMemories = (sessionId) => {
-  return rest.get(`${API_PREFIX}/chat-memory`, { sessionId })
+  return axios.get(`${API_PREFIX}/chat-memory`, { sessionId })
 }
 
 /**
@@ -40,7 +40,7 @@ export const getSessionMemories = (sessionId) => {
  * @param {string} data.memoryId - 记忆ID
  */
 export const addMemoryToSession = (data) => {
-  return rest.post(`${API_PREFIX}/chat-memory`, data)
+  return axios.post(`${API_PREFIX}/chat-memory`, data)
 }
 
 /**
@@ -49,7 +49,7 @@ export const addMemoryToSession = (data) => {
  * @param {string} memoryId - 记忆ID
  */
 export const removeMemoryFromSession = (sessionId, memoryId) => {
-  return rest.delete(`${API_PREFIX}/chat-memory/${sessionId}/${memoryId}`)
+  return axios.delete(`${API_PREFIX}/chat-memory/${sessionId}/${memoryId}`)
 }
 
 /**
@@ -57,5 +57,5 @@ export const removeMemoryFromSession = (sessionId, memoryId) => {
  * @param {string} sessionId - 会话ID
  */
 export const clearSessionMemories = (sessionId) => {
-  return rest.delete(`${API_PREFIX}/chat-memory/${sessionId}/clear`)
+  return axios.delete(`${API_PREFIX}/chat-memory/${sessionId}/clear`)
 }

@@ -25,22 +25,22 @@
     </div>
 
     <!-- 记忆统计 -->
-    <MemoryStats ref="statsRef" :userId="userId" />
+    <MemoryStats ref="statsRef" :user_id="user_id" />
 
     <!-- 记忆列表与检索 -->
     <n-tabs v-model:value="activeTab" type="line" animated class="detail-tabs">
       <n-tab-pane name="list" tab="记忆列表">
-        <MemoryList ref="listRef" :userId="userId" @refresh="handleRefresh" @edit="handleEdit" />
+        <MemoryList ref="listRef" :user_id="user_id" @refresh="handleRefresh" @edit="handleEdit" />
       </n-tab-pane>
       <n-tab-pane name="retrieval" tab="检索测试">
-        <MemoryRetrieval :userId="userId" />
+        <MemoryRetrieval :user_id="user_id" />
       </n-tab-pane>
     </n-tabs>
 
     <!-- 添加/编辑记忆表单 -->
     <MemoryForm
       v-model:visible="formVisible"
-      :userId="userId"
+      :user_id="user_id"
       :editData="editData"
       @success="handleFormSuccess"
     />
@@ -59,19 +59,19 @@ import { clearMemories } from '@/api/memory'
 const msgApi = useMessage()
 const dialogApi = useDialog()
 
-// ✅ 使用与 AI 对话页面相同的 userId 获取逻辑
-const initUserId = () => {
-  const savedUserId = localStorage.getItem('userId')
-  if (savedUserId) {
-    return savedUserId
+// ✅ 使用与 AI 对话页面相同的 user_id 获取逻辑
+const inituser_id = () => {
+  const saveduser_id = localStorage.getItem('user_id')
+  if (saveduser_id) {
+    return saveduser_id
   }
   // 如果没有，生成一个新的并保存
-  const newUserId = 'user_' + Date.now()
-  localStorage.setItem('userId', newUserId)
-  return newUserId
+  const newuser_id = 'user_' + Date.now()
+  localStorage.setItem('user_id', newuser_id)
+  return newuser_id
 }
 
-const userId = ref(initUserId())
+const user_id = ref(inituser_id())
 
 const statsRef = ref(null)
 const listRef = ref(null)

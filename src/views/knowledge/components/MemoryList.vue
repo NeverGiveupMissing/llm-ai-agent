@@ -25,12 +25,7 @@
       </n-space>
     </template>
 
-    <n-data-table
-      :columns="columns"
-      :data="memoryList"
-      :pagination="false"
-      :scroll-x="1200"
-    />
+    <n-data-table :columns="columns" :data="memoryList" :pagination="false" :scroll-x="1200" />
 
     <div style="display: flex; justify-content: flex-end; margin-top: 16px">
       <n-pagination
@@ -55,7 +50,7 @@ import { getMemoryList, deleteMemory } from '@/api/memory'
 import ImportanceFilter from '@/views/chat/components/MemoryPanel/components/ImportanceFilter.vue'
 
 const props = defineProps({
-  userId: { type: String, required: true },
+  user_id: { type: String, required: true },
 })
 
 const emit = defineEmits(['refresh', 'edit'])
@@ -187,8 +182,8 @@ const fetchMemories = async () => {
       offset: (pagination.value.page - 1) * pagination.value.pageSize,
     }
 
-    if (props.userId) {
-      params.userId = props.userId
+    if (props.user_id) {
+      params.user_id = props.user_id
     }
 
     if (typeFilter.value) {
@@ -221,7 +216,7 @@ const fetchMemories = async () => {
 const fetchAllMemories = async () => {
   try {
     const params = {
-      userId: props.userId,
+      user_id: props.user_id,
       limit: 1000,
       offset: 0,
     }
@@ -294,7 +289,7 @@ const handleClearAll = () => {
       try {
         // TODO: 调用批量删除 API
         message.info('批量删除功能开发中...')
-        // await clearAllMemories(props.userId)
+        // await clearAllMemories(props.user_id)
         // message.success('清空成功')
         // fetchMemories()
         // emit('refresh')
