@@ -52,9 +52,16 @@ Thumbs.db
 .vscode/
 .idea/
 
+koa2/scripts/
+koa2/tests/
+koa2/database/
+koa2/database/sql
+
+
 # database backup files
 *.sql
 *.zip
 db_backup_*.sql
 db_backup_*.zip
+
 
