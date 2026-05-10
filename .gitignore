@@ -52,6 +52,10 @@ Thumbs.db
 .vscode/
 .idea/
 
+tests/
+docs/
+ruoyicankao/RuoYi-Vue-master
+
 koa2/scripts/
 koa2/tests/
 koa2/database/

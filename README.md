@@ -113,6 +113,8 @@
 - ✅ 使用 `<script setup>` 语法
 - ✅ 组件命名使用 `PascalCase`（如 `ChatMessageList`）
 - ✅ 工具函数使用 `camelCase`（如 `generateId`）
+- ✅ 数据库字段使用 `snake_case`（如 `menu_name`）
+- ✅ 前后端统一使用 `snake_case` 命名，无需中间件转换
 - ✅ 常量使用 `UPPER_SNAKE_CASE`（如 `BASE_URL`）
 
 ### 文件组织
