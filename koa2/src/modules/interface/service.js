@@ -12,7 +12,7 @@ class InterfaceService {
    */
   async getInterfaceList(params = {}) {
     const result = await interfaceModel.list(params)
-    
+
     return {
       success: true,
       data: result.list,
@@ -24,12 +24,12 @@ class InterfaceService {
 
   /**
    * 获取接口详情
-   * @param {number} interfaceId - 接口ID
+   * @param {number} interface_id - 接口ID
    * @returns {Promise<{success: boolean, data: Object}>}
    */
-  async getInterfaceDetail(interfaceId) {
-    const interfaceItem = await interfaceModel.getById(interfaceId)
-    
+  async getInterfaceDetail(interface_id) {
+    const interfaceItem = await interfaceModel.getById(interface_id)
+
     if (!interfaceItem) {
       throw new Error('接口不存在')
     }
@@ -68,13 +68,13 @@ class InterfaceService {
 
   /**
    * 更新接口
-   * @param {number} interfaceId - 接口ID
+   * @param {number} interface_id - 接口ID
    * @param {Object} updates - 更新数据
    * @returns {Promise<{success: boolean, data: Object, message: string}>}
    */
-  async updateInterface(interfaceId, updates) {
-    const interfaceItem = await interfaceModel.getById(interfaceId)
-    
+  async updateInterface(interface_id, updates) {
+    const interfaceItem = await interfaceModel.getById(interface_id)
+
     if (!interfaceItem) {
       throw new Error('接口不存在')
     }
@@ -87,7 +87,7 @@ class InterfaceService {
       }
     }
 
-    const updatedInterface = await interfaceModel.update(interfaceId, updates)
+    const updatedInterface = await interfaceModel.update(interface_id, updates)
 
     return {
       success: true,
@@ -98,18 +98,18 @@ class InterfaceService {
 
   /**
    * 删除接口
-   * @param {number} interfaceId - 接口ID
+   * @param {number} interface_id - 接口ID
    * @returns {Promise<{success: boolean, message: string}>}
    */
-  async deleteInterface(interfaceId) {
-    const interfaceItem = await interfaceModel.getById(interfaceId)
-    
+  async deleteInterface(interface_id) {
+    const interfaceItem = await interfaceModel.getById(interface_id)
+
     if (!interfaceItem) {
       throw new Error('接口不存在')
     }
 
-    await interfaceModel.delete(interfaceId)
-    
+    await interfaceModel.delete(interface_id)
+
     return {
       success: true,
       message: '接口删除成功',
@@ -122,7 +122,7 @@ class InterfaceService {
    */
   async getAllInterfaces() {
     const interfaces = await interfaceModel.all()
-    
+
     return {
       success: true,
       data: interfaces,

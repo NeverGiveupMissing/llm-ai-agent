@@ -75,7 +75,7 @@ router.post('/', authMiddleware(), requirePermission('role:create'), roleControl
 
 /**
  * @swagger
- * /roles/{roleId}/status:
+ * /roles/{role_id}/status:
  *   put:
  *     tags: [角色管理]
  *     summary: 更新角色状态（启用/禁用）
@@ -83,7 +83,7 @@ router.post('/', authMiddleware(), requirePermission('role:create'), roleControl
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: roleId
+ *         name: role_id
  *         required: true
  *         schema:
  *           type: string
@@ -102,11 +102,16 @@ router.post('/', authMiddleware(), requirePermission('role:create'), roleControl
  *       200:
  *         description: 更新成功
  */
-router.put('/:roleId/status', authMiddleware(), requirePermission('role:update'), roleController.updateRoleStatus.bind(roleController))
+router.put(
+  '/:role_id/status',
+  authMiddleware(),
+  requirePermission('role:update'),
+  roleController.updateRoleStatus.bind(roleController),
+)
 
 /**
  * @swagger
- * /roles/{roleId}/permissions:
+ * /roles/{role_id}/permissions:
  *   post:
  *     tags: [角色管理]
  *     summary: 为角色分配权限
@@ -114,7 +119,7 @@ router.put('/:roleId/status', authMiddleware(), requirePermission('role:update')
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: roleId
+ *         name: role_id
  *         required: true
  *         schema:
  *           type: string
@@ -132,11 +137,16 @@ router.put('/:roleId/status', authMiddleware(), requirePermission('role:update')
  *       200:
  *         description: 分配成功
  */
-router.post('/:roleId/permissions', authMiddleware(), requirePermission('role:update'), roleController.assignPermission)
+router.post(
+  '/:role_id/permissions',
+  authMiddleware(),
+  requirePermission('role:update'),
+  roleController.assignPermission,
+)
 
 /**
  * @swagger
- * /roles/{roleId}/permissions/batch:
+ * /roles/{role_id}/permissions/batch:
  *   post:
  *     tags: [角色管理]
  *     summary: 批量为角色分配权限
@@ -144,7 +154,7 @@ router.post('/:roleId/permissions', authMiddleware(), requirePermission('role:up
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: roleId
+ *         name: role_id
  *         required: true
  *         schema:
  *           type: string
@@ -164,11 +174,16 @@ router.post('/:roleId/permissions', authMiddleware(), requirePermission('role:up
  *       200:
  *         description: 批量分配成功
  */
-router.post('/:roleId/permissions/batch', authMiddleware(), requirePermission('role:update'), roleController.assignPermissions)
+router.post(
+  '/:role_id/permissions/batch',
+  authMiddleware(),
+  requirePermission('role:update'),
+  roleController.assignPermissions,
+)
 
 /**
  * @swagger
- * /roles/{roleId}/permissions/{permissionId}:
+ * /roles/{role_id}/permissions/{permissionId}:
  *   delete:
  *     tags: [角色管理]
  *     summary: 移除角色权限
@@ -176,7 +191,7 @@ router.post('/:roleId/permissions/batch', authMiddleware(), requirePermission('r
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: roleId
+ *         name: role_id
  *         required: true
  *         schema:
  *           type: string
@@ -189,11 +204,16 @@ router.post('/:roleId/permissions/batch', authMiddleware(), requirePermission('r
  *       200:
  *         description: 移除成功
  */
-router.delete('/:roleId/permissions/:permissionId', authMiddleware(), requirePermission('role:update'), roleController.removePermission)
+router.delete(
+  '/:role_id/permissions/:permissionId',
+  authMiddleware(),
+  requirePermission('role:update'),
+  roleController.removePermission,
+)
 
 /**
  * @swagger
- * /roles/{roleId}/users:
+ * /roles/{role_id}/users:
  *   get:
  *     tags: [角色管理]
  *     summary: 获取角色的所有用户
@@ -201,7 +221,7 @@ router.delete('/:roleId/permissions/:permissionId', authMiddleware(), requirePer
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: roleId
+ *         name: role_id
  *         required: true
  *         schema:
  *           type: string
@@ -217,11 +237,16 @@ router.delete('/:roleId/permissions/:permissionId', authMiddleware(), requirePer
  *       200:
  *         description: 获取成功
  */
-router.get('/:roleId/users', authMiddleware(), requirePermission('role:read'), roleController.getRoleUsers)
+router.get(
+  '/:role_id/users',
+  authMiddleware(),
+  requirePermission('role:read'),
+  roleController.getRoleUsers,
+)
 
 /**
  * @swagger
- * /roles/{roleId}:
+ * /roles/{role_id}:
  *   get:
  *     tags: [角色管理]
  *     summary: 获取角色详情
@@ -229,7 +254,7 @@ router.get('/:roleId/users', authMiddleware(), requirePermission('role:read'), r
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: roleId
+ *         name: role_id
  *         required: true
  *         schema:
  *           type: string
@@ -237,11 +262,16 @@ router.get('/:roleId/users', authMiddleware(), requirePermission('role:read'), r
  *       200:
  *         description: 获取成功
  */
-router.get('/:roleId', authMiddleware(), requirePermission('role:read'), roleController.getRoleDetail)
+router.get(
+  '/:role_id',
+  authMiddleware(),
+  requirePermission('role:read'),
+  roleController.getRoleDetail,
+)
 
 /**
  * @swagger
- * /roles/{roleId}:
+ * /roles/{role_id}:
  *   put:
  *     tags: [角色管理]
  *     summary: 更新角色信息
@@ -249,7 +279,7 @@ router.get('/:roleId', authMiddleware(), requirePermission('role:read'), roleCon
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: roleId
+ *         name: role_id
  *         required: true
  *         schema:
  *           type: string
@@ -270,11 +300,16 @@ router.get('/:roleId', authMiddleware(), requirePermission('role:read'), roleCon
  *       200:
  *         description: 更新成功
  */
-router.put('/:roleId', authMiddleware(), requirePermission('role:update'), roleController.updateRole)
+router.put(
+  '/:role_id',
+  authMiddleware(),
+  requirePermission('role:update'),
+  roleController.updateRole,
+)
 
 /**
  * @swagger
- * /roles/{roleId}:
+ * /roles/{role_id}:
  *   delete:
  *     tags: [角色管理]
  *     summary: 删除角色（软删除）
@@ -282,7 +317,7 @@ router.put('/:roleId', authMiddleware(), requirePermission('role:update'), roleC
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: roleId
+ *         name: role_id
  *         required: true
  *         schema:
  *           type: string
@@ -290,11 +325,47 @@ router.put('/:roleId', authMiddleware(), requirePermission('role:update'), roleC
  *       200:
  *         description: 删除成功
  */
-router.delete('/:roleId', authMiddleware(), requirePermission('role:delete'), roleController.deleteRole)
+router.delete(
+  '/:role_id',
+  authMiddleware(),
+  requirePermission('role:delete'),
+  roleController.deleteRole,
+)
 
 /**
  * @swagger
- * /roles/{roleId}/menu-ids:
+ * /roles/batch-delete:
+ *   post:
+ *     tags: [角色管理]
+ *     summary: 批量删除角色（软删除）
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [role_ids]
+ *             properties:
+ *               role_ids:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       200:
+ *         description: 删除成功
+ */
+router.post(
+  '/batch-delete',
+  authMiddleware(),
+  requirePermission('role:delete'),
+  roleController.batchDeleteRoles,
+)
+
+/**
+ * @swagger
+ * /roles/{role_id}/menu-ids:
  *   get:
  *     tags: [角色管理]
  *     summary: 获取角色的菜单权限 ID 列表
@@ -302,7 +373,7 @@ router.delete('/:roleId', authMiddleware(), requirePermission('role:delete'), ro
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: roleId
+ *         name: role_id
  *         required: true
  *         schema:
  *           type: integer
@@ -310,11 +381,16 @@ router.delete('/:roleId', authMiddleware(), requirePermission('role:delete'), ro
  *       200:
  *         description: 获取成功
  */
-router.get('/:roleId/menu-ids', authMiddleware(), requirePermission('role:read'), roleController.getRoleMenuIds.bind(roleController))
+router.get(
+  '/:role_id/menu-ids',
+  authMiddleware(),
+  requirePermission('role:read'),
+  roleController.getRolemenu_ids.bind(roleController),
+)
 
 /**
  * @swagger
- * /roles/{roleId}/menus:
+ * /roles/{role_id}/menus:
  *   put:
  *     tags: [角色管理]
  *     summary: 保存角色的菜单权限（覆盖更新）
@@ -322,7 +398,7 @@ router.get('/:roleId/menu-ids', authMiddleware(), requirePermission('role:read')
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: roleId
+ *         name: role_id
  *         required: true
  *         schema:
  *           type: integer
@@ -332,9 +408,9 @@ router.get('/:roleId/menu-ids', authMiddleware(), requirePermission('role:read')
  *         application/json:
  *           schema:
  *             type: object
- *             required: [menuIds]
+ *             required: [menu_ids]
  *             properties:
- *               menuIds:
+ *               menu_ids:
  *                 type: array
  *                 items:
  *                   type: integer
@@ -342,6 +418,78 @@ router.get('/:roleId/menu-ids', authMiddleware(), requirePermission('role:read')
  *       200:
  *         description: 保存成功
  */
-router.put('/:roleId/menus', authMiddleware(), requirePermission('role:update'), roleController.saveRoleMenus.bind(roleController))
+router.put(
+  '/:role_id/menus',
+  authMiddleware(),
+  requirePermission('role:update'),
+  roleController.saveRoleMenus.bind(roleController),
+)
+
+/**
+ * @swagger
+ * /roles/{role_id}/api-paths:
+ *   get:
+ *     tags: [角色管理]
+ *     summary: 获取角色的接口权限路径列表
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: role_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: 获取成功
+ */
+router.get(
+  '/:role_id/api-paths',
+  authMiddleware(),
+  requirePermission('role:read'),
+  roleController.getRoleApiPaths.bind(roleController),
+)
+
+/**
+ * @swagger
+ * /roles/{role_id}/api-paths:
+ *   put:
+ *     tags: [角色管理]
+ *     summary: 保存角色的接口权限（覆盖更新）
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: role_id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [api_paths]
+ *             properties:
+ *               api_paths:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     path:
+ *                       type: string
+ *                     method:
+ *                       type: string
+ *     responses:
+ *       200:
+ *         description: 保存成功
+ */
+router.put(
+  '/:role_id/api-paths',
+  authMiddleware(),
+  requirePermission('role:update'),
+  roleController.saveRoleApis.bind(roleController),
+)
 
 module.exports = router

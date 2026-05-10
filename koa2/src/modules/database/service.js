@@ -66,7 +66,7 @@ async function executeSQL(sql, user_id, user_name, ipAddress) {
 
       return {
         type: 'SELECT',
-        columns: result.fields ? result.fields.map(f => f.name) : [],
+        columns: result.fields ? result.fields.map((f) => f.name) : [],
         rows: rows,
         total: result.rowCount || 0,
         executionTime,
@@ -99,13 +99,13 @@ function validateSQL(sql) {
     /^\s*COMMENT\s+ON\s+/i,
     /^\s*CREATE\s+(TABLE|INDEX|VIEW|SEQUENCE|FUNCTION|TRIGGER)/i,
     /^\s*ALTER\s+(TABLE|INDEX|VIEW|SEQUENCE|FUNCTION)/i,
-    /^\s*DROP\s+(INDEX|VIEW|SEQUENCE|FUNCTION|TRIGGER)/i,  // 允许删除非表对象
+    /^\s*DROP\s+(INDEX|VIEW|SEQUENCE|FUNCTION|TRIGGER)/i, // 允许删除非表对象
     /^\s*GRANT\s+/i,
     /^\s*REVOKE\s+/i,
-    /^\s*INSERT\s+INTO\s+pg_catalog/i,  // 系统表操作
+    /^\s*INSERT\s+INTO\s+pg_catalog/i, // 系统表操作
   ]
 
-  const isSafeBatchDDL = safeDDLPatterns.some(pattern => pattern.test(upperSQL))
+  const isSafeBatchDDL = safeDDLPatterns.some((pattern) => pattern.test(upperSQL))
 
   // 2. 生产环境高危操作限制
   const isProduction = process.env.NODE_ENV === 'production'
@@ -154,7 +154,10 @@ function validateSQL(sql) {
 
   // 禁止多条语句（优化：排除字符串中的分号）
   if (!isSafeBatchDDL) {
-    const semicolonCount = sql.replace(/'[^']*'/g, '').split(';').filter(s => s.trim()).length
+    const semicolonCount = sql
+      .replace(/'[^']*'/g, '')
+      .split(';')
+      .filter((s) => s.trim()).length
     if (semicolonCount > 1) {
       throw new Error('安全限制：每次只能执行一条 SQL 语句')
     }
@@ -250,7 +253,7 @@ async function exportDatabase(user_id, user_name, ipAddress) {
   // 生成时间戳：YYYY-MM-DD_HH-mm-ss
   const now = new Date()
   const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}-${String(now.getSeconds()).padStart(2, '0')}`
-  
+
   const tempDir = path.join(__dirname, '../../../temp')
   const sqlFileName = `db_backup_${timestamp}.sql`
   const zipFileName = `db_backup_${timestamp}.zip`
@@ -326,7 +329,7 @@ async function exportDatabaseByNode(outputPath) {
 
   try {
     let sqlContent = ''
-    
+
     // 文件头
     sqlContent += '--\n'
     sqlContent += '-- PostgreSQL database dump\n'
@@ -335,7 +338,7 @@ async function exportDatabaseByNode(outputPath) {
     sqlContent += `-- Dumped at ${new Date().toISOString()}\n\n`
     sqlContent += 'SET statement_timeout = 0;\n'
     sqlContent += 'SET lock_timeout = 0;\n'
-    sqlContent += 'SET client_encoding = \'UTF8\';\n'
+    sqlContent += "SET client_encoding = 'UTF8';\n"
     sqlContent += 'SET standard_conforming_strings = on;\n'
     sqlContent += 'SET check_function_bodies = false;\n'
     sqlContent += 'SET client_min_messages = warning;\n\n'
@@ -399,15 +402,15 @@ async function getPostgresVersion(pool) {
  */
 async function exportExtensions(pool) {
   let sql = '--\n-- Extensions\n--\n\n'
-  
+
   const result = await pool.query(`
     SELECT extname FROM pg_extension WHERE extname != 'plpgsql'
   `)
-  
+
   for (const row of result.rows) {
     sql += `CREATE EXTENSION IF NOT EXISTS "${row.extname}";\n\n`
   }
-  
+
   return sql
 }
 
@@ -416,7 +419,7 @@ async function exportExtensions(pool) {
  */
 async function exportTableStructuresStandard(pool) {
   let sql = '\n--\n-- Name: TABLE; Type: TABLE; Schema: public; Owner: -\n--\n\n'
-  
+
   const tables = await pool.query(`
     SELECT table_name 
     FROM information_schema.tables 
@@ -426,9 +429,10 @@ async function exportTableStructuresStandard(pool) {
 
   for (const table of tables.rows) {
     const tableName = table.table_name
-    
+
     // 获取列信息
-    const columns = await pool.query(`
+    const columns = await pool.query(
+      `
       SELECT 
         column_name,
         data_type,
@@ -439,14 +443,16 @@ async function exportTableStructuresStandard(pool) {
       FROM information_schema.columns
       WHERE table_name = $1 AND table_schema = 'public'
       ORDER BY ordinal_position
-    `, [tableName])
-    
+    `,
+      [tableName],
+    )
+
     sql += `CREATE TABLE "${tableName}" (\n`
-    
+
     const columnDefs = []
     for (const col of columns.rows) {
       let colDef = `    "${col.column_name}" `
-      
+
       // 数据类型
       if (col.udt_name === 'uuid') {
         colDef += 'uuid'
@@ -469,24 +475,24 @@ async function exportTableStructuresStandard(pool) {
       } else {
         colDef += col.udt_name
       }
-      
+
       // 默认值
       if (col.column_default) {
         colDef += ` DEFAULT ${col.column_default}`
       }
-      
+
       // 非空约束
       if (col.is_nullable === 'NO') {
         colDef += ' NOT NULL'
       }
-      
+
       columnDefs.push(colDef)
     }
-    
+
     sql += columnDefs.join(',\n')
     sql += '\n);\n\n'
   }
-  
+
   return sql
 }
 
@@ -494,8 +500,9 @@ async function exportTableStructuresStandard(pool) {
  * 导出数据（标准 COPY 格式）
  */
 async function exportTableDataStandard(pool) {
-  let sql = '\n--\n-- Data for Name: various tables; Type: TABLE DATA; Schema: public; Owner: -\n--\n\n'
-  
+  let sql =
+    '\n--\n-- Data for Name: various tables; Type: TABLE DATA; Schema: public; Owner: -\n--\n\n'
+
   const tables = await pool.query(`
     SELECT table_name 
     FROM information_schema.tables 
@@ -505,26 +512,29 @@ async function exportTableDataStandard(pool) {
 
   for (const table of tables.rows) {
     const tableName = table.table_name
-    
+
     try {
       const result = await pool.query(`SELECT * FROM "${tableName}"`)
-      
+
       console.log(`    📋 ${tableName}: ${result.rows.length} 条记录`)
-      
+
       if (result.rows.length === 0) {
         continue
       }
-      
-      sql += `COPY "${tableName}" (${result.fields.map(f => `"${f.name}"`).join(', ')}) FROM stdin;\n`
-      
+
+      sql += `COPY "${tableName}" (${result.fields.map((f) => `"${f.name}"`).join(', ')}) FROM stdin;\n`
+
       for (const row of result.rows) {
-        const values = result.fields.map(field => {
+        const values = result.fields.map((field) => {
           const value = row[field.name]
           if (value === null) return '\\N'
           if (typeof value === 'boolean') return value ? 't' : 'f'
           if (value instanceof Date) {
             // 格式化日期为 PostgreSQL 标准格式
-            return value.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '')
+            return value
+              .toISOString()
+              .replace('T', ' ')
+              .replace(/\.\d{3}Z$/, '')
           }
           if (typeof value === 'object') {
             // JSON/JSONB 类型
@@ -539,14 +549,14 @@ async function exportTableDataStandard(pool) {
         })
         sql += values.join('\t') + '\n'
       }
-      
+
       sql += '\\.\n\n'
     } catch (err) {
       console.error(`❌ 导出表 ${tableName} 数据失败:`, err.message)
       console.error('   详细错误:', err)
     }
   }
-  
+
   return sql
 }
 
@@ -555,7 +565,7 @@ async function exportTableDataStandard(pool) {
  */
 async function exportSequences(pool) {
   let sql = '\n--\n-- Name: SEQUENCE; Type: SEQUENCE; Schema: public; Owner: -\n--\n\n'
-  
+
   try {
     const sequences = await pool.query(`
       SELECT 
@@ -567,7 +577,7 @@ async function exportSequences(pool) {
       FROM information_schema.sequences
       WHERE sequence_schema = 'public'
     `)
-    
+
     for (const seq of sequences.rows) {
       sql += `CREATE SEQUENCE "${seq.sequence_name}"\n`
       sql += `    START WITH ${seq.start_value}\n`
@@ -579,7 +589,7 @@ async function exportSequences(pool) {
   } catch (err) {
     console.warn('⚠️ 导出序列失败:', err.message)
   }
-  
+
   return sql
 }
 
@@ -588,7 +598,7 @@ async function exportSequences(pool) {
  */
 async function exportIndexesStandard(pool) {
   let sql = '\n--\n-- Name: INDEX; Type: INDEX; Schema: public; Owner: -\n--\n\n'
-  
+
   const indexes = await pool.query(`
     SELECT
       i.relname AS index_name,
@@ -602,7 +612,7 @@ async function exportIndexesStandard(pool) {
     WHERE t.relnamespace = 'public'::regnamespace
     ORDER BY t.relname, i.relname
   `)
-  
+
   for (const idx of indexes.rows) {
     if (idx.is_primary) {
       // 主键在建表时已经定义，这里跳过
@@ -610,7 +620,7 @@ async function exportIndexesStandard(pool) {
     }
     sql += `${idx.index_def};\n\n`
   }
-  
+
   return sql
 }
 
@@ -619,7 +629,7 @@ async function exportIndexesStandard(pool) {
  */
 async function exportConstraintsStandard(pool) {
   let sql = '\n--\n-- Name: CONSTRAINT; Type: CONSTRAINT; Schema: public; Owner: -\n--\n\n'
-  
+
   // 主键约束
   const pks = await pool.query(`
     SELECT
@@ -632,11 +642,11 @@ async function exportConstraintsStandard(pool) {
     WHERE tc.constraint_type = 'PRIMARY KEY'
       AND tc.table_schema = 'public'
   `)
-  
+
   for (const pk of pks.rows) {
     sql += `ALTER TABLE ONLY "${pk.table_name}" ADD CONSTRAINT "${pk.constraint_name}" PRIMARY KEY ("${pk.column_name}");\n\n`
   }
-  
+
   // 唯一约束
   const uniques = await pool.query(`
     SELECT
@@ -649,11 +659,11 @@ async function exportConstraintsStandard(pool) {
     WHERE tc.constraint_type = 'UNIQUE'
       AND tc.table_schema = 'public'
   `)
-  
+
   for (const uq of uniques.rows) {
     sql += `ALTER TABLE ONLY "${uq.table_name}" ADD CONSTRAINT "${uq.constraint_name}" UNIQUE ("${uq.column_name}");\n\n`
   }
-  
+
   // 外键约束
   const fks = await pool.query(`
     SELECT
@@ -670,11 +680,11 @@ async function exportConstraintsStandard(pool) {
     WHERE tc.constraint_type = 'FOREIGN KEY'
       AND tc.table_schema = 'public'
   `)
-  
+
   for (const fk of fks.rows) {
     sql += `ALTER TABLE ONLY "${fk.table_name}" ADD CONSTRAINT "${fk.constraint_name}" FOREIGN KEY ("${fk.column_name}") REFERENCES "${fk.foreign_table_name}"("${fk.foreign_column_name}");\n\n`
   }
-  
+
   return sql
 }
 
@@ -683,7 +693,7 @@ async function exportConstraintsStandard(pool) {
  */
 async function exportTriggersStandard(pool) {
   let sql = '\n--\n-- Name: TRIGGER; Type: TRIGGER; Schema: public; Owner: -\n--\n\n'
-  
+
   const triggers = await pool.query(`
     SELECT
       trigger_name,
@@ -694,11 +704,11 @@ async function exportTriggersStandard(pool) {
     FROM information_schema.triggers
     WHERE trigger_schema = 'public'
   `)
-  
+
   for (const trigger of triggers.rows) {
     sql += `${trigger.action_statement};\n\n`
   }
-  
+
   return sql
 }
 
@@ -707,17 +717,17 @@ async function exportTriggersStandard(pool) {
  */
 async function exportViewsStandard(pool) {
   let sql = '\n--\n-- Name: VIEW; Type: VIEW; Schema: public; Owner: -\n--\n\n'
-  
+
   const views = await pool.query(`
     SELECT table_name, view_definition
     FROM information_schema.views
     WHERE table_schema = 'public'
   `)
-  
+
   for (const view of views.rows) {
     sql += `CREATE VIEW "${view.table_name}" AS\n${view.view_definition};\n\n`
   }
-  
+
   return sql
 }
 
@@ -780,7 +790,7 @@ async function getTableList() {
     `
 
     const result = await pool.query(query)
-    return result.rows.map(row => row.table_name)
+    return result.rows.map((row) => row.table_name)
   } catch (err) {
     console.error('获取表列表失败:', err)
     throw new Error(`获取表列表失败: ${err.message}`)
@@ -820,7 +830,7 @@ async function getTableStructure(tableName) {
     const result = await pool.query(query, [tableName])
 
     // 格式化返回数据
-    return result.rows.map(row => ({
+    return result.rows.map((row) => ({
       column_name: row.column_name,
       data_type: row.data_type,
       character_maximum_length: row.character_maximum_length,
@@ -871,7 +881,7 @@ async function getTableDetail(tableName) {
 
     const columnsResult = await pool.query(columnsQuery, [tableName])
 
-    const columns = columnsResult.rows.map(row => ({
+    const columns = columnsResult.rows.map((row) => ({
       ordinal_position: row.ordinal_position,
       column_name: row.column_name,
       data_type: row.data_type,
@@ -905,7 +915,7 @@ async function getTableDetail(tableName) {
 
     const indexesResult = await pool.query(indexesQuery, [tableName])
 
-    const indexes = indexesResult.rows.map(row => ({
+    const indexes = indexesResult.rows.map((row) => ({
       indexName: row.index_name,
       isPrimary: row.is_primary,
       isUnique: row.is_unique,
@@ -928,10 +938,10 @@ async function getTableDetail(tableName) {
  * 获取表数据（分页）
  * @param {string} tableName - 表名
  * @param {number} page - 页码（从1开始）
- * @param {number} pageSize - 每页条数
+ * @param {number} page_size - 每页条数
  * @returns {Object} { columns, rows, pagination, primaryKey }
  */
-async function getTableData(tableName, page = 1, pageSize = 50) {
+async function getTableData(tableName, page = 1, page_size = 50) {
   if (!tableName) {
     throw new Error('表名不能为空')
   }
@@ -962,12 +972,12 @@ async function getTableData(tableName, page = 1, pageSize = 50) {
     const total = parseInt(countResult.rows[0].total)
 
     // 3. 查询数据
-    const offset = (page - 1) * pageSize
+    const offset = (page - 1) * page_size
     const dataQuery = `SELECT * FROM "${tableName}" LIMIT $1 OFFSET $2`
-    const dataResult = await pool.query(dataQuery, [pageSize, offset])
+    const dataResult = await pool.query(dataQuery, [page_size, offset])
 
     // 4. 获取列名
-    const columns = dataResult.fields.map(f => f.name)
+    const columns = dataResult.fields.map((f) => f.name)
 
     return {
       columns,
@@ -975,9 +985,9 @@ async function getTableData(tableName, page = 1, pageSize = 50) {
       primaryKey,
       pagination: {
         page,
-        pageSize,
+        page_size,
         total,
-        totalPages: Math.ceil(total / pageSize),
+        totalPages: Math.ceil(total / page_size),
       },
     }
   } catch (err) {
@@ -1029,7 +1039,7 @@ async function updateRow(tableName, primaryKey, primaryValue, updates) {
     const whereClause = `"${primaryKey}" = $${setFields.length + 1}`
 
     // 准备参数值（NOW()是SQL函数，不需要传参）
-    const values = [...setFields.map(f => updates[f]), primaryValue]
+    const values = [...setFields.map((f) => updates[f]), primaryValue]
 
     const query = `UPDATE "${tableName}" SET ${setClause} WHERE ${whereClause} RETURNING *`
 

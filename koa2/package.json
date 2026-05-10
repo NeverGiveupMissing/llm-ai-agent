@@ -39,9 +39,10 @@
     "koa2-swagger-ui": "^5.10.0",
     "multer": "^2.1.1",
     "pg": "^8.20.0",
+    "svg-captcha": "^1.4.0",
     "swagger-jsdoc": "^6.2.8",
     "ua-parser-js": "^2.0.9",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "eslint": "^8.56.0",

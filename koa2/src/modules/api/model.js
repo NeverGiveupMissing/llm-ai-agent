@@ -15,7 +15,7 @@ class InterfaceModel {
 
     // 强制类型转换，防止注入
     const pageNum = parseInt(page) || 1
-    const pageSizeNum = parseInt(page_size) || 10
+    const page_sizeNum = parseInt(page_size) || 10
 
     // 构建 WHERE 条件
     const conditions = []
@@ -45,7 +45,7 @@ class InterfaceModel {
     const total = parseInt(countResult.rows[0].total)
 
     // 分页查询
-    const offset = (pageNum - 1) * pageSizeNum
+    const offset = (pageNum - 1) * page_sizeNum
     const query = `
       SELECT 
         api_id,
@@ -62,7 +62,7 @@ class InterfaceModel {
       ORDER BY api_id DESC
       LIMIT $${idx++} OFFSET $${idx++}
     `
-    values.push(pageSizeNum, offset)
+    values.push(page_sizeNum, offset)
 
     const result = await pool.query(query, values)
 
@@ -70,20 +70,20 @@ class InterfaceModel {
       list: result.rows,
       total,
       page: pageNum,
-      page_size: pageSizeNum,
+      page_size: page_sizeNum,
     }
   }
 
   /**
    * 根据ID查询接口详情
-   * @param {number} interfaceId - 接口ID
+   * @param {number} interface_id - 接口ID
    * @returns {Promise<Object|null>}
    */
-  async getById(interfaceId) {
+  async getById(interface_id) {
     const query = `
       SELECT * FROM sys_interface WHERE api_id = $1
     `
-    const result = await pool.query(query, [interfaceId])
+    const result = await pool.query(query, [interface_id])
     return result.rows[0] || null
   }
 
@@ -113,11 +113,11 @@ class InterfaceModel {
 
   /**
    * 更新接口
-   * @param {number} interfaceId - 接口ID
+   * @param {number} interface_id - 接口ID
    * @param {Object} updates - 更新数据
    * @returns {Promise<Object|null>}
    */
-  async update(interfaceId, updates) {
+  async update(interface_id, updates) {
     const fields = []
     const values = []
     let idx = 1
@@ -148,11 +148,11 @@ class InterfaceModel {
     }
 
     if (fields.length === 0) {
-      return await this.getById(interfaceId)
+      return await this.getById(interface_id)
     }
 
     fields.push(`update_time = NOW()`)
-    values.push(interfaceId)
+    values.push(interface_id)
 
     const query = `
       UPDATE sys_interface
@@ -167,14 +167,14 @@ class InterfaceModel {
 
   /**
    * 删除接口
-   * @param {number} interfaceId - 接口ID
+   * @param {number} interface_id - 接口ID
    * @returns {Promise<boolean>}
    */
-  async delete(interfaceId) {
+  async delete(interface_id) {
     const query = `
       DELETE FROM sys_interface WHERE api_id = $1 RETURNING api_id
     `
-    const result = await pool.query(query, [interfaceId])
+    const result = await pool.query(query, [interface_id])
     return result.rows.length > 0
   }
 

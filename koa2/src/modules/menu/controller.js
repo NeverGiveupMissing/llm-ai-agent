@@ -28,13 +28,13 @@ class MenuController {
    * 获取菜单详情
    */
   getMenuDetail = asyncHandler(async (ctx) => {
-    const { menuId } = ctx.params
+    const { menu_id } = ctx.params
 
-    if (!menuId) {
-      throw new BadRequestError('缺少 menuId 参数')
+    if (!menu_id) {
+      throw new BadRequestError('缺少 menu_id 参数')
     }
 
-    const result = await menuService.getMenuDetail(menuId)
+    const result = await menuService.getMenuDetail(menu_id)
     ctx.success(result.data)
   })
 
@@ -44,7 +44,7 @@ class MenuController {
   createMenu = asyncHandler(async (ctx) => {
     const menuData = ctx.request.body
 
-    if (!menuData.menuName) {
+    if (!menuData.menu_name) {
       throw new BadRequestError('菜单名称不能为空')
     }
 
@@ -56,14 +56,14 @@ class MenuController {
    * 更新菜单
    */
   updateMenu = asyncHandler(async (ctx) => {
-    const { menuId } = ctx.params
+    const { menu_id } = ctx.params
     const updates = ctx.request.body
 
-    if (!menuId) {
-      throw new BadRequestError('缺少 menuId 参数')
+    if (!menu_id) {
+      throw new BadRequestError('缺少 menu_id 参数')
     }
 
-    const result = await menuService.updateMenu(menuId, updates)
+    const result = await menuService.updateMenu(menu_id, updates)
     ctx.success(result.data, result.message)
   })
 
@@ -71,13 +71,13 @@ class MenuController {
    * 删除菜单
    */
   deleteMenu = asyncHandler(async (ctx) => {
-    const { menuId } = ctx.params
+    const { menu_id } = ctx.params
 
-    if (!menuId) {
-      throw new BadRequestError('缺少 menuId 参数')
+    if (!menu_id) {
+      throw new BadRequestError('缺少 menu_id 参数')
     }
 
-    const result = await menuService.deleteMenu(menuId)
+    const result = await menuService.deleteMenu(menu_id)
     ctx.success(null, result.message)
   })
 

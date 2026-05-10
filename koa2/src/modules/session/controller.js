@@ -9,9 +9,10 @@ class SessionController {
    * 获取会话列表
    */
   listSessions = asyncHandler(async (ctx) => {
-    const { user_id } = ctx.query
+    // 从认证中间件获取 user_id，而不是从 query 参数
+    const user_id = ctx.state.user_id
     if (!user_id) {
-      throw new BadRequestError('缺少 user_id 参数')
+      throw new BadRequestError('未登录')
     }
 
     const result = await sessionService.listSessions(user_id)
@@ -22,9 +23,12 @@ class SessionController {
    * 创建新会话
    */
   createSession = asyncHandler(async (ctx) => {
-    const { user_id, title } = ctx.request.body
+    // 从认证中间件获取 user_id，而不是从请求体
+    const user_id = ctx.state.user_id
+    const { title } = ctx.request.body
+    
     if (!user_id) {
-      throw new BadRequestError('缺少 user_id 参数')
+      throw new BadRequestError('未登录')
     }
 
     const result = await sessionService.createSession(user_id, title)

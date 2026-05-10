@@ -1,6 +1,7 @@
 // 说明：用户控制器 - 处理用户的 HTTP 请求
 
 const userService = require('./service')
+const captchaService = require('../captcha/service')
 const ResponseUtil = require('../../utils/response')
 const { asyncHandler } = require('../../utils/async-handler')
 const { BadRequestError, UnauthorizedError } = require('../../utils/app-error')
@@ -23,6 +24,8 @@ class UserController {
       remark,
       avatar,
       user_type,
+      code, // 验证码
+      uuid, // 验证码 UUID
     } = ctx.request.body
 
     console.log('[DEBUG] 解构后的 user_name:', user_name)
@@ -30,6 +33,26 @@ class UserController {
 
     if (!user_name || !password) {
       throw new BadRequestError('用户名和密码不能为空')
+    }
+
+    // ✅ 手机号校验
+    if (phonenumber && !/^1[3-9]\d{9}$/.test(phonenumber)) {
+      throw new BadRequestError('请输入正确的手机号码')
+    }
+
+    // ✅ 邮箱校验
+    if (email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      throw new BadRequestError('请输入正确的邮箱地址')
+    }
+
+    // 验证码校验
+    if (!code || !uuid) {
+      throw new BadRequestError('请输入验证码')
+    }
+
+    const isValid = captchaService.verifyCaptcha(uuid, code)
+    if (!isValid) {
+      throw new BadRequestError('验证码错误或已过期')
     }
 
     const result = await userService.createUser({
@@ -51,10 +74,20 @@ class UserController {
    * 用户登录
    */
   login = asyncHandler(async (ctx) => {
-    const { user_name, password } = ctx.request.body
+    const { user_name, password, code, uuid } = ctx.request.body
 
-    if (!user_name) {
+    if (!user_name || !password) {
       throw new BadRequestError('用户名和密码不能为空')
+    }
+
+    // 验证码校验
+    if (!code || !uuid) {
+      throw new BadRequestError('请输入验证码')
+    }
+
+    const isValid = captchaService.verifyCaptcha(uuid, code)
+    if (!isValid) {
+      throw new BadRequestError('验证码错误或已过期')
     }
 
     const result = await userService.login(user_name, password, ctx)
@@ -129,11 +162,11 @@ class UserController {
    */
   listUsers = asyncHandler(async (ctx) => {
     const params = {
-      page: parseInt(ctx.query.page) || 1,
+      page_num: parseInt(ctx.query.page_num) || 1,
       page_size: parseInt(ctx.query.page_size) || 10,
       status: ctx.query.status,
-      keyword: ctx.query.keyword,
-      phone: ctx.query.phonenumber,
+      user_name: ctx.query.user_name,
+      phonenumber: ctx.query.phonenumber,
       begin_time: ctx.query.begin_time,
       end_time: ctx.query.end_time,
     }
@@ -141,7 +174,7 @@ class UserController {
     const result = await userService.listUsers(params)
 
     // 使用统一的分页响应方法
-    ctx.pageSuccess(result.data, result.total, result.page, result.page_size)
+    ctx.pageSuccess(result.data, result.total, result.page_num, result.page_size)
   })
 
   /**
@@ -173,6 +206,16 @@ class UserController {
     // 超级管理员不允许修改（假设 admin 用户的 user_id 为 1）
     if (parseInt(user_id) === 1) {
       return ctx.forbidden('超级管理员不允许修改')
+    }
+
+    // ✅ 手机号校验
+    if (updates.phonenumber && !/^1[3-9]\d{9}$/.test(updates.phonenumber)) {
+      throw new BadRequestError('请输入正确的手机号码')
+    }
+
+    // ✅ 邮箱校验
+    if (updates.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(updates.email)) {
+      throw new BadRequestError('请输入正确的邮箱地址')
     }
 
     const result = await userService.updateUser(user_id, updates)

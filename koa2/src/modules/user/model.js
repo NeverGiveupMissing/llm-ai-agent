@@ -6,19 +6,19 @@ const { pool } = require('../../config/db')
 class UserModel {
   /**
    * 创建新用户
-   * @param {Object} userData - 用户数据（驼峰格式）
-   * @param {string} userData.userName - 用户名
-   * @param {string} userData.nickName - 昵称
-   * @param {string} userData.userType - 用户类型
+   * @param {Object} userData - 用户数据（下划线格式）
+   * @param {string} userData.user_name - 用户名
+   * @param {string} userData.nick_name - 昵称
+   * @param {string} userData.user_type - 用户类型
    * @param {string} userData.email - 邮箱
    * @param {string} userData.phonenumber - 手机号
    * @param {string} userData.sex - 性别（0男 1女 2未知）
    * @param {string} userData.avatar - 头像
    * @param {string} userData.password - 密码
    * @param {string} userData.status - 状态（0正常 1停用）
-   * @param {string} userData.createBy - 创建者
+   * @param {string} userData.create_by - 创建者
    * @param {string} userData.remark - 备注
-   * @returns {Object} 创建的用户对象（驼峰格式）
+   * @returns {Object} 创建的用户对象（下划线格式）
    */
   async insertUser(userData) {
     const query = `
@@ -50,8 +50,8 @@ class UserModel {
 
   /**
    * 根据 userName 查询用户
-   * @param {string} userName - 用户名（驼峰格式）
-   * @returns {Object|null} 用户对象（驼峰格式）
+   * @param {string} userName - 用户名
+   * @returns {Object|null} 用户对象（下划线格式）
    */
   async selectUserByUserName(userName) {
     const query = `
@@ -72,7 +72,7 @@ class UserModel {
   /**
    * 根据 ID 查询用户
    * @param {number} user_id - 用户ID
-   * @returns {Object|null} 用户对象（驼峰格式，包含 user_id, userName, nickName, userType, email, phonenumber, sex, avatar, status, delFlag, loginIp, loginDate, pwdUpdateDate, createBy, createTime, updateBy, updateTime, remark）
+   * @returns {Object|null} 用户对象（下划线格式）
    */
   async selectUserById(user_id) {
     const query = `
@@ -99,25 +99,25 @@ class UserModel {
       WHERE user_id = $1 AND del_flag = '0'
     `
     const result = await pool.query(query, [user_id])
-    // ✅ 返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
+    // ✅ 返回数据库原始字段（下划线格式）
     return result.rows[0] || null
   }
 
   /**
    * 获取用户列表（分页）
-   * @param {Object} params - 查询参数（驼峰格式）
-   * @param {number} params.page - 页码
-   * @param {number} params.limit - 每页数量
+   * @param {Object} params - 查询参数（下划线格式）
+   * @param {number} params.page_num - 页码
+   * @param {number} params.page_size - 每页数量
    * @param {string} params.status - 状态
-   * @param {string} params.keyword - 关键词（用户名/昵称/邮箱）
-   * @param {string} params.phone - 手机号
-   * @param {string} params.beginTime - 开始时间
-   * @param {string} params.endTime - 结束时间
-   * @returns {Array} 用户列表（驼峰格式，包含 roles 数组）
+   * @param {string} params.user_name - 用户名（模糊查询）
+   * @param {string} params.phonenumber - 手机号（模糊查询）
+   * @param {string} params.begin_time - 开始时间
+   * @param {string} params.end_time - 结束时间
+   * @returns {Array} 用户列表（下划线格式，包含 roles 数组）
    */
   async list(params = {}) {
-    const { page = 1, limit = 20, status, keyword, phone, beginTime, endTime } = params
-    const offset = (page - 1) * limit
+    const { page_num = 1, page_size = 20, status, user_name, phonenumber, begin_time, end_time } = params
+    const offset = (page_num - 1) * page_size
 
     let query = `
       SELECT 
@@ -137,45 +137,50 @@ class UserModel {
     const values = []
     let idx = 1
 
+    // ✅ 状态过滤（精确匹配）
     if (status) {
       query += ` AND u.status = $${idx++}`
       values.push(status)
     }
 
-    if (keyword) {
-      query += ` AND (u.user_name ILIKE $${idx} OR u.email ILIKE $${idx} OR u.nick_name ILIKE $${idx})`
-      values.push(`%${keyword}%`)
+    // ✅ 用户名模糊匹配
+    if (user_name) {
+      query += ` AND u.user_name ILIKE $${idx++}`
+      values.push(`%${user_name}%`)
     }
 
-    if (phone) {
-      query += ` AND u.phonenumber ILIKE $${idx}`
-      values.push(`%${phone}%`)
+    // ✅ 手机号模糊匹配
+    if (phonenumber) {
+      query += ` AND u.phonenumber ILIKE $${idx++}`
+      values.push(`%${phonenumber}%`)
     }
 
-    if (beginTime) {
+    // ✅ 时间范围处理
+    if (begin_time) {
       query += ` AND u.create_time >= $${idx++}`
-      values.push(new Date(beginTime))
+      values.push(begin_time)
     }
 
-    if (endTime) {
+    if (end_time) {
       query += ` AND u.create_time <= $${idx++}`
-      values.push(new Date(endTime))
+      values.push(end_time)
     }
 
     query += ` GROUP BY u.user_id ORDER BY u.create_time DESC LIMIT $${idx++} OFFSET $${idx}`
-    values.push(limit, offset)
+    values.push(page_size, offset)
 
     const result = await pool.query(query, values)
     
-    // ✅ 直接返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
+    // ✅ 直接返回数据库原始字段（下划线格式）
     return result.rows
   }
 
   /**
    * 获取用户总数
+   * @param {Object} params - 查询参数（下划线格式）
    */
   async count(params = {}) {
-    const { status, keyword, phone, beginTime, endTime } = params
+    const { status, user_name, phonenumber, begin_time, end_time } = params
 
     let query = `SELECT COUNT(*) FROM sys_user WHERE del_flag = '0'`
     const values = []
@@ -186,24 +191,24 @@ class UserModel {
       values.push(status)
     }
 
-    if (keyword) {
-      query += ` AND (user_name ILIKE $${idx} OR email ILIKE $${idx} OR nick_name ILIKE $${idx})`
-      values.push(`%${keyword}%`)
+    if (user_name) {
+      query += ` AND user_name ILIKE $${idx++}`
+      values.push(`%${user_name}%`)
     }
 
-    if (phone) {
-      query += ` AND phonenumber ILIKE $${idx}`
-      values.push(`%${phone}%`)
+    if (phonenumber) {
+      query += ` AND phonenumber ILIKE $${idx++}`
+      values.push(`%${phonenumber}%`)
     }
 
-    if (beginTime) {
+    if (begin_time) {
       query += ` AND create_time >= $${idx++}`
-      values.push(new Date(beginTime))
+      values.push(begin_time)
     }
 
-    if (endTime) {
+    if (end_time) {
       query += ` AND create_time <= $${idx++}`
-      values.push(new Date(endTime))
+      values.push(end_time)
     }
 
     const result = await pool.query(query, values)
@@ -223,6 +228,7 @@ class UserModel {
       avatar: 'avatar',
       nick_name: 'nick_name',
       phonenumber: 'phonenumber',
+      sex: 'sex',
       remark: 'remark',
       status: 'status',
       password: 'password',
@@ -290,7 +296,7 @@ class UserModel {
   /**
    * 获取用户的所有角色
    * @param {number} user_id - 用户ID
-   * @returns {Array} 角色列表（驼峰格式，经过 response-transformer 转换）
+   * @returns {Array} 角色列表（下划线格式）
    */
   async getUserRoles(user_id) {
     const query = `
@@ -302,7 +308,7 @@ class UserModel {
         AND r.status = '0'
     `
     const result = await pool.query(query, [user_id])
-    // ✅ 直接返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
+    // ✅ 直接返回数据库原始字段（下划线格式）
     return result.rows
   }
 }

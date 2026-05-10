@@ -32,7 +32,8 @@ class UserService {
       sex: userData.sex || '0',
       avatar: userData.avatar,
       user_type: userData.user_type || '00', // ✅ 下划线
-      status: userData.status || '0',
+      // ✅ 自定义规则：0=停用，1=正常。新用户默认正常状态
+      status: userData.status || '1',
       create_by: userData.create_by || '', // ✅ 下划线
       remark: userData.remark,
     })
@@ -128,8 +129,8 @@ class UserService {
       throw new BadRequestError('用户名或密码错误')
     }
 
-    // 检查用户状态（0=正常，1=停用）
-    if (user.status === '1') {
+    // 检查用户状态（0=停用，1=正常）
+    if (user.status === '0') {
       const { ForbiddenError } = require('../../utils/app-error')
 
       // 记录被禁用的登录日志
@@ -151,10 +152,14 @@ class UserService {
     // 获取用户角色
     const roles = await userModel.getUserRoles(user.user_id) // ✅ 下划线
 
+    // 获取用户权限（从 sys_menu.perms）
+    const permissions = await this.getUserPermissions(user.user_id)
+
     // 生成 JWT Token（使用下划线命名以保持一致）
     const token = generateToken({
       user_id: user.user_id,
       user_name: user.user_name,
+      roles: roles.map((r) => r.role_key),
     })
 
     // 记录成功的登录日志
@@ -178,13 +183,15 @@ class UserService {
     return {
       success: true,
       data: {
+        token,
         user_id: user.user_id,
-        userName: user.user_name,
-        nickName: user.nick_name,
-        email: user.email,
+        user_name: user.user_name,
+        nick_name: user.nick_name,
         avatar: user.avatar,
+        email: user.email,
+        phonenumber: user.phonenumber,
         roles: roles.map((r) => r.role_key),
-        token, // 返回 JWT Token
+        permissions,
       },
       message: '登录成功',
     }
@@ -253,8 +260,8 @@ class UserService {
       success: true,
       data: users,
       total,
-      page: params.page || 1,
-      limit: params.limit || 20,
+      page_num: params.page_num || 1,
+      page_size: params.page_size || 20,
     }
   }
 
@@ -391,18 +398,18 @@ class UserService {
   /**
    * 为用户分配角色（使用 sys_user_role 表）
    */
-  async assignRole(user_id, roleId) {
+  async assignRole(user_id, role_id) {
     const user = await userModel.selectUserById(user_id)
     if (!user) {
       throw new Error('用户不存在')
     }
 
-    const role = await roleModel.getById(roleId)
+    const role = await roleModel.getById(role_id)
     if (!role) {
       throw new Error('角色不存在')
     }
 
-    await this.assignRoleToUser(user_id, roleId)
+    await this.assignRoleToUser(user_id, role_id)
 
     return {
       success: true,
@@ -413,26 +420,51 @@ class UserService {
   /**
    * 内部方法：将用户与角色关联到 sys_user_role 表
    */
-  async assignRoleToUser(user_id, roleId) {
+  async assignRoleToUser(user_id, role_id) {
     const { pool } = require('../../config/db')
     const query = `
       INSERT INTO sys_user_role (user_id, role_id)
       VALUES ($1, $2)
       ON CONFLICT (user_id, role_id) DO NOTHING
     `
-    await pool.query(query, [user_id, roleId])
+    await pool.query(query, [user_id, role_id])
+  }
+
+  /**
+   * 获取用户的所有权限标识（从 sys_menu.perms）
+   * @param {number} user_id - 用户 ID
+   * @returns {Promise<string[]>} 权限标识数组
+   */
+  async getUserPermissions(user_id) {
+    const { pool } = require('../../config/db')
+
+    const query = `
+      SELECT DISTINCT m.perms
+      FROM sys_menu m
+      INNER JOIN sys_role_menu srm ON m.menu_id = srm.menu_id
+      INNER JOIN sys_user_role ur ON srm.role_id = ur.role_id
+      INNER JOIN sys_role r ON ur.role_id = r.role_id
+      WHERE ur.user_id = $1
+        AND m.status = '0'
+        AND r.status = '0'
+        AND m.perms IS NOT NULL
+        AND m.perms != ''
+    `
+
+    const result = await pool.query(query, [user_id])
+    return result.rows.map((row) => row.perms)
   }
 
   /**
    * 移除用户角色
    */
-  async removeRole(user_id, roleId) {
+  async removeRole(user_id, role_id) {
     const { pool } = require('../../config/db')
     const query = `
       DELETE FROM sys_user_role
       WHERE user_id = $1 AND role_id = $2
     `
-    const result = await pool.query(query, [user_id, roleId])
+    const result = await pool.query(query, [user_id, role_id])
 
     if (result.rowCount === 0) {
       throw new Error('角色移除失败')
@@ -468,17 +500,17 @@ class UserService {
   /**
    * 批量为用户分配角色（使用 sys_user_role 表）
    */
-  async assignRoles(user_id, roleIds) {
+  async assignRoles(user_id, role_ids) {
     const user = await userModel.selectUserById(user_id)
     if (!user) {
       throw new Error('用户不存在')
     }
 
     // 验证所有角色是否存在
-    for (const roleId of roleIds) {
-      const role = await roleModel.getById(roleId)
+    for (const role_id of role_ids) {
+      const role = await roleModel.getById(role_id)
       if (!role) {
-        throw new Error(`角色 ${roleId} 不存在`)
+        throw new Error(`角色 ${role_id} 不存在`)
       }
     }
 
@@ -487,15 +519,15 @@ class UserService {
     try {
       await client.query('BEGIN')
 
-      for (const roleId of roleIds) {
-        await this.assignRoleToUser(user_id, roleId)
+      for (const role_id of role_ids) {
+        await this.assignRoleToUser(user_id, role_id)
       }
 
       await client.query('COMMIT')
 
       return {
         success: true,
-        message: `成功分配 ${roleIds.length} 个角色`,
+        message: `成功分配 ${role_ids.length} 个角色`,
       }
     } catch (error) {
       await client.query('ROLLBACK')
@@ -564,13 +596,13 @@ function parseOS(userAgent) {
 
 /**
  * 确保角色有默认菜单权限
- * 如果角色在 sys_role_menu 表中没有任何菜单，则分配所有可见菜单
- * @param {string} roleId - 角色 ID
+ * ✅ 修复：普通角色必须包含根节点菜单，否则前端菜单树无法构建
+ * @param {number} role_id - 角色 ID（整型）
  * @param {boolean} includeButtons - 是否包含按钮权限（默认 false）
  */
-async function ensureRoleHasDefaultMenus(roleId, includeButtons = false) {
+async function ensureRoleHasDefaultMenus(role_id, includeButtons = false) {
   console.log('\n🔧 [菜单分配] 开始检查角色菜单权限')
-  console.log('   角色ID:', roleId)
+  console.log('   角色ID:', role_id, '类型:', typeof role_id)
   console.log('   包含按钮:', includeButtons)
 
   try {
@@ -582,53 +614,87 @@ async function ensureRoleHasDefaultMenus(roleId, includeButtons = false) {
       FROM sys_role_menu 
       WHERE role_id = $1
     `
-    const checkResult = await pool.query(checkQuery, [roleId])
+    const checkResult = await pool.query(checkQuery, [role_id])
     const menuCount = parseInt(checkResult.rows[0].count)
 
     console.log('   当前菜单数:', menuCount)
 
-    // 如果已经有菜单，不需要再分配
-    if (menuCount > 0) {
-      console.log('✅ [菜单分配] 角色已有菜单权限，跳过分配\n')
-      return
+    // ✅ 关键修复：检查角色是否有根节点菜单（parent_id = 0）
+    const rootMenuQuery = `
+      SELECT COUNT(DISTINCT srm.menu_id) as count
+      FROM sys_role_menu srm
+      INNER JOIN sys_menu m ON srm.menu_id = m.menu_id
+      WHERE srm.role_id = $1
+        AND (m.parent_id = 0 OR m.parent_id = '0')
+        AND m.status = '0'
+    `
+    const rootMenuResult = await pool.query(rootMenuQuery, [role_id])
+    const rootMenuCount = parseInt(rootMenuResult.rows[0].count)
+
+    console.log('   根节点菜单数:', rootMenuCount)
+
+    // ✅ 如果没有根节点菜单，必须分配（即使已有子级菜单）
+    if (rootMenuCount === 0) {
+      console.log('   ⚠️  角色没有根节点菜单，开始分配...')
+
+      // ✅ 修复：使用 $1 而不是 $1::uuid（已改用整型 ID）
+      const insertQuery = `
+        INSERT INTO sys_role_menu (role_id, menu_id)
+        SELECT $1, m.menu_id
+        FROM sys_menu m
+        WHERE m.status = '0'
+          AND m.menu_type IN ('M', 'C')
+          AND (m.parent_id = 0 OR m.parent_id = '0')
+        ON CONFLICT (role_id, menu_id) DO NOTHING
+      `
+
+      console.log('   执行根节点菜单插入...')
+      await pool.query(insertQuery, [role_id])
+
+      // 验证分配结果
+      const verifyQuery = `
+        SELECT COUNT(DISTINCT srm.menu_id) as count
+        FROM sys_role_menu srm
+        INNER JOIN sys_menu m ON srm.menu_id = m.menu_id
+        WHERE srm.role_id = $1
+          AND (m.parent_id = 0 OR m.parent_id = '0')
+          AND m.status = '0'
+      `
+      const verifyResult = await pool.query(verifyQuery, [role_id])
+      const finalRootCount = parseInt(verifyResult.rows[0].count)
+
+      console.log(`✅ [菜单分配] 已为角色分配 ${finalRootCount} 个根节点菜单`)
+    } else if (menuCount === 0) {
+      // 如果完全没有菜单，分配所有可见菜单
+      console.log('   ⚠️  角色没有任何菜单，开始分配...')
+
+      const menuTypes = includeButtons ? "('M', 'C', 'F')" : "('M', 'C')"
+      const insertQuery = `
+        INSERT INTO sys_role_menu (role_id, menu_id)
+        SELECT $1, m.menu_id
+        FROM sys_menu m
+        WHERE m.status = '0'
+          AND m.menu_type IN ${menuTypes}
+        ON CONFLICT (role_id, menu_id) DO NOTHING
+      `
+
+      console.log('   执行插入操作...')
+      await pool.query(insertQuery, [role_id])
+
+      const verifyQuery = `
+        SELECT COUNT(*) as count
+        FROM sys_role_menu
+        WHERE role_id = $1
+      `
+      const verifyResult = await pool.query(verifyQuery, [role_id])
+      const finalCount = parseInt(verifyResult.rows[0].count)
+
+      console.log(`✅ [菜单分配] 已为角色分配 ${finalCount} 个菜单权限`)
+    } else {
+      console.log('✅ [菜单分配] 角色已有完整菜单权限，跳过分配')
     }
 
-    console.log('   ⚠️  角色没有菜单，开始分配...')
-
-    // 查询可用的菜单数量
-    const menuTypes = includeButtons ? "('M', 'C', 'F')" : "('M', 'C')"
-    const availableMenusQuery = `
-      SELECT COUNT(*) as count
-      FROM sys_menu
-      WHERE status = '0' AND menu_type IN ${menuTypes}
-    `
-    const availableResult = await pool.query(availableMenusQuery)
-    const availableCount = parseInt(availableResult.rows[0].count)
-    console.log('   系统中可用菜单数:', availableCount)
-
-    // 为该角色分配所有可见的目录和菜单（可选包含按钮）
-    const insertQuery = `
-      INSERT INTO sys_role_menu (role_id, menu_id)
-      SELECT $1::uuid, m.menu_id
-      FROM sys_menu m
-      WHERE m.status = '0'
-        AND m.menu_type IN ${menuTypes}
-      ON CONFLICT (role_id, menu_id) DO NOTHING
-    `
-
-    console.log('   执行插入操作...')
-    const result = await pool.query(insertQuery, [roleId])
-
-    // 验证分配结果
-    const verifyQuery = `
-      SELECT COUNT(*) as count
-      FROM sys_role_menu
-      WHERE role_id = $1
-    `
-    const verifyResult = await pool.query(verifyQuery, [roleId])
-    const finalCount = parseInt(verifyResult.rows[0].count)
-
-    console.log(`✅ [菜单分配] 已为角色分配 ${finalCount} 个菜单权限\n`)
+    console.log('')
   } catch (error) {
     console.error(`❌ [菜单分配] 为角色分配默认菜单失败:`, error.message)
     console.error(error)
@@ -639,26 +705,26 @@ async function ensureRoleHasDefaultMenus(roleId, includeButtons = false) {
 /**
  * 强制为角色分配所有菜单权限（包括按钮）
  * 用于 admin 角色，确保拥有所有权限
- * @param {string} roleId - 角色 ID
+ * @param {number} role_id - 角色 ID（整型）
  */
-async function forceAssignAllMenus(roleId) {
+async function forceAssignAllMenus(role_id) {
   console.log('\n🔄 [强制菜单分配] 开始为角色分配所有菜单权限')
-  console.log('   角色ID:', roleId)
+  console.log('   角色ID:', role_id, '类型:', typeof role_id)
 
   try {
     const { pool } = require('../../config/db')
 
-    // 分配所有状态为正常的菜单（包括按钮）
+    // ✅ 修复：使用 $1 而不是 $1::uuid（已改用整型 ID）
     const insertQuery = `
       INSERT INTO sys_role_menu (role_id, menu_id)
-      SELECT $1::uuid, m.menu_id
+      SELECT $1, m.menu_id
       FROM sys_menu m
       WHERE m.status = '0'
       ON CONFLICT (role_id, menu_id) DO NOTHING
     `
 
     console.log('   执行插入操作...')
-    await pool.query(insertQuery, [roleId])
+    await pool.query(insertQuery, [role_id])
 
     // 验证分配结果
     const verifyQuery = `
@@ -666,7 +732,7 @@ async function forceAssignAllMenus(roleId) {
       FROM sys_role_menu
       WHERE role_id = $1
     `
-    const verifyResult = await pool.query(verifyQuery, [roleId])
+    const verifyResult = await pool.query(verifyQuery, [role_id])
     const finalCount = parseInt(verifyResult.rows[0].count)
 
     console.log(`✅ [强制菜单分配] 已为角色分配 ${finalCount} 个菜单权限（包括所有按钮）\n`)

@@ -32,13 +32,13 @@ class RoleService {
   /**
    * 获取角色详情
    */
-  async getRoleDetail(roleId) {
-    const role = await roleModel.getById(roleId)
+  async getRoleDetail(role_id) {
+    const role = await roleModel.getById(role_id)
     if (!role) {
       throw new Error('角色不存在')
     }
 
-    const permissions = await roleModel.getRolePermissions(roleId)
+    const permissions = await roleModel.getRolePermissions(role_id)
 
     return {
       success: true,
@@ -60,21 +60,21 @@ class RoleService {
       success: true,
       data: roles,
       total,
-      page: params.page || 1,
-      limit: params.limit || 20,
+      page_num: params.page_num || 1,
+      page_size: params.page_size || 20,
     }
   }
 
   /**
    * 更新角色信息
    */
-  async updateRole(roleId, updates) {
-    const role = await roleModel.getById(roleId)
+  async updateRole(role_id, updates) {
+    const role = await roleModel.getById(role_id)
     if (!role) {
       throw new Error('角色不存在')
     }
 
-    const updatedRole = await roleModel.update(roleId, updates)
+    const updatedRole = await roleModel.update(role_id, updates)
 
     return {
       success: true,
@@ -86,9 +86,9 @@ class RoleService {
   /**
    * 删除角色（软删除）
    */
-  async deleteRole(roleId) {
+  async deleteRole(role_id) {
     try {
-      await roleModel.delete(roleId)
+      await roleModel.delete(role_id)
       return {
         success: true,
         message: '角色删除成功',
@@ -99,10 +99,46 @@ class RoleService {
   }
 
   /**
+   * 批量删除角色（软删除）
+   */
+  async batchDeleteRoles(role_ids) {
+    try {
+      let successCount = 0
+      let failCount = 0
+      const errors = []
+
+      for (const role_id of role_ids) {
+        try {
+          await roleModel.delete(role_id)
+          successCount++
+        } catch (error) {
+          failCount++
+          errors.push({ role_id, error: error.message })
+        }
+      }
+
+      if (failCount > 0) {
+        return {
+          success: successCount > 0,
+          message: `批量删除完成：成功 ${successCount} 个，失败 ${failCount} 个`,
+          errors,
+        }
+      }
+
+      return {
+        success: true,
+        message: `批量删除成功，共删除 ${successCount} 个角色`,
+      }
+    } catch (error) {
+      throw error
+    }
+  }
+
+  /**
    * 更新角色状态（启用/禁用）
    */
-  async updateRoleStatus(roleId, status) {
-    const role = await roleModel.getById(roleId)
+  async updateRoleStatus(role_id, status) {
+    const role = await roleModel.getById(role_id)
     if (!role) {
       throw new Error('角色不存在')
     }
@@ -117,7 +153,7 @@ class RoleService {
       throw new Error('系统角色不允许禁用')
     }
 
-    const updatedRole = await roleModel.updateStatus(roleId, status)
+    const updatedRole = await roleModel.updateStatus(role_id, status)
     if (!updatedRole) {
       throw new Error('状态更新失败')
     }
@@ -137,8 +173,8 @@ class RoleService {
   /**
    * 为角色分配权限
    */
-  async assignPermission(roleId, permissionId) {
-    const role = await roleModel.getById(roleId)
+  async assignPermission(role_id, permissionId) {
+    const role = await roleModel.getById(role_id)
     if (!role) {
       throw new Error('角色不存在')
     }
@@ -148,7 +184,7 @@ class RoleService {
       throw new Error('权限不存在')
     }
 
-    await roleModel.assignPermission(roleId, permissionId)
+    await roleModel.assignPermission(role_id, permissionId)
 
     return {
       success: true,
@@ -159,8 +195,8 @@ class RoleService {
   /**
    * 移除角色权限
    */
-  async removePermission(roleId, permissionId) {
-    const removed = await roleModel.removePermission(roleId, permissionId)
+  async removePermission(role_id, permissionId) {
+    const removed = await roleModel.removePermission(role_id, permissionId)
     if (!removed) {
       throw new Error('权限移除失败')
     }
@@ -174,13 +210,13 @@ class RoleService {
   /**
    * 批量为角色分配权限
    */
-  async assignPermissions(roleId, permissionIds) {
-    const role = await roleModel.getById(roleId)
+  async assignPermissions(role_id, permissionIds) {
+    const role = await roleModel.getById(role_id)
     if (!role) {
       throw new Error('角色不存在')
     }
 
-    await roleModel.assignPermissions(roleId, permissionIds)
+    await roleModel.assignPermissions(role_id, permissionIds)
 
     return {
       success: true,
@@ -191,46 +227,76 @@ class RoleService {
   /**
    * 获取角色的所有用户
    */
-  async getRoleUsers(roleId, params) {
-    const users = await roleModel.getRoleUsers(roleId, params)
+  async getRoleUsers(role_id, params) {
+    const users = await roleModel.getRoleUsers(role_id, params)
     const total = users.length
 
     return {
       success: true,
       data: users,
       total,
-      page: params.page || 1,
-      limit: params.limit || 20,
+      page_num: params.page_num || 1,
+      page_size: params.page_size || 20,
     }
   }
 
   /**
    * 获取角色的菜单权限 ID 列表
    */
-  async getRoleMenuIds(roleId) {
-    const menuIds = await roleModel.getRoleMenuIds(roleId)
+  async getRolemenu_ids(role_id) {
+    const menu_ids = await roleModel.getRolemenu_ids(role_id)
     return {
       success: true,
-      data: menuIds,
+      data: menu_ids,
     }
   }
 
   /**
    * 保存角色的菜单权限（覆盖更新，使用事务）
    */
-  async saveRoleMenus(roleId, menuIds) {
+  async saveRoleMenus(role_id, menu_ids) {
     // 验证角色是否存在
-    const role = await roleModel.getById(roleId)
+    const role = await roleModel.getById(role_id)
     if (!role) {
       throw new Error('角色不存在')
     }
 
     // 使用 model 层的事务方法
-    await roleModel.assignMenus(roleId, menuIds)
+    await roleModel.assignMenus(role_id, menu_ids)
 
     return {
       success: true,
       message: '菜单权限分配成功',
+    }
+  }
+
+  /**
+   * 获取角色的接口权限路径列表
+   */
+  async getRoleApiPaths(role_id) {
+    const apiPaths = await roleModel.getRoleApiPaths(role_id)
+    return {
+      success: true,
+      data: apiPaths,
+    }
+  }
+
+  /**
+   * 保存角色的接口权限（覆盖更新，使用事务）
+   */
+  async saveRoleApis(role_id, api_paths) {
+    // 验证角色是否存在
+    const role = await roleModel.getById(role_id)
+    if (!role) {
+      throw new Error('角色不存在')
+    }
+
+    // 使用 model 层的事务方法
+    await roleModel.assignApis(role_id, api_paths)
+
+    return {
+      success: true,
+      message: '接口权限分配成功',
     }
   }
 }

@@ -217,7 +217,13 @@ ${memoryContext}
         console.log('ℹ️ 未提取到新记忆')
       }
     } catch (error) {
-      console.error('❌ 提取记忆失败:', error.message)
+      // 友好提示：记忆提取失败不影响聊天功能
+      if (error.message.includes('401') || error.message.includes('Embedding')) {
+        console.warn('⚠️ 记忆功能暂时不可用（API 配置问题），但不影响聊天')
+        console.warn('💡 提示：请检查 .env 文件中的 API_KEY 和 EMBEDDING_MODEL 配置')
+      } else {
+        console.error('❌ 提取记忆失败:', error.message)
+      }
     }
   }
 

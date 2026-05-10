@@ -32,14 +32,14 @@ class RoleModel {
       roleData.createBy || '',
       roleData.remark || '',
     ])
-    // ✅ 返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
+    // ✅ 返回数据库原始字段（下划线格式）
     return result.rows[0]
   }
 
   /**
    * 根据角色名称查询角色
-   * @param {string} roleName - 角色名称（驼峰格式）
-   * @returns {Object|null} 角色对象（驼峰格式）
+   * @param {string} roleName - 角色名称
+   * @returns {Object|null} 角色对象（下划线格式）
    */
   async getByRoleName(roleName) {
     const query = `
@@ -48,14 +48,14 @@ class RoleModel {
       WHERE role_name = $1 AND del_flag = '0'
     `
     const result = await pool.query(query, [roleName])
-    // ✅ 返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
+    // ✅ 返回数据库原始字段（下划线格式）
     return result.rows[0] || null
   }
 
   /**
    * 根据 roleKey 查询角色
-   * @param {string} roleKey - 角色标识（驼峰格式）
-   * @returns {Object|null} 角色对象（驼峰格式）
+   * @param {string} roleKey - 角色标识
+   * @returns {Object|null} 角色对象（下划线格式）
    */
   async getByRoleKey(roleKey) {
     const query = `
@@ -64,16 +64,16 @@ class RoleModel {
       WHERE role_key = $1 AND del_flag = '0'
     `
     const result = await pool.query(query, [roleKey])
-    // ✅ 返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
+    // ✅ 返回数据库原始字段（下划线格式）
     return result.rows[0] || null
   }
 
   /**
    * 根据 ID 查询角色
-   * @param {number} roleId - 角色ID
-   * @returns {Object|null} 角色对象（驼峰格式，包含 roleId, roleName, roleKey, roleSort, dataScope, menuCheckStrictly, deptCheckStrictly, status, delFlag, createBy, createTime, updateBy, updateTime, remark）
+   * @param {number} role_id - 角色ID
+   * @returns {Object|null} 角色对象（下划线格式）
    */
-  async getById(roleId) {
+  async getById(role_id) {
     const query = `
       SELECT 
         role_id, role_name, role_key, role_sort, data_scope,
@@ -82,24 +82,24 @@ class RoleModel {
       FROM sys_role
       WHERE role_id = $1 AND del_flag = '0'
     `
-    const result = await pool.query(query, [roleId])
-    // ✅ 返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
+    const result = await pool.query(query, [role_id])
+    // ✅ 返回数据库原始字段（下划线格式）
     return result.rows[0] || null
   }
 
   /**
    * 获取角色列表（分页）
-   * @param {Object} params - 查询参数（驼峰格式）
-   * @param {number} params.page - 页码
-   * @param {number} params.limit - 每页数量
-   * @param {string} params.roleName - 角色名称（模糊查询）
-   * @param {string} params.roleKey - 角色标识（模糊查询）
+   * @param {Object} params - 查询参数（下划线格式）
+   * @param {number} params.page_num - 页码
+   * @param {number} params.page_size - 每页数量
+   * @param {string} params.role_name - 角色名称（模糊查询）
+   * @param {string} params.role_key - 角色标识（模糊查询）
    * @param {string} params.status - 状态
-   * @returns {Array} 角色列表（驼峰格式）
+   * @returns {Array} 角色列表（下划线格式）
    */
   async list(params = {}) {
-    const { page = 1, limit = 20, roleName, roleKey, status } = params
-    const offset = (page - 1) * limit
+    const { page_num = 1, page_size = 20, role_name, role_key, status } = params
+    const offset = (page_num - 1) * page_size
 
     let query = `
       SELECT 
@@ -112,47 +112,51 @@ class RoleModel {
     const values = []
     let idx = 1
 
-    if (roleName) {
+    // ✅ 角色名称模糊匹配
+    if (role_name) {
       query += ` AND role_name ILIKE $${idx++}`
-      values.push(`%${roleName}%`)
+      values.push(`%${role_name}%`)
     }
 
-    if (roleKey) {
+    // ✅ 角色标识模糊匹配
+    if (role_key) {
       query += ` AND role_key ILIKE $${idx++}`
-      values.push(`%${roleKey}%`)
+      values.push(`%${role_key}%`)
     }
 
+    // ✅ 状态过滤（精确匹配）
     if (status) {
       query += ` AND status = $${idx++}`
       values.push(status)
     }
 
     query += ` ORDER BY role_sort ASC, role_id ASC LIMIT $${idx++} OFFSET $${idx}`
-    values.push(limit, offset)
+    values.push(page_size, offset)
 
     const result = await pool.query(query, values)
-    // ✅ 返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
+    // ✅ 直接返回数据库原始字段（下划线格式）
     return result.rows
   }
 
   /**
    * 获取角色总数
+   * @param {Object} params - 查询参数（下划线格式）
    */
   async count(params = {}) {
-    const { roleName, roleKey, status } = params
+    const { role_name, role_key, status } = params
 
     let query = `SELECT COUNT(*) FROM sys_role WHERE del_flag = '0'`
     const values = []
     let idx = 1
 
-    if (roleName) {
+    if (role_name) {
       query += ` AND role_name ILIKE $${idx++}`
-      values.push(`%${roleName}%`)
+      values.push(`%${role_name}%`)
     }
 
-    if (roleKey) {
+    if (role_key) {
       query += ` AND role_key ILIKE $${idx++}`
-      values.push(`%${roleKey}%`)
+      values.push(`%${role_key}%`)
     }
 
     if (status) {
@@ -166,20 +170,20 @@ class RoleModel {
 
   /**
    * 更新角色信息
-   * @param {number} roleId - 角色ID
-   * @param {Object} updates - 更新数据（驼峰格式）
-   * @param {string} updates.roleName - 角色名称
-   * @param {string} updates.roleKey - 角色标识
-   * @param {number} updates.roleSort - 显示排序
-   * @param {string} updates.dataScope - 数据权限范围
+   * @param {number} role_id - 角色ID
+   * @param {Object} updates - 更新数据（下划线格式）
+   * @param {string} updates.role_name - 角色名称
+   * @param {string} updates.role_key - 角色标识
+   * @param {number} updates.role_sort - 显示排序
+   * @param {string} updates.data_scope - 数据权限范围
    * @param {string} updates.status - 状态
    * @param {string} updates.remark - 备注
-   * @param {string} updates.updateBy - 更新者
-   * @returns {Object} 更新后的角色对象（驼峰格式）
+   * @param {string} updates.update_by - 更新者
+   * @returns {Object} 更新后的角色对象（下划线格式）
    */
-  async update(roleId, updates) {
+  async update(role_id, updates) {
     // 系统角色（admin）不允许修改 roleKey
-    const role = await this.getById(roleId)
+    const role = await this.getById(role_id)
     if (role && role.roleKey === 'admin' && updates.roleKey) {
       throw new Error('超级管理员角色不允许修改权限标识')
     }
@@ -188,15 +192,15 @@ class RoleModel {
     const values = []
     let idx = 1
 
-    // 前端传入驼峰格式，映射到数据库下划线字段
+    // 前端传入下划线格式，映射到数据库下划线字段
     const fieldMap = {
-      roleName: 'role_name',
-      roleKey: 'role_key',
-      roleSort: 'role_sort',
-      dataScope: 'data_scope',
+      role_name: 'role_name',
+      role_key: 'role_key',
+      role_sort: 'role_sort',
+      data_scope: 'data_scope',
       status: 'status',
       remark: 'remark',
-      updateBy: 'update_by',
+      update_by: 'update_by',
     }
 
     for (const [key, dbField] of Object.entries(fieldMap)) {
@@ -207,11 +211,11 @@ class RoleModel {
     }
 
     if (fields.length === 0) {
-      return await this.getById(roleId)
+      return await this.getById(role_id)
     }
 
     fields.push(`update_time = NOW()`)
-    values.push(roleId)
+    values.push(role_id)
 
     const query = `
       UPDATE sys_role
@@ -227,8 +231,8 @@ class RoleModel {
   /**
    * 删除角色（软删除）
    */
-  async delete(roleId) {
-    const role = await this.getById(roleId)
+  async delete(role_id) {
+    const role = await this.getById(role_id)
     if (!role) {
       throw new Error('角色不存在')
     }
@@ -242,7 +246,7 @@ class RoleModel {
       FROM sys_user_role
       WHERE role_id = $1
     `
-    const userCountResult = await pool.query(userCountQuery, [roleId])
+    const userCountResult = await pool.query(userCountQuery, [role_id])
     const userCount = parseInt(userCountResult.rows[0].count)
 
     if (userCount > 0) {
@@ -255,15 +259,15 @@ class RoleModel {
       SET del_flag = '2', update_time = NOW()
       WHERE role_id = $1 AND del_flag = '0'
     `
-    const result = await pool.query(query, [roleId])
+    const result = await pool.query(query, [role_id])
     return result.rowCount > 0
   }
 
   /**
    * 更新角色状态（启用/禁用）
    */
-  async updateStatus(roleId, status) {
-    const role = await this.getById(roleId)
+  async updateStatus(role_id, status) {
+    const role = await this.getById(role_id)
     if (!role) {
       throw new Error('角色不存在')
     }
@@ -279,31 +283,28 @@ class RoleModel {
       WHERE role_id = $2 AND del_flag = '0'
       RETURNING role_id, role_name, role_key, status
     `
-    const result = await pool.query(query, [status, roleId])
+    const result = await pool.query(query, [status, role_id])
     return result.rows[0] || null
   }
 
   /**
    * 为角色分配菜单权限
    */
-  async assignMenus(roleId, menuIds) {
+  async assignMenus(role_id, menu_ids) {
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
-      
+
       // 删除角色现有的所有菜单权限
-      await client.query('DELETE FROM sys_role_menu WHERE role_id = $1', [roleId])
-      
+      await client.query('DELETE FROM sys_role_menu WHERE role_id = $1', [role_id])
+
       // 插入新的菜单权限关联
-      if (menuIds && menuIds.length > 0) {
-        const values = menuIds.map((menuId, idx) => `($1, $${idx + 2})`).join(',')
-        const params = [roleId, ...menuIds]
-        await client.query(
-          `INSERT INTO sys_role_menu (role_id, menu_id) VALUES ${values}`,
-          params
-        )
+      if (menu_ids && menu_ids.length > 0) {
+        const values = menu_ids.map((menu_id, idx) => `($1, $${idx + 2})`).join(',')
+        const params = [role_id, ...menu_ids]
+        await client.query(`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ${values}`, params)
       }
-      
+
       await client.query('COMMIT')
       return true
     } catch (error) {
@@ -317,29 +318,29 @@ class RoleModel {
   /**
    * 获取角色的所有菜单ID
    */
-  async getRoleMenuIds(roleId) {
+  async getRolemenu_ids(role_id) {
     const query = `
       SELECT menu_id
       FROM sys_role_menu
       WHERE role_id = $1
       ORDER BY menu_id ASC
     `
-    const result = await pool.query(query, [roleId])
-    return result.rows.map(row => row.menu_id)
+    const result = await pool.query(query, [role_id])
+    return result.rows.map((row) => row.menu_id)
   }
 
   /**
    * 获取角色的所有用户
    */
-  async getRoleUsers(roleId, params = {}) {
-    const { page = 1, limit = 20 } = params
-    const offset = (page - 1) * limit
+  async getRoleUsers(role_id, params = {}) {
+    const { page_num = 1, page_size = 20 } = params
+    const offset = (page_num - 1) * page_size
 
     // 查询总数
     const countQuery = `
       SELECT COUNT(*) FROM sys_user_role WHERE role_id = $1
     `
-    const countResult = await pool.query(countQuery, [roleId])
+    const countResult = await pool.query(countQuery, [role_id])
     const total = parseInt(countResult.rows[0].count)
 
     // 查询数据
@@ -352,13 +353,75 @@ class RoleModel {
       ORDER BY u.create_time DESC
       LIMIT $2 OFFSET $3
     `
-    const result = await pool.query(query, [roleId, limit, offset])
-    
-    // ✅ 直接返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
+    const result = await pool.query(query, [role_id, page_size, offset])
+
+    // ✅ 直接返回数据库原始字段（下划线格式）
     return {
       list: result.rows,
       total,
     }
+  }
+
+  /**
+   * 为角色分配接口权限（覆盖更新）
+   * @param {number} role_id - 角色ID
+   * @param {Array} apiPaths - 接口路径数组
+   */
+  async assignApis(role_id, apiPaths) {
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      // 删除角色现有的所有接口权限
+      await client.query('DELETE FROM sys_role_api WHERE role_id = $1', [role_id])
+
+      // 插入新的接口权限关联
+      if (apiPaths && apiPaths.length > 0) {
+        // apiPaths 格式: [{ path: '/api/xxx' }, ...]
+        const values = []
+        const placeholders = []
+        let idx = 1
+
+        apiPaths.forEach((api) => {
+          placeholders.push(`($${idx}, $${idx + 1})`)
+          values.push(role_id, api.path)
+          idx += 2
+        })
+
+        await client.query(
+          `INSERT INTO sys_role_api (role_id, api_path) VALUES ${placeholders.join(',')}`,
+          values,
+        )
+      }
+
+      await client.query('COMMIT')
+      return true
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  }
+
+  /**
+   * 获取角色的所有接口权限路径列表
+   * @param {number} role_id - 角色ID
+   * @returns {Array} 返回接口路径数组
+   */
+  async getRoleApiPaths(role_id) {
+    const query = `
+      SELECT api_path
+      FROM sys_role_api
+      WHERE role_id = $1
+      ORDER BY api_path ASC
+    `
+    const result = await pool.query(query, [role_id])
+    return result.rows.map((row) => ({
+      api_path: row.api_path,
+      api_name: '', // ✅ 默认值（数据库表无 api_name 字段）
+      method: 'GET', // ✅ 默认值（数据库表无 method 字段）
+    }))
   }
 }
 

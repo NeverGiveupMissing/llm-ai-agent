@@ -61,10 +61,10 @@ const ResponseUtil = {
    * @param {Array} list - 数据列表
    * @param {number} total - 总记录数
    * @param {number} page - 当前页码
-   * @param {number} pageSize - 每页数量
+   * @param {number} page_size - 每页数量
    * @param {string} message - 自定义消息
    */
-  pageSuccess(list = [], total = 0, page = 1, pageSize = 10, message) {
+  pageSuccess(list = [], total = 0, page = 1, page_size = 10, message) {
     return createResponse(
       CODES.success,
       {
@@ -72,7 +72,7 @@ const ResponseUtil = {
         pagination: {
           total,
           page,
-          pageSize,
+          page_size,
         },
       },
       message,
@@ -133,8 +133,8 @@ function mountToContext(ctx) {
     ctx.body = ResponseUtil.fail(message, code)
   }
 
-  ctx.pageSuccess = (list, total, page, pageSize, message) => {
-    ctx.body = ResponseUtil.pageSuccess(list, total, page, pageSize, message)
+  ctx.pageSuccess = (list, total, page, page_size, message) => {
+    ctx.body = ResponseUtil.pageSuccess(list, total, page, page_size, message)
   }
 
   ctx.notFound = (message) => {

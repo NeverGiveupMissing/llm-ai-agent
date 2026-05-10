@@ -16,18 +16,18 @@ class InterfaceController {
     const apiUrl = ctx.query.apiUrl || ctx.query.api_url
     const status = ctx.query.status
     const page = ctx.query.page || ctx.query.pageNo || 1
-    const pageSize = ctx.query.pageSize || ctx.query.page_size || 10
+    const page_size = ctx.query.page_size || ctx.query.page_size || 10
 
     const params = {
       api_name: apiName,
       api_url: apiUrl,
       status,
       page: parseInt(page),
-      page_size: parseInt(pageSize),
+      page_size: parseInt(page_size),
     }
 
     const result = await interfaceService.getInterfaceList(params)
-    
+
     // 使用统一的分页响应方法（与用户管理保持一致）
     ctx.pageSuccess(result.data, result.total, result.page, result.limit)
   })
@@ -37,13 +37,13 @@ class InterfaceController {
    */
   detail = asyncHandler(async (ctx) => {
     const { id } = ctx.params
-    const interfaceId = parseInt(id)
+    const interface_id = parseInt(id)
 
-    if (!interfaceId || isNaN(interfaceId)) {
+    if (!interface_id || isNaN(interface_id)) {
       throw new BadRequestError('接口ID无效')
     }
 
-    const result = await interfaceService.getInterfaceDetail(interfaceId)
+    const result = await interfaceService.getInterfaceDetail(interface_id)
     ctx.success(result.data)
   })
 
@@ -62,14 +62,14 @@ class InterfaceController {
    */
   update = asyncHandler(async (ctx) => {
     const { id } = ctx.params
-    const interfaceId = parseInt(id)
+    const interface_id = parseInt(id)
 
-    if (!interfaceId || isNaN(interfaceId)) {
+    if (!interface_id || isNaN(interface_id)) {
       throw new BadRequestError('接口ID无效')
     }
 
     const updates = ctx.request.body
-    const result = await interfaceService.updateInterface(interfaceId, updates)
+    const result = await interfaceService.updateInterface(interface_id, updates)
     ctx.success(result.data, result.message)
   })
 
@@ -78,13 +78,13 @@ class InterfaceController {
    */
   delete = asyncHandler(async (ctx) => {
     const { id } = ctx.params
-    const interfaceId = parseInt(id)
+    const interface_id = parseInt(id)
 
-    if (!interfaceId || isNaN(interfaceId)) {
+    if (!interface_id || isNaN(interface_id)) {
       throw new BadRequestError('接口ID无效')
     }
 
-    const result = await interfaceService.deleteInterface(interfaceId)
+    const result = await interfaceService.deleteInterface(interface_id)
     ctx.success(null, result.message)
   })
 

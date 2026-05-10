@@ -25,6 +25,9 @@ const uploadRoutes = require('../modules/upload/routes')
 // 健康检查路由（不需要 API 前缀，直接挂载到根路径）
 const healthRoutes = require('../modules/health/routes')
 
+// 验证码路由
+const captchaRoutes = require('../modules/captcha/routes')
+
 const config = require('../config')
 
 const router = new Router({ prefix: config.api.prefix })
@@ -59,6 +62,9 @@ router.use(uploadRoutes.routes(), uploadRoutes.allowedMethods())
 
 // 健康检查路由（不需要 API 前缀，直接挂载到根路径）
 router.use(healthRoutes.routes(), healthRoutes.allowedMethods())
+
+// 验证码路由
+router.use(captchaRoutes.routes(), captchaRoutes.allowedMethods())
 
 /**
  * @swagger

@@ -13,33 +13,30 @@ class RoleController {
    */
   listRoles = asyncHandler(async (ctx) => {
     const params = {
-      page: parseInt(ctx.query.page) || 1,
-      limit: parseInt(ctx.query.pageSize) || 10,
-      keyword: ctx.query.keyword,
+      page_num: parseInt(ctx.query.page_num) || 1,
+      page_size: parseInt(ctx.query.page_size) || 10,
+      role_name: ctx.query.role_name,
+      role_key: ctx.query.role_key,
+      status: ctx.query.status,
     }
 
     const result = await roleService.listRoles(params)
 
     // 使用统一的分页响应方法
-    ctx.pageSuccess(
-      result.data,
-      result.total,
-      result.page,
-      result.limit
-    )
+    ctx.pageSuccess(result.data, result.total, result.page_num, result.page_size)
   })
 
   /**
    * 获取角色详情
    */
   getRoleDetail = asyncHandler(async (ctx) => {
-    const { roleId } = ctx.params
+    const { role_id } = ctx.params
 
-    if (!roleId) {
-      throw new BadRequestError('缺少 roleId 参数')
+    if (!role_id) {
+      throw new BadRequestError('缺少 role_id 参数')
     }
 
-    const result = await roleService.getRoleDetail(roleId)
+    const result = await roleService.getRoleDetail(role_id)
     ctx.success(result.data)
   })
 
@@ -67,14 +64,14 @@ class RoleController {
    * 更新角色
    */
   updateRole = asyncHandler(async (ctx) => {
-    const { roleId } = ctx.params
+    const { role_id } = ctx.params
     const updates = ctx.request.body
 
-    if (!roleId) {
-      throw new BadRequestError('缺少 roleId 参数')
+    if (!role_id) {
+      throw new BadRequestError('缺少 role_id 参数')
     }
 
-    const result = await roleService.updateRole(roleId, updates)
+    const result = await roleService.updateRole(role_id, updates)
     ctx.success(result.data, result.message)
   })
 
@@ -82,14 +79,14 @@ class RoleController {
    * 更新角色状态
    */
   updateRoleStatus = asyncHandler(async (ctx) => {
-    const { roleId } = ctx.params
+    const { role_id } = ctx.params
     const { status } = ctx.request.body
 
-    if (!roleId || !status) {
-      throw new BadRequestError('缺少 roleId 或 status 参数')
+    if (!role_id || !status) {
+      throw new BadRequestError('缺少 role_id 或 status 参数')
     }
 
-    const result = await roleService.updateRoleStatus(roleId, status)
+    const result = await roleService.updateRoleStatus(role_id, status)
     ctx.success(result.data, result.message)
   })
 
@@ -97,13 +94,27 @@ class RoleController {
    * 删除角色
    */
   deleteRole = asyncHandler(async (ctx) => {
-    const { roleId } = ctx.params
+    const { role_id } = ctx.params
 
-    if (!roleId) {
-      throw new BadRequestError('缺少 roleId 参数')
+    if (!role_id) {
+      throw new BadRequestError('缺少 role_id 参数')
     }
 
-    const result = await roleService.deleteRole(roleId)
+    const result = await roleService.deleteRole(role_id)
+    ctx.success(null, result.message)
+  })
+
+  /**
+   * 批量删除角色
+   */
+  batchDeleteRoles = asyncHandler(async (ctx) => {
+    const { role_ids } = ctx.request.body
+
+    if (!role_ids || !Array.isArray(role_ids) || role_ids.length === 0) {
+      throw new BadRequestError('缺少 role_ids 参数或参数格式错误')
+    }
+
+    const result = await roleService.batchDeleteRoles(role_ids)
     ctx.success(null, result.message)
   })
 
@@ -111,14 +122,14 @@ class RoleController {
    * 为角色分配单个权限
    */
   assignPermission = asyncHandler(async (ctx) => {
-    const { roleId } = ctx.params
+    const { role_id } = ctx.params
     const { permissionId } = ctx.request.body
 
-    if (!roleId || !permissionId) {
-      throw new BadRequestError('缺少 roleId 或 permissionId 参数')
+    if (!role_id || !permissionId) {
+      throw new BadRequestError('缺少 role_id 或 permissionId 参数')
     }
 
-    const result = await roleService.assignPermission(roleId, permissionId)
+    const result = await roleService.assignPermission(role_id, permissionId)
     ctx.success(result.data, result.message)
   })
 
@@ -126,14 +137,14 @@ class RoleController {
    * 批量为角色分配权限
    */
   assignPermissions = asyncHandler(async (ctx) => {
-    const { roleId } = ctx.params
+    const { role_id } = ctx.params
     const { permissionIds } = ctx.request.body
 
-    if (!roleId || !permissionIds) {
-      throw new BadRequestError('缺少 roleId 或 permissionIds 参数')
+    if (!role_id || !permissionIds) {
+      throw new BadRequestError('缺少 role_id 或 permissionIds 参数')
     }
 
-    const result = await roleService.assignPermissions(roleId, permissionIds)
+    const result = await roleService.assignPermissions(role_id, permissionIds)
     ctx.success(result.data, result.message)
   })
 
@@ -141,13 +152,13 @@ class RoleController {
    * 移除角色权限
    */
   removePermission = asyncHandler(async (ctx) => {
-    const { roleId, permissionId } = ctx.params
+    const { role_id, permissionId } = ctx.params
 
-    if (!roleId || !permissionId) {
-      throw new BadRequestError('缺少 roleId 或 permissionId 参数')
+    if (!role_id || !permissionId) {
+      throw new BadRequestError('缺少 role_id 或 permissionId 参数')
     }
 
-    const result = await roleService.removePermission(roleId, permissionId)
+    const result = await roleService.removePermission(role_id, permissionId)
     ctx.success(null, result.message)
   })
 
@@ -155,13 +166,13 @@ class RoleController {
    * 获取角色的所有权限
    */
   getRolePermissions = asyncHandler(async (ctx) => {
-    const { roleId } = ctx.params
+    const { role_id } = ctx.params
 
-    if (!roleId) {
-      throw new BadRequestError('缺少 roleId 参数')
+    if (!role_id) {
+      throw new BadRequestError('缺少 role_id 参数')
     }
 
-    const result = await roleService.getRolePermissions(roleId)
+    const result = await roleService.getRolePermissions(role_id)
     ctx.success(result.data)
   })
 
@@ -169,38 +180,33 @@ class RoleController {
    * 获取角色的所有用户
    */
   getRoleUsers = asyncHandler(async (ctx) => {
-    const { roleId } = ctx.params
+    const { role_id } = ctx.params
     const params = {
-      page: parseInt(ctx.query.page) || 1,
-      limit: parseInt(ctx.query.pageSize) || 10,
+      page_num: parseInt(ctx.query.page_num) || 1,
+      page_size: parseInt(ctx.query.page_size) || 10,
     }
 
-    if (!roleId) {
-      throw new BadRequestError('缺少 roleId 参数')
+    if (!role_id) {
+      throw new BadRequestError('缺少 role_id 参数')
     }
 
-    const result = await roleService.getRoleUsers(roleId, params)
+    const result = await roleService.getRoleUsers(role_id, params)
 
     // 使用统一的分页响应方法
-    ctx.pageSuccess(
-      result.data,
-      result.total,
-      result.page,
-      result.limit
-    )
+    ctx.pageSuccess(result.data, result.total, result.page_num, result.page_size)
   })
 
   /**
    * 获取角色的菜单权限 ID 列表
    */
-  getRoleMenuIds = asyncHandler(async (ctx) => {
-    const { roleId } = ctx.params
+  getRolemenu_ids = asyncHandler(async (ctx) => {
+    const { role_id } = ctx.params
 
-    if (!roleId) {
-      throw new BadRequestError('缺少 roleId 参数')
+    if (!role_id) {
+      throw new BadRequestError('缺少 role_id 参数')
     }
 
-    const result = await roleService.getRoleMenuIds(roleId)
+    const result = await roleService.getRolemenu_ids(role_id)
     ctx.success(result.data)
   })
 
@@ -208,18 +214,51 @@ class RoleController {
    * 保存角色的菜单权限（覆盖更新）
    */
   saveRoleMenus = asyncHandler(async (ctx) => {
-    const { roleId } = ctx.params
-    const { menuIds } = ctx.request.body
+    const { role_id } = ctx.params
+    const { menu_ids } = ctx.request.body
 
-    if (!roleId) {
-      throw new BadRequestError('缺少 roleId 参数')
+    if (!role_id) {
+      throw new BadRequestError('缺少 role_id 参数')
     }
 
-    if (!Array.isArray(menuIds)) {
-      throw new BadRequestError('menuIds 必须为数组')
+    if (!Array.isArray(menu_ids)) {
+      throw new BadRequestError('menu_ids 必须为数组')
     }
 
-    const result = await roleService.saveRoleMenus(roleId, menuIds)
+    const result = await roleService.saveRoleMenus(role_id, menu_ids)
+    ctx.success(null, result.message)
+  })
+
+  /**
+   * 获取角色的接口权限路径列表
+   */
+  getRoleApiPaths = asyncHandler(async (ctx) => {
+    const { role_id } = ctx.params
+
+    if (!role_id) {
+      throw new BadRequestError('缺少 role_id 参数')
+    }
+
+    const result = await roleService.getRoleApiPaths(role_id)
+    ctx.success(result.data)
+  })
+
+  /**
+   * 保存角色的接口权限（覆盖更新）
+   */
+  saveRoleApis = asyncHandler(async (ctx) => {
+    const { role_id } = ctx.params
+    const { api_paths } = ctx.request.body
+
+    if (!role_id) {
+      throw new BadRequestError('缺少 role_id 参数')
+    }
+
+    if (!Array.isArray(api_paths)) {
+      throw new BadRequestError('api_paths 必须为数组')
+    }
+
+    const result = await roleService.saveRoleApis(role_id, api_paths)
     ctx.success(null, result.message)
   })
 }

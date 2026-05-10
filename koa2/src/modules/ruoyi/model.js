@@ -17,7 +17,7 @@ class UserModel {
    */
   async list(params = {}) {
     const { userName, nickName, status, deptId } = params
-    
+
     let query = `
       SELECT 
         user_id, user_name, nick_name, user_type, email, phonenumber,
@@ -49,12 +49,13 @@ class UserModel {
     query += ` ORDER BY user_id ASC`
 
     const result = await pool.query(query, values)
-    return toCamelCaseArray(result.rows)
+    // ✅ 直接返回数据库原始字段（下划线格式）
+    return result.rows
   }
 
   /**
    * 根据ID获取用户详情
-   * @param {number} user_id 
+   * @param {number} user_id
    * @returns {Promise<Object|null>}
    */
   async getById(user_id) {
@@ -72,7 +73,7 @@ class UserModel {
 
   /**
    * 根据用户名获取用户（用于登录）
-   * @param {string} userName 
+   * @param {string} userName
    * @returns {Promise<Object|null>}
    */
   async getByUserName(userName) {
@@ -88,7 +89,7 @@ class UserModel {
 
   /**
    * 创建用户
-   * @param {Object} userData 
+   * @param {Object} userData
    * @returns {Promise<Object>}
    */
   async create(userData) {
@@ -118,8 +119,8 @@ class UserModel {
 
   /**
    * 更新用户
-   * @param {number} user_id 
-   * @param {Object} updates 
+   * @param {number} user_id
+   * @param {Object} updates
    * @returns {Promise<Object|null>}
    */
   async update(user_id, updates) {
@@ -156,14 +157,15 @@ class UserModel {
       WHERE user_id = $${idx}
       RETURNING *
     `
-    
+
     const result = await pool.query(query, values)
-    return toCamelCase(result.rows[0]) || null
+    // ✅ 直接返回数据库原始字段（下划线格式）
+    return result.rows[0] || null
   }
 
   /**
    * 删除用户（软删除）
-   * @param {number} user_id 
+   * @param {number} user_id
    * @returns {Promise<boolean>}
    */
   async delete(user_id) {
@@ -178,8 +180,8 @@ class UserModel {
 
   /**
    * 重置密码
-   * @param {number} user_id 
-   * @param {string} newPassword 
+   * @param {number} user_id
+   * @param {string} newPassword
    * @returns {Promise<boolean>}
    */
   async resetPassword(user_id, newPassword) {
@@ -199,12 +201,12 @@ class UserModel {
 class RoleModel {
   /**
    * 获取角色列表
-   * @param {Object} params 
+   * @param {Object} params
    * @returns {Promise<Array>}
    */
   async list(params = {}) {
     const { roleName, roleKey, status } = params
-    
+
     let query = `
       SELECT 
         role_id, role_name, role_key, role_sort, data_scope,
@@ -232,26 +234,28 @@ class RoleModel {
     query += ` ORDER BY role_sort ASC, role_id ASC`
 
     const result = await pool.query(query, values)
-    return toCamelCaseArray(result.rows)
+    // ✅ 直接返回数据库原始字段（下划线格式）
+    return result.rows
   }
 
   /**
    * 根据ID获取角色详情
-   * @param {number} roleId 
+   * @param {number} role_id
    * @returns {Promise<Object|null>}
    */
-  async getById(roleId) {
+  async getById(role_id) {
     const query = `
       SELECT * FROM sys_role
       WHERE role_id = $1 AND del_flag = '0'
     `
-    const result = await pool.query(query, [roleId])
-    return toCamelCase(result.rows[0]) || null
+    const result = await pool.query(query, [role_id])
+    // ✅ 直接返回数据库原始字段（下划线格式）
+    return result.rows[0] || null
   }
 
   /**
    * 创建角色
-   * @param {Object} roleData 
+   * @param {Object} roleData
    * @returns {Promise<Object>}
    */
   async create(roleData) {
@@ -263,88 +267,90 @@ class RoleModel {
       ) RETURNING *
     `
     const result = await pool.query(query, [
-      roleData.roleName,
-      roleData.roleKey,
-      roleData.roleSort || 0,
-      roleData.dataScope || '1',
+      roleData.role_name,
+      roleData.role_key,
+      roleData.role_sort || 0,
+      roleData.data_scope || '1',
       roleData.status || '0',
-      roleData.createBy || '',
+      roleData.create_by || '',
       roleData.remark || '',
     ])
-    return toCamelCase(result.rows[0])
+    // ✅ 直接返回数据库原始字段（下划线格式）
+    return result.rows[0]
   }
 
   /**
    * 更新角色
-   * @param {number} roleId 
-   * @param {Object} updates 
+   * @param {number} role_id
+   * @param {Object} updates
    * @returns {Promise<Object|null>}
    */
-  async update(roleId, updates) {
+  async update(role_id, updates) {
     const fields = []
     const values = []
     let idx = 1
 
     const fieldMap = {
-      roleName: 'role_name',
-      roleKey: 'role_key',
-      roleSort: 'role_sort',
-      dataScope: 'data_scope',
+      role_name: 'role_name',
+      role_key: 'role_key',
+      role_sort: 'role_sort',
+      data_scope: 'data_scope',
       status: 'status',
       remark: 'remark',
-      updateBy: 'update_by',
+      update_by: 'update_by',
     }
 
-    for (const [camelKey, dbKey] of Object.entries(fieldMap)) {
-      if (updates[camelKey] !== undefined) {
+    for (const [dbKey, _] of Object.entries(fieldMap)) {
+      if (updates[dbKey] !== undefined) {
         fields.push(`${dbKey} = $${idx++}`)
-        values.push(updates[camelKey])
+        values.push(updates[dbKey])
       }
     }
 
     if (fields.length === 0) {
-      return await this.getById(roleId)
+      return await this.getById(role_id)
     }
 
-    values.push(roleId)
+    values.push(role_id)
     const query = `
       UPDATE sys_role 
       SET ${fields.join(', ')}
       WHERE role_id = $${idx}
       RETURNING *
     `
-    
+
     const result = await pool.query(query, values)
-    return toCamelCase(result.rows[0]) || null
+    // ✅ 直接返回数据库原始字段（下划线格式）
+    return result.rows[0] || null
   }
 
   /**
    * 删除角色（软删除）
-   * @param {number} roleId 
+   * @param {number} role_id
    * @returns {Promise<boolean>}
    */
-  async delete(roleId) {
+  async delete(role_id) {
     const query = `
       UPDATE sys_role 
       SET del_flag = '2', update_time = NOW()
       WHERE role_id = $1
     `
-    const result = await pool.query(query, [roleId])
+    const result = await pool.query(query, [role_id])
     return result.rowCount > 0
   }
 
   /**
    * 检查角色是否被用户使用
-   * @param {number} roleId 
+   * @param {number} role_id
    * @returns {Promise<number>} 使用该角色的用户数量
    */
-  async countUsersByRole(roleId) {
+  async countUsersByRole(role_id) {
     const query = `
       SELECT COUNT(*) as count
       FROM sys_user_role
       WHERE role_id = $1
     `
-    const result = await pool.query(query, [roleId])
+    const result = await pool.query(query, [role_id])
     return parseInt(result.rows[0].count)
   }
 }
@@ -355,29 +361,26 @@ class RoleModel {
 class UserRoleModel {
   /**
    * 为用户分配角色（事务操作）
-   * @param {number} user_id 
-   * @param {number[]} roleIds 
+   * @param {number} user_id
+   * @param {number[]} role_ids
    * @returns {Promise<boolean>}
    */
-  async assignRoles(user_id, roleIds) {
+  async assignRoles(user_id, role_ids) {
     const client = await pool.connect()
-    
+
     try {
       await client.query('BEGIN')
-      
+
       // 删除用户现有的所有角色
       await client.query('DELETE FROM sys_user_role WHERE user_id = $1', [user_id])
-      
+
       // 插入新的角色关联
-      if (roleIds && roleIds.length > 0) {
-        const values = roleIds.map((roleId, idx) => `($1, $${idx + 2})`).join(',')
-        const params = [user_id, ...roleIds]
-        await client.query(
-          `INSERT INTO sys_user_role (user_id, role_id) VALUES ${values}`,
-          params
-        )
+      if (role_ids && role_ids.length > 0) {
+        const values = role_ids.map((role_id, idx) => `($1, $${idx + 2})`).join(',')
+        const params = [user_id, ...role_ids]
+        await client.query(`INSERT INTO sys_user_role (user_id, role_id) VALUES ${values}`, params)
       }
-      
+
       await client.query('COMMIT')
       return true
     } catch (error) {
@@ -390,7 +393,7 @@ class UserRoleModel {
 
   /**
    * 获取用户的角色列表
-   * @param {number} user_id 
+   * @param {number} user_id
    * @returns {Promise<Array>}
    */
   async getUserRoles(user_id) {
@@ -404,7 +407,8 @@ class UserRoleModel {
       ORDER BY r.role_sort ASC
     `
     const result = await pool.query(query, [user_id])
-    return toCamelCaseArray(result.rows)
+    // ✅ 直接返回数据库原始字段（下划线格式）
+    return result.rows
   }
 }
 
@@ -414,29 +418,26 @@ class UserRoleModel {
 class RoleMenuModel {
   /**
    * 为角色分配菜单权限（事务操作）
-   * @param {number} roleId 
-   * @param {number[]} menuIds 
+   * @param {number} role_id
+   * @param {number[]} menu_ids
    * @returns {Promise<boolean>}
    */
-  async assignMenus(roleId, menuIds) {
+  async assignMenus(role_id, menu_ids) {
     const client = await pool.connect()
-    
+
     try {
       await client.query('BEGIN')
-      
+
       // 删除角色现有的所有菜单权限
-      await client.query('DELETE FROM sys_role_menu WHERE role_id = $1', [roleId])
-      
+      await client.query('DELETE FROM sys_role_menu WHERE role_id = $1', [role_id])
+
       // 插入新的菜单权限关联
-      if (menuIds && menuIds.length > 0) {
-        const values = menuIds.map((menuId, idx) => `($1, $${idx + 2})`).join(',')
-        const params = [roleId, ...menuIds]
-        await client.query(
-          `INSERT INTO sys_role_menu (role_id, menu_id) VALUES ${values}`,
-          params
-        )
+      if (menu_ids && menu_ids.length > 0) {
+        const values = menu_ids.map((menu_id, idx) => `($1, $${idx + 2})`).join(',')
+        const params = [role_id, ...menu_ids]
+        await client.query(`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ${values}`, params)
       }
-      
+
       await client.query('COMMIT')
       return true
     } catch (error) {
@@ -449,19 +450,49 @@ class RoleMenuModel {
 
   /**
    * 获取角色的菜单ID列表
-   * @param {number} roleId 
+   * @param {number} role_id
    * @returns {Promise<number[]>}
    */
-  async getRoleMenuIds(roleId) {
+  async getRolemenu_ids(role_id) {
     const query = `
       SELECT menu_id
       FROM sys_role_menu
       WHERE role_id = $1
       ORDER BY menu_id ASC
     `
-    const result = await pool.query(query, [roleId])
-    return result.rows.map(row => row.menu_id)
+    const result = await pool.query(query, [role_id])
+    return result.rows.map((row) => row.menu_id)
   }
+}
+
+// =====================================================
+// 字段转换工具函数（已废弃，保留仅用于兼容）
+// 注意：系统已全面使用 snake_case，不再进行字段转换
+// =====================================================
+
+/**
+ * 将下划线命名转换为驼峰命名（已废弃）
+ * @deprecated 系统已统一使用 snake_case
+ */
+function toCamelCase(obj) {
+  if (!obj || typeof obj !== 'object') return obj
+  const result = {}
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      const camelKey = key.replace(/_([a-z])/g, (match, letter) => letter.toUpperCase())
+      result[camelKey] = obj[key]
+    }
+  }
+  return result
+}
+
+/**
+ * 将数组中的对象从下划线命名转换为驼峰命名（已废弃）
+ * @deprecated 系统已统一使用 snake_case
+ */
+function toCamelCaseArray(arr) {
+  if (!Array.isArray(arr)) return arr
+  return arr.map((item) => toCamelCase(item))
 }
 
 // =====================================================

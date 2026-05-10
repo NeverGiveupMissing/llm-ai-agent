@@ -25,17 +25,12 @@ async function executeSQL(ctx) {
     }
 
     // 获取用户信息
-    const user_id = ctx.state.user_id  // ✅ 使用 ctx.state.user_id
-    const user_name = ctx.state.user_name  // ✅ 使用 ctx.state.user_name
+    const user_id = ctx.state.user_id // ✅ 使用 ctx.state.user_id
+    const user_name = ctx.state.user_name // ✅ 使用 ctx.state.user_name
     const ipAddress = ctx.ip || ctx.request.ip
 
     // 执行 SQL（包含安全检查和日志记录）
-    const result = await databaseService.executeSQL(
-      sql.trim(),
-      user_id,
-      user_name,
-      ipAddress
-    )
+    const result = await databaseService.executeSQL(sql.trim(), user_id, user_name, ipAddress)
 
     // 返回结果
     ctx.body = { code: 200, message: 'success', data: result }
@@ -53,8 +48,8 @@ async function executeSQL(ctx) {
 async function exportDatabase(ctx) {
   try {
     // 获取用户信息
-    const user_id = ctx.state.user_id  // ✅ 使用 ctx.state.user_id
-    const user_name = ctx.state.user_name  // ✅ 使用 ctx.state.user_name
+    const user_id = ctx.state.user_id // ✅ 使用 ctx.state.user_id
+    const user_name = ctx.state.user_name // ✅ 使用 ctx.state.user_name
     const ipAddress = ctx.ip || ctx.request.ip
 
     // 执行导出
@@ -118,8 +113,8 @@ async function importDatabase(ctx) {
     }
 
     // 获取用户信息
-    const user_id = ctx.state.user_id  // ✅ 使用 ctx.state.user_id
-    const user_name = ctx.state.user_name  // ✅ 使用 ctx.state.user_name
+    const user_id = ctx.state.user_id // ✅ 使用 ctx.state.user_id
+    const user_name = ctx.state.user_name // ✅ 使用 ctx.state.user_name
     const ipAddress = ctx.ip || ctx.request.ip
 
     // 执行导入
@@ -128,7 +123,7 @@ async function importDatabase(ctx) {
       file.originalname,
       user_id,
       user_name,
-      ipAddress
+      ipAddress,
     )
 
     ctx.body = { code: 200, message: result.message, data: result }
@@ -161,7 +156,7 @@ async function getTableList(ctx) {
 async function getTableStructure(ctx) {
   try {
     const { name } = ctx.params
-    
+
     if (!name) {
       ctx.status = 400
       ctx.body = { code: 400, message: '表名不能为空', data: null }
@@ -184,7 +179,7 @@ async function getTableStructure(ctx) {
 async function getTableDetail(ctx) {
   try {
     const { name } = ctx.params
-    
+
     if (!name) {
       ctx.status = 400
       ctx.body = { code: 400, message: '表名不能为空', data: null }
@@ -207,20 +202,20 @@ async function getTableDetail(ctx) {
 async function getTableData(ctx) {
   try {
     const { name } = ctx.params
-    const { page = 1, pageSize = 50 } = ctx.query
+    const { page = 1, page_size = 50 } = ctx.query
 
     if (!name) {
-      ctx.status = 400
-      ctx.body = { code: 400, message: '表名不能为空', data: null }
+      ctx.fail('表名不能为空', 400)
       return
     }
 
-    const data = await databaseService.getTableData(name, parseInt(page), parseInt(pageSize))
-    ctx.body = { code: 200, message: 'success', data }
+    const data = await databaseService.getTableData(name, parseInt(page), parseInt(page_size))
+    
+    // ✅ 使用统一响应格式
+    ctx.success(data)
   } catch (err) {
     console.error('获取表数据失败:', err)
-    ctx.status = 500
-    ctx.body = { code: 500, message: err.message || '获取表数据失败', data: null }
+    ctx.fail(err.message || '获取表数据失败', 500)
   }
 }
 
@@ -283,4 +278,3 @@ module.exports = {
   updateTableRow,
   deleteTableRow,
 }
-

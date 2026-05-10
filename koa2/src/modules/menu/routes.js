@@ -135,7 +135,7 @@ router.post('/', authMiddleware(), requirePermission('system:menu:add'), menuCon
 
 /**
  * @swagger
- * /menus/{menuId}:
+ * /menus/{menu_id}:
  *   get:
  *     tags: [菜单管理]
  *     summary: 获取菜单详情
@@ -143,7 +143,7 @@ router.post('/', authMiddleware(), requirePermission('system:menu:add'), menuCon
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: menuId
+ *         name: menu_id
  *         required: true
  *         schema:
  *           type: integer
@@ -151,11 +151,16 @@ router.post('/', authMiddleware(), requirePermission('system:menu:add'), menuCon
  *       200:
  *         description: 获取成功
  */
-router.get('/:menuId', authMiddleware(), requirePermission('system:menu:query'), menuController.getMenuDetail.bind(menuController))
+router.get(
+  '/:menu_id',
+  authMiddleware(),
+  requirePermission('system:menu:query'),
+  menuController.getMenuDetail.bind(menuController),
+)
 
 /**
  * @swagger
- * /menus/{menuId}:
+ * /menus/{menu_id}:
  *   put:
  *     tags: [菜单管理]
  *     summary: 更新菜单
@@ -163,7 +168,7 @@ router.get('/:menuId', authMiddleware(), requirePermission('system:menu:query'),
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: menuId
+ *         name: menu_id
  *         required: true
  *         schema:
  *           type: integer
@@ -206,11 +211,16 @@ router.get('/:menuId', authMiddleware(), requirePermission('system:menu:query'),
  *       200:
  *         description: 更新成功
  */
-router.put('/:menuId', authMiddleware(), requirePermission('system:menu:edit'), menuController.updateMenu.bind(menuController))
+router.put(
+  '/:menu_id',
+  authMiddleware(),
+  requirePermission('system:menu:edit'),
+  menuController.updateMenu.bind(menuController),
+)
 
 /**
  * @swagger
- * /menus/{menuId}:
+ * /menus/{menu_id}:
  *   delete:
  *     tags: [菜单管理]
  *     summary: 删除菜单
@@ -218,7 +228,7 @@ router.put('/:menuId', authMiddleware(), requirePermission('system:menu:edit'), 
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: menuId
+ *         name: menu_id
  *         required: true
  *         schema:
  *           type: integer
@@ -226,6 +236,11 @@ router.put('/:menuId', authMiddleware(), requirePermission('system:menu:edit'), 
  *       200:
  *         description: 删除成功
  */
-router.delete('/:menuId', authMiddleware(), requirePermission('system:menu:remove'), menuController.deleteMenu.bind(menuController))
+router.delete(
+  '/:menu_id',
+  authMiddleware(),
+  requirePermission('system:menu:remove'),
+  menuController.deleteMenu.bind(menuController),
+)
 
 module.exports = router

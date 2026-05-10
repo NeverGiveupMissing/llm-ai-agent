@@ -2,8 +2,12 @@
 
 const Router = require('@koa/router')
 const sessionController = require('./controller')
+const { authMiddleware } = require('../../middlewares/auth.middleware')
 
 const router = new Router({ prefix: '/sessions' })
+
+// 所有会话接口都需要认证
+router.use(authMiddleware())
 
 /**
  * @swagger

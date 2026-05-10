@@ -146,10 +146,10 @@ router.put(
 
 /**
  * 移除用户角色（需要 user:update 权限）
- * ⚠️ 必须放在 /:user_id/:roleId 之前
+ * ⚠️ 必须放在 /:user_id/:role_id 之前
  */
 router.delete(
-  '/:user_id/roles/:roleId',
+  '/:user_id/roles/:role_id',
   authMiddleware(),
   requirePermission('user:update'),
   userController.removeRole,

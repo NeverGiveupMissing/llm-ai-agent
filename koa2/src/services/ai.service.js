@@ -140,11 +140,27 @@ async function* callAiStream(messages) {
         return
       }
       
+      // ⚠️ 401 错误是认证失败
+      if (error.response?.status === 401 || error.message.includes('401')) {
+        console.error(' AI API 调用失败 (401):', error.message)
+        yield '❌ AI 服务认证失败，请检查 API Key 是否有效'
+        return
+      }
+      
       if (attempt < maxRetries - 1) {
-        yield '⚠️ 网络错误，重试中...\n'
+        yield '⚠️ 请求失败，重试中...\n'
         await new Promise((resolve) => setTimeout(resolve, retryDelay))
       } else {
-        yield `❌ 请求失败: ${error.message}`
+        // 根据错误类型显示不同提示
+        if (error.response?.status) {
+          yield `❌ 请求失败 (${error.response.status}): 服务器返回错误`
+        } else if (error.code === 'ECONNREFUSED') {
+          yield '❌ 连接失败: 无法连接到 AI 服务，请检查网络或稍后重试'
+        } else if (error.code === 'ETIMEDOUT' || error.message.includes('timeout')) {
+          yield '❌ 请求超时: AI 服务响应超时，请稍后重试'
+        } else {
+          yield `❌ 请求失败: ${error.message}`
+        }
         return
       }
     }

@@ -4,7 +4,7 @@
 
 /**
  * @typedef {Object} SysMenu
- * @property {number} menuId - 菜单ID
+ * @property {number} menu_id- 菜单ID
  * @property {string} menuName - 菜单名称
  * @property {number} parentId - 父菜单ID
  * @property {number} orderNum - 显示顺序
@@ -101,27 +101,27 @@ class MenuModel {
     query += ` ORDER BY parent_id ASC, order_num ASC`
 
     const result = await pool.query(query, values)
-    // ✅ 返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
+    // ✅ 返回数据库原始字段（下划线格式）
     return result.rows
   }
 
   /**
    * 根据ID查询菜单详情
-   * @param {number} menuId - 菜单ID
+   * @param {number} menu_id- 菜单ID
    * @returns {Promise<SysMenu|null>}
    */
-  async getById(menuId) {
+  async getById(menu_id) {
     const query = `
       SELECT * FROM sys_menu WHERE menu_id = $1
     `
-    const result = await pool.query(query, [menuId])
-    // ✅ 返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
+    const result = await pool.query(query, [menu_id])
+    // ✅ 返回数据库原始字段（下划线格式）
     return result.rows[0] || null
   }
 
   /**
    * 创建菜单
-   * @param {Object} menuData - 菜单数据（下划线格式，由中间件自动转换）
+   * @param {Object} menuData - 菜单数据（下划线格式）
    * @param {string} menuData.menu_name - 菜单名称
    * @param {number} menuData.parent_id - 父菜单ID
    * @param {number} menuData.order_num - 显示顺序
@@ -137,7 +137,7 @@ class MenuModel {
    * @param {string} menuData.perms - 权限标识
    * @param {string} menuData.icon - 菜单图标
    * @param {string} menuData.remark - 备注
-   * @returns {Promise<SysMenu>} 创建的菜单对象（下划线格式，由中间件转换为驼峰）
+   * @returns {Promise<SysMenu>} 创建的菜单对象（下划线格式）
    */
   async create(menuData) {
     const query = `
@@ -170,8 +170,8 @@ class MenuModel {
 
   /**
    * 更新菜单
-   * @param {number} menuId - 菜单ID
-   * @param {Object} updates - 更新数据（下划线格式，由中间件自动转换）
+   * @param {number} menu_id- 菜单ID
+   * @param {Object} updates - 更新数据（下划线格式）
    * @param {string} updates.menu_name - 菜单名称
    * @param {number} updates.parent_id - 父菜单ID
    * @param {number} updates.order_num - 显示顺序
@@ -187,14 +187,14 @@ class MenuModel {
    * @param {string} updates.perms - 权限标识
    * @param {string} updates.icon - 菜单图标
    * @param {string} updates.remark - 备注
-   * @returns {Promise<SysMenu|null>} 更新后的菜单对象（下划线格式，由中间件转换为驼峰）
+   * @returns {Promise<SysMenu|null>} 更新后的菜单对象（下划线格式）
    */
-  async update(menuId, updates) {
+  async update(menu_id, updates) {
     const fields = []
     const values = []
     let idx = 1
 
-    // 直接使用下划线字段名（中间件已自动转换）
+    // 直接使用下划线字段名
     const dbFields = [
       'menu_name',
       'parent_id',
@@ -221,11 +221,11 @@ class MenuModel {
     }
 
     if (fields.length === 0) {
-      return await this.getById(menuId)
+      return await this.getById(menu_id)
     }
 
     fields.push(`update_time = NOW()`)
-    values.push(menuId)
+    values.push(menu_id)
 
     const query = `
       UPDATE sys_menu
@@ -241,9 +241,9 @@ class MenuModel {
   /**
    * 删除菜单
    */
-  async delete(menuId) {
+  async delete(menu_id) {
     // 检查是否有子菜单
-    const childCount = await this.countChildren(menuId)
+    const childCount = await this.countChildren(menu_id)
     if (childCount > 0) {
       throw new Error('存在子菜单，不允许删除')
     }
@@ -251,7 +251,7 @@ class MenuModel {
     const query = `
       DELETE FROM sys_menu WHERE menu_id = $1 RETURNING menu_id
     `
-    const result = await pool.query(query, [menuId])
+    const result = await pool.query(query, [menu_id])
     return result.rows.length > 0
   }
 
@@ -268,11 +268,10 @@ class MenuModel {
 
   /**
    * 将平铺列表转换为树形结构
-   * ✅ 接收数据库原始字段（下划线格式），输出树形结构，经过 response-transformer 中间件后前端收到的是驼峰格式
    */
   buildTree(menus, parent_id = 0) {
     const tree = []
-    
+
     for (const menu of menus) {
       // ✅ 使用下划线字段名 parent_id（数据库原始字段）
       if (menu.parent_id == parent_id) {
@@ -292,13 +291,12 @@ class MenuModel {
    * 获取用户菜单树(根据权限过滤)
    * 从 sys_menu 表查询,通过若依风格的 sys_user_role 和 sys_role 表桥接
    * 注意: 所有表使用 BIGINT/BIGSERIAL 整型主键，废弃 UUID
-   * ✅ 返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
    * ✅ 包含按钮权限（menu_type='F'），用于前端权限校验
    */
   async getUserMenuTree(user_id) {
     console.log('\n🔍 [菜单查询] 开始查询用户菜单树')
     console.log('   用户ID:', user_id, '类型:', typeof user_id)
-    
+
     const query = `
       SELECT DISTINCT 
         m.menu_id,
@@ -327,14 +325,14 @@ class MenuModel {
         AND m.menu_type IN ('M', 'C', 'F')
       ORDER BY m.parent_id ASC, m.order_num ASC
     `
-    
+
     console.log('   执行SQL查询...')
     const result = await pool.query(query, [user_id])
-    // ✅ 返回数据库原始字段（下划线格式），经过 response-transformer 中间件后前端收到的是驼峰格式
+    // ✅ 返回数据库原始字段（下划线格式）
     const menus = result.rows
-    
+
     console.log('   查询结果:', menus.length, '个菜单')
-    
+
     if (menus.length === 0) {
       console.warn('   ⚠️  警告: 未找到任何菜单！')
       console.warn('   可能原因:')
@@ -342,7 +340,7 @@ class MenuModel {
       console.warn('     2. 用户的角色在 sys_role_menu 中没有菜单')
       console.warn('     3. 菜单状态不是 "0" (正常)')
       console.warn('     4. 菜单类型不是 "M" (目录) 或 "C" (菜单)')
-      
+
       // 诊断：检查用户的角色
       const userRolesQuery = `
         SELECT r.role_id, r.role_name, r.role_key
@@ -352,8 +350,13 @@ class MenuModel {
           AND r.del_flag = '0'
       `
       const userRoles = await pool.query(userRolesQuery, [user_id])
-      console.log('   用户角色:', userRoles.rows.length > 0 ? userRoles.rows.map(r => `${r.role_name}(${r.role_key}) [${r.role_id}]`).join(', ') : '无角色')
-      
+      console.log(
+        '   用户角色:',
+        userRoles.rows.length > 0
+          ? userRoles.rows.map((r) => `${r.role_name}(${r.role_key}) [${r.role_id}]`).join(', ')
+          : '无角色',
+      )
+
       // 诊断：检查每个角色的菜单数
       for (const role of userRoles.rows) {
         const roleMenuQuery = `
@@ -364,7 +367,7 @@ class MenuModel {
         const roleMenuResult = await pool.query(roleMenuQuery, [role.role_id])
         const menuCount = parseInt(roleMenuResult.rows[0].count)
         console.log(`   角色 "${role.role_name}" [${role.role_id}] 的菜单数: ${menuCount}`)
-        
+
         // 显示该角色的前5个菜单ID
         if (menuCount > 0) {
           const sampleMenusQuery = `
@@ -373,10 +376,13 @@ class MenuModel {
             LIMIT 5
           `
           const sampleMenus = await pool.query(sampleMenusQuery, [role.role_id])
-          console.log(`   角色 "${role.role_name}" 的前5个菜单ID:`, sampleMenus.rows.map(r => r.menu_id).join(', '))
+          console.log(
+            `   角色 "${role.role_name}" 的前5个菜单ID:`,
+            sampleMenus.rows.map((r) => r.menu_id).join(', '),
+          )
         }
       }
-      
+
       // 诊断：检查系统中的菜单总数
       const totalMenusQuery = `
         SELECT COUNT(*) as count
@@ -386,14 +392,20 @@ class MenuModel {
       const totalMenusResult = await pool.query(totalMenusQuery)
       console.log('   系统中可用的菜单总数:', totalMenusResult.rows[0].count)
     } else {
-      console.log('   前3个菜单:', menus.slice(0, 3).map(m => `${m.menu_name}(${m.menu_type}) [id:${m.menu_id}]`).join(', '))
+      console.log(
+        '   前3个菜单:',
+        menus
+          .slice(0, 3)
+          .map((m) => `${m.menu_name}(${m.menu_type}) [id:${m.menu_id}]`)
+          .join(', '),
+      )
     }
-    
-    // 构建树形结构（数据库字段为下划线格式，经过中间件转换后前端收到驼峰格式）
+
+    // 构建树形结构
     const tree = this.buildTree(menus)
     console.log('   构建后的菜单树:', tree.length, '个根节点')
     console.log('✅ [菜单查询] 查询完成\n')
-    
+
     return tree
   }
 

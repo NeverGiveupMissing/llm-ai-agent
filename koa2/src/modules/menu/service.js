@@ -24,11 +24,11 @@ class MenuService {
 
   /**
    * 获取菜单详情
-   * @param {number} menuId - 菜单ID
+   * @param {number} menu_id - 菜单ID
    * @returns {Promise<{success: boolean, data: SysMenu}>}
    */
-  async getMenuDetail(menuId) {
-    const menu = await menuModel.getById(menuId)
+  async getMenuDetail(menu_id) {
+    const menu = await menuModel.getById(menu_id)
     
     if (!menu) {
       throw new Error('菜单不存在')
@@ -71,28 +71,28 @@ class MenuService {
 
   /**
    * 更新菜单
-   * @param {number} menuId - 菜单ID
+   * @param {number} menu_id - 菜单ID
    * @param {Object} updates - 更新数据（下划线格式）
    * @returns {Promise<{success: boolean, data: SysMenu, message: string}>}
    */
-  async updateMenu(menuId, updates) {
-    const menu = await menuModel.getById(menuId)
+  async updateMenu(menu_id, updates) {
+    const menu = await menuModel.getById(menu_id)
     
     if (!menu) {
       throw new Error('菜单不存在')
     }
 
     // 不允许将菜单设置为自己的子菜单
-    if (updates.parent_id === parseInt(menuId)) {
+    if (updates.parent_id === parseInt(menu_id)) {
       throw new Error('不能将菜单设置为自己的子菜单')
     }
 
     // 检查是否会导致循环引用
     if (updates.parent_id && updates.parent_id !== 0) {
-      await this.checkCircularReference(menuId, updates.parent_id)
+      await this.checkCircularReference(menu_id, updates.parent_id)
     }
 
-    const updatedMenu = await menuModel.update(menuId, updates)
+    const updatedMenu = await menuModel.update(menu_id, updates)
 
     return {
       success: true,
@@ -103,18 +103,18 @@ class MenuService {
 
   /**
    * 删除菜单
-   * @param {number} menuId - 菜单ID
+   * @param {number} menu_id - 菜单ID
    * @returns {Promise<{success: boolean, message: string}>}
    */
-  async deleteMenu(menuId) {
-    const menu = await menuModel.getById(menuId)
+  async deleteMenu(menu_id) {
+    const menu = await menuModel.getById(menu_id)
     
     if (!menu) {
       throw new Error('菜单不存在')
     }
 
     try {
-      await menuModel.delete(menuId)
+      await menuModel.delete(menu_id)
       return {
         success: true,
         message: '菜单删除成功',
@@ -127,8 +127,8 @@ class MenuService {
   /**
    * 检查循环引用
    */
-  async checkCircularReference(menuId, parentId) {
-    // 如果parentId是menuId的子节点，则会产生循环引用
+  async checkCircularReference(menu_id, parentId) {
+    // 如果parentId是menu_id的子节点，则会产生循环引用
     const checkParent = async (currentId, targetId) => {
       if (currentId === targetId) {
         throw new Error('不能选择子菜单作为父菜单，否则会产生循环引用')
@@ -140,7 +140,7 @@ class MenuService {
       }
     }
 
-    await checkParent(parentId, parseInt(menuId))
+    await checkParent(parentId, parseInt(menu_id))
   }
 
   /**

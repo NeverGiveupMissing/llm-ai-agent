@@ -88,11 +88,11 @@ async function checkUserPermission(user_id, permission) {
       return false
     }
 
-    const roleIds = userRoles.map((role) => role.role_id)
+    const role_ids = userRoles.map((role) => role.role_id)
 
     // 2. 查询这些角色关联的菜单权限
     const menuModel = require('../modules/menu/model')
-    const menus = await menuModel.getMenusByRoleIds(roleIds)
+    const menus = await menuModel.getMenusByrole_ids(role_ids)
 
     if (!menus || menus.length === 0) {
       return false
