@@ -1,19 +1,25 @@
 // 说明：角色数据模型 - 管理角色的创建、查询、权限分配
 // 已迁移到若依（RuoYi）风格 sys_role 表
+// 表名：sys_role（角色信息表）
+//
+// 相关关联表：
+// - sys_user_role（用户和角色关联表）：user_id (bigint) + role_id (bigint)
+// - sys_role_menu（角色和菜单关联表）：role_id (bigint) + menu_id (bigint)
+// - sys_role_api（角色和接口权限关联表）：role_id (bigint) + api_path (varchar(255)) + api_method (varchar(10))
 
 const { pool } = require('../../config/db')
 
 class RoleModel {
   /**
    * 创建新角色
-   * @param {Object} roleData - 角色数据（驼峰格式）
-   * @param {string} roleData.roleName - 角色名称
-   * @param {string} roleData.roleKey - 角色标识
-   * @param {number} roleData.roleSort - 显示排序
-   * @param {string} roleData.dataScope - 数据权限范围
-   * @param {string} roleData.status - 状态（0正常 1停用）
-   * @param {string} roleData.createBy - 创建者
-   * @param {string} roleData.remark - 备注
+   * @param {Object} roleData - 角色数据（下划线格式）
+   * @param {string} roleData.roleName - 角色名称 (varchar(30), NOT NULL)
+   * @param {string} roleData.roleKey - 角色标识 (varchar(100), NOT NULL, UNIQUE)
+   * @param {number} roleData.roleSort - 显示排序 (integer, NOT NULL, DEFAULT 0)
+   * @param {string} roleData.dataScope - 数据权限范围 (character(1), DEFAULT '1')
+   * @param {string} roleData.status - 状态 (character(1), NOT NULL, DEFAULT '0', 0正常 1停用)
+   * @param {string} roleData.createBy - 创建者 (varchar(64), DEFAULT '')
+   * @param {string} roleData.remark - 备注 (varchar(500))
    */
   async create(roleData) {
     const query = `
@@ -70,7 +76,7 @@ class RoleModel {
 
   /**
    * 根据 ID 查询角色
-   * @param {number} role_id - 角色ID
+   * @param {number} role_id - 角色ID (SERIAL, PRIMARY KEY)
    * @returns {Object|null} 角色对象（下划线格式）
    */
   async getById(role_id) {
@@ -80,7 +86,7 @@ class RoleModel {
         menu_check_strictly, dept_check_strictly, status, del_flag,
         create_by, create_time, update_by, update_time, remark
       FROM sys_role
-      WHERE role_id = $1 AND del_flag = '0'
+      WHERE role_id = $1::int AND del_flag = '0'
     `
     const result = await pool.query(query, [role_id])
     // ✅ 返回数据库原始字段（下划线格式）
@@ -96,6 +102,18 @@ class RoleModel {
    * @param {string} params.role_key - 角色标识（模糊查询）
    * @param {string} params.status - 状态
    * @returns {Array} 角色列表（下划线格式）
+   * @property {number} role_id - 角色ID
+   * @property {string} role_name - 角色名称
+   * @property {string} role_key - 角色标识
+   * @property {number} role_sort - 显示排序
+   * @property {string} data_scope - 数据权限范围
+   * @property {number} menu_check_strictly - 菜单树选择项是否关联显示 (smallint, DEFAULT 1)
+   * @property {number} dept_check_strictly - 部门树选择项是否关联显示 (smallint, DEFAULT 1)
+   * @property {string} status - 状态 (0正常 1停用)
+   * @property {string} del_flag - 删除标志 (character(1), DEFAULT '0', 0正常 1删除)
+   * @property {Date} create_time - 创建时间
+   * @property {Date} update_time - 更新时间
+   * @property {string} remark - 备注
    */
   async list(params = {}) {
     const { page_num = 1, page_size = 20, role_name, role_key, status } = params
@@ -172,13 +190,13 @@ class RoleModel {
    * 更新角色信息
    * @param {number} role_id - 角色ID
    * @param {Object} updates - 更新数据（下划线格式）
-   * @param {string} updates.role_name - 角色名称
-   * @param {string} updates.role_key - 角色标识
-   * @param {number} updates.role_sort - 显示排序
-   * @param {string} updates.data_scope - 数据权限范围
-   * @param {string} updates.status - 状态
-   * @param {string} updates.remark - 备注
-   * @param {string} updates.update_by - 更新者
+   * @param {string} [updates.role_name] - 角色名称
+   * @param {string} [updates.role_key] - 角色标识
+   * @param {number} [updates.role_sort] - 显示排序
+   * @param {string} [updates.data_scope] - 数据权限范围
+   * @param {string} [updates.status] - 状态
+   * @param {string} [updates.remark] - 备注
+   * @param {string} [updates.update_by] - 更新者
    * @returns {Object} 更新后的角色对象（下划线格式）
    */
   async update(role_id, updates) {
@@ -317,6 +335,9 @@ class RoleModel {
 
   /**
    * 获取角色的所有菜单ID
+   * @param {number} role_id - 角色ID
+   * @returns {Array} 菜单ID数组
+   * @description 从 sys_role_menu 表查询
    */
   async getRolemenu_ids(role_id) {
     const query = `
@@ -331,6 +352,12 @@ class RoleModel {
 
   /**
    * 获取角色的所有用户
+   * @param {number} role_id - 角色ID
+   * @param {Object} params - 查询参数
+   * @param {number} params.page_num - 页码
+   * @param {number} params.page_size - 每页数量
+   * @returns {Object} 用户列表和总数
+   * @description 通过 sys_user_role 表关联查询
    */
   async getRoleUsers(role_id, params = {}) {
     const { page_num = 1, page_size = 20 } = params
@@ -366,6 +393,8 @@ class RoleModel {
    * 为角色分配接口权限（覆盖更新）
    * @param {number} role_id - 角色ID
    * @param {Array} apiPaths - 接口路径数组
+   * @returns {boolean} 是否成功
+   * @description 通过 sys_role_api 表关联角色和接口权限
    */
   async assignApis(role_id, apiPaths) {
     const client = await pool.connect()
@@ -408,6 +437,7 @@ class RoleModel {
    * 获取角色的所有接口权限路径列表
    * @param {number} role_id - 角色ID
    * @returns {Array} 返回接口路径数组
+   * @description 从 sys_role_api 表查询
    */
   async getRoleApiPaths(role_id) {
     const query = `

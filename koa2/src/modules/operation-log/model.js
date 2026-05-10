@@ -67,8 +67,8 @@ class OperationLogModel {
       module,
       operation,
       status,
-      startDate,
-      endDate,
+      start_time,
+      end_time,
       keyword,
     } = params
 
@@ -108,15 +108,19 @@ class OperationLogModel {
       paramIndex++
     }
 
-    if (startDate) {
+    if (start_time) {
       whereConditions.push(`created_at >= $${paramIndex}`)
-      values.push(startDate)
+      // 如果是数字类型（毫秒时间戳），转换为日期对象
+      const startDateTime = typeof start_time === 'number' ? new Date(start_time) : start_time
+      values.push(startDateTime)
       paramIndex++
     }
 
-    if (endDate) {
+    if (end_time) {
       whereConditions.push(`created_at <= $${paramIndex}`)
-      values.push(endDate)
+      // 如果是数字类型（毫秒时间戳），转换为日期对象
+      const endDateTime = typeof end_time === 'number' ? new Date(end_time) : end_time
+      values.push(endDateTime)
       paramIndex++
     }
 
@@ -191,20 +195,24 @@ class OperationLogModel {
   /**
    * 获取统计数据
    */
-  async getStats(startDate, endDate) {
+  async getStats(start_time, end_time) {
     let whereConditions = []
     let values = []
     let paramIndex = 1
 
-    if (startDate) {
+    if (start_time) {
       whereConditions.push(`created_at >= $${paramIndex}`)
-      values.push(startDate)
+      // 如果是数字类型（毫秒时间戳），转换为日期对象
+      const startDateTime = typeof start_time === 'number' ? new Date(start_time) : start_time
+      values.push(startDateTime)
       paramIndex++
     }
 
-    if (endDate) {
+    if (end_time) {
       whereConditions.push(`created_at <= $${paramIndex}`)
-      values.push(endDate)
+      // 如果是数字类型（毫秒时间戳），转换为日期对象
+      const endDateTime = typeof end_time === 'number' ? new Date(end_time) : end_time
+      values.push(endDateTime)
       paramIndex++
     }
 

@@ -96,7 +96,7 @@ class PermissionModel {
       FROM permissions p
       INNER JOIN role_permissions rp ON p.id = rp.permission_id
       INNER JOIN user_roles ur ON rp.role_id = ur.role_id
-      WHERE ur.user_id = $1
+      WHERE ur.user_id = $1::int
       ORDER BY p.sort_order, p.module, p.action
     `
     const result = await pool.query(query, [user_id])
@@ -186,7 +186,7 @@ class PermissionModel {
       FROM permissions p
       INNER JOIN role_permissions rp ON p.id = rp.permission_id
       INNER JOIN user_roles ur ON rp.role_id = ur.role_id
-      WHERE ur.user_id = $1 AND p.code = $2
+      WHERE ur.user_id = $1::int AND p.code = $2
     `
     const result = await pool.query(query, [user_id, permissionCode])
     return parseInt(result.rows[0].count) > 0
@@ -201,7 +201,7 @@ class PermissionModel {
       FROM permissions p
       INNER JOIN role_permissions rp ON p.id = rp.permission_id
       INNER JOIN user_roles ur ON rp.role_id = ur.role_id
-      WHERE ur.user_id = $1 AND p.code = ANY($2)
+      WHERE ur.user_id = $1::int AND p.code = ANY($2)
     `
     const result = await pool.query(query, [user_id, permissionCodes])
     return parseInt(result.rows[0].count) > 0
@@ -216,7 +216,7 @@ class PermissionModel {
       FROM permissions p
       INNER JOIN role_permissions rp ON p.id = rp.permission_id
       INNER JOIN user_roles ur ON rp.role_id = ur.role_id
-      WHERE ur.user_id = $1 AND p.code = ANY($2)
+      WHERE ur.user_id = $1::int AND p.code = ANY($2)
     `
     const result = await pool.query(query, [user_id, permissionCodes])
     return parseInt(result.rows[0].count) === permissionCodes.length

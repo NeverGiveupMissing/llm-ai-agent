@@ -16,7 +16,7 @@ async function getUserPerms(user_id) {
     INNER JOIN sys_role_menu rm ON m.menu_id = rm.menu_id
     INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
     INNER JOIN sys_role r ON ur.role_id = r.role_id
-    WHERE ur.user_id = $1 
+    WHERE ur.user_id = $1::int 
       AND m.status = '0' 
       AND r.status = '0'
       AND m.perms IS NOT NULL 
@@ -37,7 +37,7 @@ async function isSuperAdmin(user_id) {
     SELECT COUNT(*) as count
     FROM sys_user_role ur
     INNER JOIN sys_role r ON ur.role_id = r.role_id
-    WHERE ur.user_id = $1 
+    WHERE ur.user_id = $1::int 
       AND r.role_key = 'admin'
       AND r.status = '0'
   `
@@ -56,7 +56,7 @@ async function hasRole(user_id, roleKey) {
     SELECT COUNT(*) as count
     FROM sys_user_role ur
     INNER JOIN sys_role r ON ur.role_id = r.role_id
-    WHERE ur.user_id = $1 
+    WHERE ur.user_id = $1::int 
       AND r.role_key = $2
       AND r.status = '0'
   `
@@ -152,6 +152,7 @@ function checkPermission(permissionCodes, options = {}) {
       await next()
     } catch (error) {
       console.error('权限验证失败:', error.message)
+      console.error('完整错误堆栈:', error.stack)
       ctx.status = 500
       ctx.body = {
         code: 500,

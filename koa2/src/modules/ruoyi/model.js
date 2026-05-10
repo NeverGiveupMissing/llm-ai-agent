@@ -65,7 +65,7 @@ class UserModel {
         sex, avatar, status, del_flag, login_ip, login_date,
         pwd_update_date, create_by, create_time, update_by, update_time, remark
       FROM sys_user
-      WHERE user_id = $1 AND del_flag = '0'
+      WHERE user_id = $1::int AND del_flag = '0'
     `
     const result = await pool.query(query, [user_id])
     return result.rows[0] || null
@@ -172,7 +172,7 @@ class UserModel {
     const query = `
       UPDATE sys_user 
       SET del_flag = '2', update_time = NOW()
-      WHERE user_id = $1
+      WHERE user_id = $1::int
     `
     const result = await pool.query(query, [user_id])
     return result.rowCount > 0
@@ -372,7 +372,7 @@ class UserRoleModel {
       await client.query('BEGIN')
 
       // 删除用户现有的所有角色
-      await client.query('DELETE FROM sys_user_role WHERE user_id = $1', [user_id])
+      await client.query('DELETE FROM sys_user_role WHERE user_id = $1::int', [user_id])
 
       // 插入新的角色关联
       if (role_ids && role_ids.length > 0) {
@@ -401,7 +401,7 @@ class UserRoleModel {
       SELECT r.role_id, r.role_name, r.role_key, r.role_sort, r.status
       FROM sys_role r
       INNER JOIN sys_user_role ur ON r.role_id = ur.role_id
-      WHERE ur.user_id = $1
+      WHERE ur.user_id = $1::int
         AND r.del_flag = '0'
         AND r.status = '0'
       ORDER BY r.role_sort ASC

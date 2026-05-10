@@ -9,7 +9,55 @@ const { authMiddleware } = require('../../middlewares/auth.middleware')
 
 class UserController {
   /**
-   * 用户注册
+   * 管理员新增用户（需要认证，不需要验证码）
+   */
+  createUser = asyncHandler(async (ctx) => {
+    const {
+      user_name,
+      password,
+      nick_name,
+      email,
+      phonenumber,
+      sex,
+      status,
+      remark,
+      avatar,
+      user_type,
+    } = ctx.request.body
+
+    if (!user_name || !password) {
+      throw new BadRequestError('用户名和密码不能为空')
+    }
+
+    // ✅ 手机号校验
+    if (phonenumber && !/^1[3-9]\d{9}$/.test(phonenumber)) {
+      throw new BadRequestError('请输入正确的手机号码')
+    }
+
+    // ✅ 邮箱校验
+    if (email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+      throw new BadRequestError('请输入正确的邮箱地址')
+    }
+
+    const result = await userService.createUser({
+      user_name,
+      password,
+      nick_name,
+      email,
+      phonenumber,
+      sex: sex || '0',
+      status: status || '1',
+      avatar,
+      user_type: user_type || '00',
+      create_by: ctx.state.user_name || 'system',
+      remark,
+    })
+
+    ctx.success(result.data, result.message)
+  })
+
+  /**
+   * 用户注册（公开接口，需要验证码）
    */
   register = asyncHandler(async (ctx) => {
     console.log('[DEBUG] Controller 接收到的 body:', JSON.stringify(ctx.request.body))
@@ -50,9 +98,9 @@ class UserController {
       throw new BadRequestError('请输入验证码')
     }
 
-    const isValid = captchaService.verifyCaptcha(uuid, code)
-    if (!isValid) {
-      throw new BadRequestError('验证码错误或已过期')
+    const captchaResult = captchaService.verifyCaptcha(uuid, code)
+    if (!captchaResult.valid) {
+      throw new BadRequestError(captchaResult.message)
     }
 
     const result = await userService.createUser({
@@ -85,9 +133,9 @@ class UserController {
       throw new BadRequestError('请输入验证码')
     }
 
-    const isValid = captchaService.verifyCaptcha(uuid, code)
-    if (!isValid) {
-      throw new BadRequestError('验证码错误或已过期')
+    const captchaResult = captchaService.verifyCaptcha(uuid, code)
+    if (!captchaResult.valid) {
+      throw new BadRequestError(captchaResult.message)
     }
 
     const result = await userService.login(user_name, password, ctx)
@@ -167,7 +215,8 @@ class UserController {
       status: ctx.query.status,
       user_name: ctx.query.user_name,
       phonenumber: ctx.query.phonenumber,
-      begin_time: ctx.query.begin_time,
+      // ✅ 下划线命名 start_time/end_time
+      start_time: ctx.query.start_time,
       end_time: ctx.query.end_time,
     }
 
@@ -311,8 +360,11 @@ class UserController {
     const { user_id } = ctx.params
     const { role_id } = ctx.request.body
 
-    if (!user_id || !role_id) {
-      throw new BadRequestError('缺少 user_id 或 role_id 参数')
+    if (!user_id) {
+      throw new BadRequestError('缺少 user_id 参数')
+    }
+    if (!role_id) {
+      throw new BadRequestError('缺少 role_id 参数')
     }
 
     const result = await userService.assignRole(user_id, role_id)

@@ -26,8 +26,9 @@ class LoginLogController {
       limit: parseInt(ctx.query.limit) || 20,
       username: ctx.query.username,
       status: ctx.query.status,
-      startDate: ctx.query.startDate,
-      endDate: ctx.query.endDate,
+      // ✅ 下划线命名 start_time/end_time
+      start_time: ctx.query.start_time,
+      end_time: ctx.query.end_time,
       keyword: ctx.query.keyword,
     }
 

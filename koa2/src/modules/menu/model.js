@@ -1,29 +1,30 @@
 /**
  * 菜单数据模型 - 处理数据库操作和树形结构构建
+ * 表名：sys_menu（菜单权限表）
  */
 
 /**
  * @typedef {Object} SysMenu
- * @property {number} menu_id- 菜单ID
- * @property {string} menuName - 菜单名称
- * @property {number} parentId - 父菜单ID
- * @property {number} orderNum - 显示顺序
- * @property {string} [path] - 路由地址
- * @property {string} [component] - 组件路径
- * @property {string} [query] - 路由参数
- * @property {string} [routeName] - 路由名称
- * @property {number} [isFrame] - 是否外链 (1是 0否)
- * @property {number} [isCache] - 是否缓存 (1是 0否)
- * @property {string} menuType - 菜单类型 (M目录 C菜单 F按钮)
- * @property {string} visible - 显示状态 (0显示 1隐藏)
- * @property {string} status - 菜单状态 (0正常 1停用)
- * @property {string} [perms] - 权限标识
- * @property {string} [icon] - 菜单图标
- * @property {string} [createBy] - 创建者
- * @property {Date} [createTime] - 创建时间
- * @property {string} [updateBy] - 更新者
- * @property {Date} [updateTime] - 更新时间
- * @property {string} [remark] - 备注
+ * @property {number} menu_id - 菜单ID (SERIAL, PRIMARY KEY)
+ * @property {string} menu_name - 菜单名称 (varchar(50), NOT NULL)
+ * @property {number} parent_id - 父菜单ID (bigint, DEFAULT 0)
+ * @property {number} order_num - 显示顺序 (integer, DEFAULT 0)
+ * @property {string} [path] - 路由地址 (varchar(200), DEFAULT '')
+ * @property {string} [component] - 组件路径 (varchar(255))
+ * @property {string} [query] - 路由参数 (varchar(255))
+ * @property {string} [route_name] - 路由名称 (varchar(50), DEFAULT '')
+ * @property {number} [is_frame] - 是否外链 (integer, DEFAULT 1, 0是 1否)
+ * @property {number} [is_cache] - 是否缓存 (integer, DEFAULT 0, 0缓存 1不缓存)
+ * @property {string} menu_type - 菜单类型 (character(1), DEFAULT '', M目录 C菜单 F按钮)
+ * @property {string} visible - 菜单状态 (character(1), DEFAULT '0', 0显示 1隐藏)
+ * @property {string} status - 菜单状态 (character(1), DEFAULT '0', 0正常 1停用)
+ * @property {string} [perms] - 权限标识 (varchar(100))
+ * @property {string} [icon] - 菜单图标 (varchar(100), DEFAULT '#')
+ * @property {string} [create_by] - 创建者 (varchar(64), DEFAULT '')
+ * @property {Date} [create_time] - 创建时间 (timestamp, DEFAULT CURRENT_TIMESTAMP)
+ * @property {string} [update_by] - 更新者 (varchar(64), DEFAULT '')
+ * @property {Date} [update_time] - 更新时间 (timestamp)
+ * @property {string} [remark] - 备注 (varchar(500), DEFAULT '')
  * @property {SysMenu[]} [children] - 子菜单列表 (树形结构时使用)
  */
 

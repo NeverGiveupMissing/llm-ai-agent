@@ -6,20 +6,36 @@ const permissionModel = require('../permission/model')
 class RoleService {
   /**
    * 创建新角色
+   * @param {Object} roleData - 角色数据（驼峰格式）
+   * @param {string} roleData.roleName - 角色名称
+   * @param {string} roleData.roleKey - 角色标识
+   * @param {number} roleData.roleSort - 显示排序
+   * @param {string} roleData.dataScope - 数据权限范围
+   * @param {string} roleData.status - 状态
+   * @param {string} roleData.createBy - 创建者
+   * @param {string} roleData.remark - 备注
    */
   async createRole(roleData) {
     // 验证角色名称是否已存在
-    const existingRole = await roleModel.getByName(roleData.name)
+    const existingRole = await roleModel.getByRoleName(roleData.roleName)
     if (existingRole) {
       throw new Error('角色名称已存在')
     }
 
+    // 验证角色标识是否已存在
+    const existingKey = await roleModel.getByRoleKey(roleData.roleKey)
+    if (existingKey) {
+      throw new Error('角色标识已存在')
+    }
+
     const role = await roleModel.create({
-      name: roleData.name,
-      displayName: roleData.displayName,
-      description: roleData.description,
-      isSystem: roleData.isSystem,
-      sortOrder: roleData.sortOrder,
+      roleName: roleData.roleName,
+      roleKey: roleData.roleKey,
+      roleSort: roleData.roleSort,
+      dataScope: roleData.dataScope,
+      status: roleData.status,
+      createBy: roleData.createBy,
+      remark: roleData.remark,
     })
 
     return {

@@ -256,6 +256,17 @@ class UserService {
     const users = await userModel.list(params)
     const total = await userModel.count(params)
 
+    // ✅ 解析 json_agg 返回的 roles 字段（兼容 pg 驱动可能返回字符串的情况）
+    users.forEach(user => {
+      if (typeof user.roles === 'string') {
+        try {
+          user.roles = JSON.parse(user.roles)
+        } catch (e) {
+          user.roles = null
+        }
+      }
+    })
+
     return {
       success: true,
       data: users,
@@ -289,6 +300,25 @@ class UserService {
   }
 
   /**
+   * 检查用户是否拥有管理员角色
+   * @param {number} user_id - 用户ID
+   * @returns {Promise<boolean>} 是否拥有管理员角色
+   */
+  async hasAdminRole(user_id) {
+    const { pool } = require('../../config/db')
+    const query = `
+      SELECT r.role_name
+      FROM sys_role r
+      INNER JOIN sys_user_role ur ON r.role_id = ur.role_id
+      WHERE ur.user_id = $1
+        AND r.del_flag = '0'
+        AND r.role_name ILIKE '%管理员%'
+    `
+    const result = await pool.query(query, [user_id])
+    return result.rows.length > 0
+  }
+
+  /**
    * 删除用户（软删除）
    */
   async deleteUser(user_id, updateBy = '') {
@@ -303,13 +333,16 @@ class UserService {
       }
     }
 
-    // ✅ 如果用户不存在，也返回成功（幂等性）
+    // ✅ 如果用户不存在，返回错误（不应返回 success: true）
     if (!user) {
-      console.log(`⚠️ 用户 ${user_id} 不存在，跳过删除操作`)
-      return {
-        success: true,
-        message: '用户不存在',
-      }
+      const { NotFoundError } = require('../../utils/app-error')
+      throw new NotFoundError('用户不存在')
+    }
+
+    // ✅ 检查是否拥有管理员角色
+    const isAdmin = await this.hasAdminRole(user_id)
+    if (isAdmin) {
+      throw new Error('该用户拥有管理员角色，不允许删除')
     }
 
     const deleted = await userModel.deleteUserById(user_id, updateBy)
@@ -336,15 +369,39 @@ class UserService {
       await client.query('BEGIN')
 
       let successCount = 0
+      const adminUsers = []
+
       for (const user_id of user_ids) {
         const user = await userModel.selectUserById(user_id)
-        if (user && user.delFlag !== '2') {
-          await userModel.deleteUserById(user_id, updateBy)
-          successCount++
+
+        // 跳过已删除或不存在的用户
+        if (!user || user.del_flag === '2') {
+          continue
         }
+
+        // ✅ 检查是否拥有管理员角色
+        const isAdmin = await this.hasAdminRole(user_id)
+        if (isAdmin) {
+          adminUsers.push(user.user_name || user_id)
+          continue
+        }
+
+        await userModel.deleteUserById(user_id, updateBy)
+        successCount++
       }
 
       await client.query('COMMIT')
+
+      // ✅ 如果有管理员用户，抛出错误
+      if (adminUsers.length > 0) {
+        throw new Error(`以下用户拥有管理员角色，不允许删除：${adminUsers.join(', ')}`)
+      }
+
+      // ✅ 如果所有用户都已被删除或不存在，返回提示
+      if (successCount === 0) {
+        const { NotFoundError } = require('../../utils/app-error')
+        throw new NotFoundError('所有用户已被删除或不存在')
+      }
 
       return {
         success: true,
@@ -353,7 +410,7 @@ class UserService {
     } catch (error) {
       await client.query('ROLLBACK')
       console.error('批量删除用户失败:', error)
-      throw new Error('批量删除失败')
+      throw error
     } finally {
       client.release()
     }
@@ -462,7 +519,7 @@ class UserService {
     const { pool } = require('../../config/db')
     const query = `
       DELETE FROM sys_user_role
-      WHERE user_id = $1 AND role_id = $2
+      WHERE user_id = $1::int AND role_id = $2
     `
     const result = await pool.query(query, [user_id, role_id])
 
@@ -514,13 +571,19 @@ class UserService {
       }
     }
 
-    // 批量分配角色到 sys_user_role 表
+    // 批量分配角色到 sys_user_role 表（事务：先删除旧角色，再分配新角色）
     const client = await require('../../config/db').pool.connect()
     try {
       await client.query('BEGIN')
 
-      for (const role_id of role_ids) {
-        await this.assignRoleToUser(user_id, role_id)
+      // ✅ 删除用户现有的所有角色，实现真正的替换
+      await client.query('DELETE FROM sys_user_role WHERE user_id = $1::int', [user_id])
+
+      // ✅ 再批量插入新角色
+      if (role_ids.length > 0) {
+        const values = role_ids.map((role_id, idx) => `($1, $${idx + 2})`).join(',')
+        const params = [user_id, ...role_ids]
+        await client.query(`INSERT INTO sys_user_role (user_id, role_id) VALUES ${values}`, params)
       }
 
       await client.query('COMMIT')

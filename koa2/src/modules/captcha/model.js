@@ -25,26 +25,32 @@ class CaptchaModel {
    * 验证验证码
    * @param {string} uuid - 唯一标识
    * @param {string} code - 用户输入的验证码
-   * @returns {boolean} 验证结果
+   * @returns {Object} { valid: boolean, message: string } 验证结果和具体原因
    */
   verifyCaptcha(uuid, code) {
     const captcha = this.captchaStore.get(uuid)
 
     if (!captcha) {
-      return false
+      return { valid: false, message: '验证码不存在或已过期' }
     }
 
     // 检查是否过期
     if (Date.now() > captcha.expireTime) {
       this.captchaStore.delete(uuid)
-      return false
+      return { valid: false, message: '验证码已过期，请重新获取' }
     }
+
+    // 不区分大小写比较
+    const isValid = captcha.code === code.toLowerCase()
 
     // 验证成功后删除验证码（防止重复使用）
     this.captchaStore.delete(uuid)
 
-    // 不区分大小写比较
-    return captcha.code === code.toLowerCase()
+    if (!isValid) {
+      return { valid: false, message: '验证码不正确' }
+    }
+
+    return { valid: true, message: '验证通过' }
   }
 
   /**

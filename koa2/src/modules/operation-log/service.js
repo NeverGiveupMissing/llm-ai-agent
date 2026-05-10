@@ -93,9 +93,9 @@ class OperationLogService {
   /**
    * 获取统计数据
    */
-  async getStats(startDate, endDate) {
+  async getStats(start_time, end_time) {
     try {
-      const result = await operationLogModel.getStats(startDate, endDate)
+      const result = await operationLogModel.getStats(start_time, end_time)
       return { success: true, data: result }
     } catch (error) {
       console.error('获取统计数据失败:', error)

@@ -34,7 +34,7 @@ class LoginLogModel {
    * 获取登录日志列表（分页）
    */
   async getList(params) {
-    const { page = 1, limit = 20, user_id, username, status, startDate, endDate, keyword } = params
+    const { page = 1, limit = 20, user_id, username, status, start_time, end_time, keyword } = params
 
     const whereConditions = []
     const values = []
@@ -58,15 +58,19 @@ class LoginLogModel {
       paramIndex++
     }
 
-    if (startDate) {
+    if (start_time) {
       whereConditions.push(`login_time >= $${paramIndex}`)
-      values.push(startDate)
+      // 如果是数字类型（毫秒时间戳），转换为日期对象
+      const startDateTime = typeof start_time === 'number' ? new Date(start_time) : start_time
+      values.push(startDateTime)
       paramIndex++
     }
 
-    if (endDate) {
+    if (end_time) {
       whereConditions.push(`login_time <= $${paramIndex}`)
-      values.push(endDate)
+      // 如果是数字类型（毫秒时间戳），转换为日期对象
+      const endDateTime = typeof end_time === 'number' ? new Date(end_time) : end_time
+      values.push(endDateTime)
       paramIndex++
     }
 

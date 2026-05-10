@@ -101,6 +101,11 @@ router.put('/me', authMiddleware(), userController.updateCurrentUser)
 router.get('/', authMiddleware(), requirePermission('user:read'), userController.listUsers)
 
 /**
+ * 管理员新增用户（需要认证 + user:create 权限，不需要验证码）
+ */
+router.post('/', authMiddleware(), requirePermission('user:create'), userController.createUser)
+
+/**
  * 批量删除用户（需要 user:delete 权限）
  * ⚠️ 必须放在 /:user_id 之前
  */

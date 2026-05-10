@@ -17,8 +17,9 @@ class OperationLogController {
       username: ctx.query.username,
       module: ctx.query.module,
       action: ctx.query.action,
-      startDate: ctx.query.startDate,
-      endDate: ctx.query.endDate,
+      // ✅ 下划线命名 start_time/end_time
+      start_time: ctx.query.start_time,
+      end_time: ctx.query.end_time,
       keyword: ctx.query.keyword,
     }
 
@@ -90,9 +91,10 @@ class OperationLogController {
    * 获取统计数据
    */
   getStats = asyncHandler(async (ctx) => {
-    const { startDate, endDate } = ctx.query
+    // ✅ 下划线命名 start_time/end_time
+    const { start_time, end_time } = ctx.query
 
-    const result = await operationLogService.getStats(startDate, endDate)
+    const result = await operationLogService.getStats(start_time, end_time)
     ctx.success(result)
   })
 }

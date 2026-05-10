@@ -22,7 +22,7 @@ class PermissionService {
       INNER JOIN sys_role_menu srm ON m.menu_id = srm.menu_id
       INNER JOIN sys_user_role ur ON srm.role_id = ur.role_id
       INNER JOIN sys_role r ON ur.role_id = r.role_id
-      WHERE ur.user_id = $1
+      WHERE ur.user_id = $1::int
         AND m.status = '0'
         AND r.status = '0'
         AND m.perms IS NOT NULL
@@ -51,7 +51,7 @@ class PermissionService {
       INNER JOIN sys_role_menu srm ON m.menu_id = srm.menu_id
       INNER JOIN sys_user_role ur ON srm.role_id = ur.role_id
       INNER JOIN sys_role r ON ur.role_id = r.role_id
-      WHERE ur.user_id = $1
+      WHERE ur.user_id = $1::int
         AND m.perms = $2
         AND m.status = '0'
         AND r.status = '0'
@@ -81,7 +81,7 @@ class PermissionService {
       INNER JOIN sys_role_menu srm ON m.menu_id = srm.menu_id
       INNER JOIN sys_user_role ur ON srm.role_id = ur.role_id
       INNER JOIN sys_role r ON ur.role_id = r.role_id
-      WHERE ur.user_id = $1
+      WHERE ur.user_id = $1::int
         AND m.perms = ANY($2)
         AND m.status = '0'
         AND r.status = '0'
@@ -109,7 +109,7 @@ class PermissionService {
       INNER JOIN sys_role_menu srm ON m.menu_id = srm.menu_id
       INNER JOIN sys_user_role ur ON srm.role_id = ur.role_id
       INNER JOIN sys_role r ON ur.role_id = r.role_id
-      WHERE ur.user_id = $1
+      WHERE ur.user_id = $1::int
         AND m.perms = ANY($2)
         AND m.status = '0'
         AND r.status = '0'

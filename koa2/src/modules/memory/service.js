@@ -265,7 +265,7 @@ class MemoryService {
         COUNT(*) FILTER (WHERE memory_type = $5) AS events,
         AVG(importance) AS avg_importance
       FROM memories
-      WHERE user_id = $1 AND is_active = true
+      WHERE user_id = $1::int AND is_active = true
     `
 
     const result = await pool.query(query, [

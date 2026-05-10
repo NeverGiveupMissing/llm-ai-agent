@@ -44,17 +44,20 @@ class RoleController {
    * 创建角色
    */
   createRole = asyncHandler(async (ctx) => {
-    const { name, displayName, description, isSystem } = ctx.request.body
+    const { role_name, role_key, role_sort, data_scope, status, remark } = ctx.request.body
 
-    if (!name || !displayName) {
-      throw new BadRequestError('角色名称和显示名称不能为空')
+    if (!role_name || !role_key) {
+      throw new BadRequestError('角色名称和角色标识不能为空')
     }
 
     const result = await roleService.createRole({
-      name,
-      displayName,
-      description,
-      isSystem: isSystem || false,
+      roleName: role_name,
+      roleKey: role_key,
+      roleSort: role_sort || 0,
+      dataScope: data_scope || '1',
+      status: status || '0',
+      createBy: ctx.state.user_name || 'system',
+      remark: remark || '',
     })
 
     ctx.success(result.data, result.message)
@@ -65,11 +68,21 @@ class RoleController {
    */
   updateRole = asyncHandler(async (ctx) => {
     const { role_id } = ctx.params
-    const updates = ctx.request.body
+    const { role_name, role_key, role_sort, data_scope, status, remark } = ctx.request.body
 
     if (!role_id) {
       throw new BadRequestError('缺少 role_id 参数')
     }
+
+    // 构建更新对象，只包含传入的字段
+    const updates = {}
+    if (role_name !== undefined) updates.role_name = role_name
+    if (role_key !== undefined) updates.role_key = role_key
+    if (role_sort !== undefined) updates.role_sort = role_sort
+    if (data_scope !== undefined) updates.data_scope = data_scope
+    if (status !== undefined) updates.status = status
+    if (remark !== undefined) updates.remark = remark
+    updates.update_by = ctx.state.user_name || 'system'
 
     const result = await roleService.updateRole(role_id, updates)
     ctx.success(result.data, result.message)

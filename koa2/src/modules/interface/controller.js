@@ -11,18 +11,21 @@ class InterfaceController {
    * 获取接口列表（分页）
    */
   list = asyncHandler(async (ctx) => {
-    const apiName = ctx.query.apiName
-    const apiUrl = ctx.query.apiUrl
+    // 接收下划线命名参数（前后端统一使用下划线）
+    const api_name = ctx.query.api_name
+    const api_url = ctx.query.api_url
+    const api_method = ctx.query.api_method
     const status = ctx.query.status
-    const page = parseInt(ctx.query.page) || 1
+    const page_num = parseInt(ctx.query.page_num) || 1
     const page_size = parseInt(ctx.query.page_size) || 10
 
     const params = {
-      api_name: apiName,
-      api_url: apiUrl,
+      api_name,
+      api_url,
+      api_method,
       status,
-      page,
-      page_size: page_size,
+      page: page_num,
+      page_size,
     }
 
     const result = await interfaceService.getInterfaceList(params)
