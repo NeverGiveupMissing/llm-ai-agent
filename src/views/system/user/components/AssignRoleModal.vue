@@ -83,16 +83,26 @@ watch(
 
       formData.user_name = props.user.user_name || ''
 
-      // ✅ 从 roles 数组中提取 role_id，并确保类型一致（数字）
       try {
-        if (props.user.roles && Array.isArray(props.user.roles) && props.user.roles.length > 0) {
-          formData.role_ids = props.user.roles
+        let roles = props.user.roles
+        // ✅ 兼容后端可能返回 JSON 字符串的情况
+        if (typeof roles === 'string') {
+          try {
+            roles = JSON.parse(roles)
+          } catch (e) {
+            roles = []
+          }
+        }
+
+        if (roles && Array.isArray(roles) && roles.length > 0) {
+          formData.role_ids = roles
             .map((role) => {
               const role_id = role?.role_id || role?.role_id || role?.id
               return role_id != null ? Number(role_id) : null
             })
             .filter((id) => id != null && !isNaN(id))
-          // ✅ 检查 options 的 value 类型
+          
+          console.log('✅ [AssignRoleModal] 回显角色 IDs:', formData.role_ids)
           if (options && options.length > 0) {
             console.log(
               ' [AssignRoleModal] options 第一个元素的 value:',
@@ -102,7 +112,7 @@ watch(
             )
           }
         } else {
-          console.log('⚠️ [AssignRoleModal] 用户没有角色或roles为空数组')
+          console.log('⚠️ [AssignRoleModal] 用户没有角色或roles为空数组', roles)
           formData.role_ids = []
         }
       } catch (error) {

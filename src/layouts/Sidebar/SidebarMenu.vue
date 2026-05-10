@@ -35,30 +35,30 @@ const handleMenuClick = (key) => {
 watch(
   () => menuStore.menuOptions,
   (newOptions) => {
-    // console.log(' [侧边栏] 菜单数据变化:', newOptions)
-    // console.log(' [侧边栏] 菜单数量:', newOptions?.length)
-    // console.log(' [侧边栏] permissionStore.isLoaded:', permissionStore.isLoaded)
+    console.log(' [侧边栏] 菜单数据变化:', newOptions)
+    console.log(' [侧边栏] 菜单数量:', newOptions?.length)
+    console.log(' [侧边栏] permissionStore.isLoaded:', permissionStore.isLoaded)
     
     if (newOptions && newOptions.length > 0) {
-      // console.log('✅ [侧边栏] 菜单数据已更新！')
-      // console.log('📋 [侧边栏] 第一个菜单:', newOptions[0])
+      console.log('✅ [侧边栏] 菜单数据已更新！')
+      console.log('📋 [侧边栏] 第一个菜单:', newOptions[0])
     }
   },
   { deep: true, immediate: true }
 )
 
 onMounted(() => {
-  // console.log(' [侧边栏组件] SidebarMenu 已挂载')
-  // console.log(' [调试] permissionStore.isLoaded:', permissionStore.isLoaded)
-  // console.log(' [调试] menuStore.menuOptions:', menuStore.menuOptions)
-  // console.log(' [调试] menuStore.menuOptions?.length:', menuStore.menuOptions?.length)
+  console.log(' [侧边栏组件] SidebarMenu 已挂载')
+  console.log(' [调试] permissionStore.isLoaded:', permissionStore.isLoaded)
+  console.log(' [调试] menuStore.menuOptions:', menuStore.menuOptions)
+  console.log(' [调试] menuStore.menuOptions?.length:', menuStore.menuOptions?.length)
 
-  // if (menuStore.menuOptions && menuStore.menuOptions.length > 0) {
-  //   console.log('✅ [侧边栏] 菜单数据正常！')
-  //   console.log('📋 [侧边栏] 第一个菜单:', menuStore.menuOptions[0])
-  // } else {
-  //   console.error('❌ [侧边栏] 菜单数据为空！')
-  // }
+  if (menuStore.menuOptions && menuStore.menuOptions.length > 0) {
+    console.log('✅ [侧边栏] 菜单数据正常！')
+    console.log('📋 [侧边栏] 第一个菜单:', menuStore.menuOptions[0])
+  } else {
+    console.error('❌ [侧边栏] 菜单数据为空！')
+  }
 })
 </script>
 

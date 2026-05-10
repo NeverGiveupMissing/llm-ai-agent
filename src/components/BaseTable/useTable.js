@@ -1,5 +1,6 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useMessage } from 'naive-ui'
+import { formatDate } from '@/utils'
 
 /**
  * BaseTable 组合式函数
@@ -45,10 +46,15 @@ export function useTable(apiMethod, options = {}) {
         ...params,
       }
 
-      // 处理日期范围（统一转为下划线传给后端）
+      // ✅ 处理日期范围（前端 dateRange 转换为后端 start_time/end_time）
       if (requestParams.dateRange && Array.isArray(requestParams.dateRange)) {
-        requestParams.begin_time = requestParams.dateRange[0]
-        requestParams.end_time = requestParams.dateRange[1]
+        const [start, end] = requestParams.dateRange
+        if (start) {
+          requestParams.start_time = formatDate(start)
+        }
+        if (end) {
+          requestParams.end_time = formatDate(end)
+        }
         delete requestParams.dateRange
       }
 

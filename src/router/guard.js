@@ -27,33 +27,15 @@ export function setupRouterGuard(router) {
       from: from.path,
       to: to.path,
       redirect: to.redirectedFrom?.path,
-      name: to.name
+      name: to.name,
+      matched: to.matched.map(r => ({ name: r.name, path: r.path }))
     })
-
-    // 🔒 检测循环重定向
-    if (to.redirectedFrom) {
-      redirectCount++
-      if (redirectCount > MAX_REDIRECTS) {
-        console.error(`❌ 路由重定向循环检测！已重定向 ${redirectCount} 次，最后路径: ${to.path}`)
-        redirectCount = 0
-        return { path: '/404', replace: true }
-      }
-      if (to.path === lastRedirectPath) {
-        console.error(`❌ 检测到循环重定向: ${to.path}`)
-        redirectCount = 0
-        return { path: '/404', replace: true }
-      }
-      lastRedirectPath = to.path
-    } else {
-      redirectCount = 0
-      lastRedirectPath = ''
-    }
 
     const userStore = useUserStore()
     const permissionStore = usePermissionStore()
 
     // 使用通用权限守卫函数
-    return permissionGuard({
+    const result = await permissionGuard({
       to,
       userStore,
       permissionStore,
@@ -62,5 +44,36 @@ export function setupRouterGuard(router) {
       loginPath: '/login',
       forbiddenPath: '/403'
     })
+
+    // ✅ 循环检测：只检测真正的循环（连续重定向到同一个路径）
+    if (result && typeof result === 'object' && result.path) {
+      redirectCount++
+      
+      // 如果重定向次数过多，直接跳到 404
+      if (redirectCount > MAX_REDIRECTS) {
+        console.error(`❌ 路由重定向循环检测！已重定向 ${redirectCount} 次`)
+        console.error(`   当前重定向到: ${result.path}`)
+        console.error(`   上次重定向到: ${lastRedirectPath}`)
+        redirectCount = 0
+        return { path: '/404', replace: true }
+      }
+      
+      // 只有当连续两次重定向到同一个路径时才认为是循环
+      // 例如：/dashboard → /dashboard → /dashboard（连续 3 次重定向）
+      if (result.path === lastRedirectPath) {
+        console.error(`❌ 检测到循环重定向: ${result.path}`)
+        redirectCount = 0
+        return { path: '/404', replace: true }
+      }
+      
+      lastRedirectPath = result.path
+    } else {
+      // 如果不是重定向（return true 或 return false），重置计数器
+      // 这很重要！权限守卫返回 true 表示正常导航，不应该被误判为循环
+      redirectCount = 0
+      lastRedirectPath = ''
+    }
+
+    return result
   })
 }

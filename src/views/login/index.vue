@@ -1,46 +1,111 @@
 <template>
   <div class="login-container">
-    <div class="login-card">
+    <n-card :bordered="false" class="login-card">
       <div class="login-header">
-        <h1>AI Agent 平台</h1>
+        <n-text class="login-title">AI Agent 平台</n-text>
         <p>{{ isRegisterMode ? '欢迎注册' : '欢迎回来，请登录' }}</p>
       </div>
 
-      <BaseForm
-        ref="formRef"
-        v-model="formData"
-        :fields="formFields"
-        label-placement="left"
-        label-width="80px"
-        :rules="customRules"
-      >
-        <!-- 验证码输入框 -->
-        <template #field-code>
-          <div class="captcha-wrapper">
-            <n-input
-              v-model:value="formData.code"
-              placeholder="请输入验证码"
-              maxlength="4"
-            />
-            <div class="captcha-image" @click="refreshCaptcha">
-              <img v-if="captchaImg" :src="captchaImg" alt="验证码" />
-              <span v-else>点击获取</span>
-            </div>
-          </div>
+      <n-form ref="formRef" :model="formData" :rules="rules" size="large" :show-feedback="false">
+        <!-- 用户名 -->
+        <n-form-item path="user_name">
+          <n-input v-model:value="formData.user_name" placeholder="请输入用户名" clearable>
+            <template #prefix>
+              <n-icon :component="PersonOutline" />
+            </template>
+          </n-input>
+        </n-form-item>
+
+        <!-- 密码 -->
+        <n-form-item path="password">
+          <n-input
+            v-model:value="formData.password"
+            type="password"
+            placeholder="请输入密码"
+            show-password-on="click"
+          >
+            <template #prefix>
+              <n-icon :component="LockClosedOutline" />
+            </template>
+          </n-input>
+        </n-form-item>
+
+        <!-- 注册模式额外字段 -->
+        <template v-if="isRegisterMode">
+          <!-- 昵称 -->
+          <n-form-item path="nick_name">
+            <n-input v-model:value="formData.nick_name" placeholder="请输入昵称" clearable>
+              <template #prefix>
+                <n-icon :component="PersonOutline" />
+              </template>
+            </n-input>
+          </n-form-item>
+
+          <!-- 邮箱 -->
+          <n-form-item path="email">
+            <n-input v-model:value="formData.email" placeholder="请输入邮箱" clearable>
+              <template #prefix>
+                <n-icon :component="MailOutline" />
+              </template>
+            </n-input>
+          </n-form-item>
+
+          <!-- 手机号 -->
+          <n-form-item path="phonenumber">
+            <n-input v-model:value="formData.phonenumber" placeholder="请输入手机号" clearable>
+              <template #prefix>
+                <n-icon :component="CallOutline" />
+              </template>
+            </n-input>
+          </n-form-item>
         </template>
 
-        <template #actions>
+        <!-- 验证码 -->
+        <n-form-item path="code">
+          <n-grid :cols="24" :x-gap="10">
+            <n-grid-item :span="15">
+              <n-input
+                v-model:value="formData.code"
+                placeholder="请输入验证码"
+                maxlength="4"
+                clearable
+              >
+                <template #prefix>
+                  <n-icon :component="KeyOutline" />
+                </template>
+              </n-input>
+            </n-grid-item>
+            <n-grid-item :span="9">
+              <div class="captcha-image" @click="refreshCaptcha" title="点击刷新验证码">
+                <img v-if="captchaImg" :src="captchaImg" alt="验证码" />
+                <span v-else>点击获取</span>
+              </div>
+            </n-grid-item>
+          </n-grid>
+        </n-form-item>
+
+        <!-- 记住密码（仅登录模式显示） -->
+        <n-form-item v-if="!isRegisterMode" class="remember-item">
+          <n-checkbox v-model:checked="formData.rememberMe">记住密码</n-checkbox>
+        </n-form-item>
+
+        <!-- 提交按钮 -->
+        <n-form-item>
           <n-button
+            native-type="submit"
             type="primary"
-            size="large"
+            secondary
+            strong
+            size="medium"
             block
             :loading="loading"
-            @click="isRegisterMode ? handleRegister() : handleLogin()"
+            @click="handleSubmit"
+            style="background-color: #1890ff; border-color: #1890ff; color: #fff"
           >
-            {{ isRegisterMode ? '注册' : '登录' }}
+            {{ isRegisterMode ? '注 册' : '登 录' }}
           </n-button>
-        </template>
-      </BaseForm>
+        </n-form-item>
+      </n-form>
 
       <div class="login-footer">
         <span>{{ isRegisterMode ? '已有账号？' : '还没有账号？' }}</span>
@@ -50,14 +115,15 @@
       </div>
 
       <CopyrightFooter />
-    </div>
+    </n-card>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useMessage } from 'naive-ui'
+import { PersonOutline, LockClosedOutline, KeyOutline, MailOutline, CallOutline } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/modules/user'
 import { usePermissionStore } from '@/stores/modules/permission'
 import { login, register, getCaptcha } from '@/api/auth'
@@ -70,73 +136,58 @@ const userStore = useUserStore()
 const permissionStore = usePermissionStore()
 
 const formRef = ref(null)
-const isRegisterMode = ref(false) // 切换登录/注册模式
-const loading = ref(false) // 加载状态
-const captchaImg = ref('') // 验证码图片
-const captchaUuid = ref('') // 验证码 UUID
+const isRegisterMode = ref(false)
+const loading = ref(false)
+const captchaImg = ref('')
+const captchaUuid = ref('')
 
 const formData = reactive({
-  user_name: 'admin',
-  password: 'admin123',
+  user_name: '',
+  password: '',
   confirm_password: '',
-  code: '', // 验证码
+  nick_name: '',
+  email: '',
+  phonenumber: '',
+  code: '',
+  rememberMe: false,
 })
 
-// 表单字段配置
-const formFields = computed(() => [
-  {
-    key: 'user_name',
-    label: '用户名',
-    type: 'input',
-    required: true,
-    placeholder: '请输入用户名',
-    rules: [{ min: 3, max: 20, message: '用户名长度为3-20个字符', trigger: 'blur' }],
-  },
-  {
-    key: 'password',
-    label: '密码',
-    type: 'password',
-    required: true,
-    placeholder: '请输入密码',
-    rules: [{ min: 6, max: 20, message: '密码长度为6-20个字符', trigger: 'blur' }],
-  },
-  {
-    key: 'confirm_password',
-    label: '确认密码',
-    type: 'password',
-    required: isRegisterMode.value,
-    hidden: !isRegisterMode.value,
-    placeholder: '请再次输入密码',
-    rules: [
-      {
-        validator: (rule, value) => {
-          return value === formData.password
-        },
-        message: '两次密码输入不一致',
-        trigger: 'blur',
-      },
-    ],
-  },
-  {
-    key: 'code',
-    label: '验证码',
-    type: 'custom',
-    required: true,
-    rules: [{ min: 4, max: 4, message: '请输入4位验证码', trigger: 'blur' }],
-  },
-])
+const rules = {
+  user_name: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  confirm_password: [
+    { required: true, message: '请确认密码', trigger: 'blur' },
+    {
+      validator: (rule, value) => value === formData.password,
+      message: '两次密码输入不一致',
+      trigger: 'blur',
+    },
+  ],
+  nick_name: [{ required: true, message: '请输入昵称', trigger: 'blur' }],
+  email: [
+    { required: true, message: '请输入邮箱', trigger: 'blur' },
+    {
+      pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+      message: '请输入正确的邮箱地址',
+      trigger: 'blur',
+    },
+  ],
+  phonenumber: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    {
+      pattern: /^1[3-9]\d{9}$/,
+      message: '请输入正确的手机号码',
+      trigger: 'blur',
+    },
+  ],
+  code: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
+}
 
-// 自定义规则（BaseForm 会自动合并 field.rules）
-const customRules = {}
-
-/**
- * 获取验证码
- */
+/** 获取验证码 */
 const refreshCaptcha = async () => {
   try {
     const res = await getCaptcha()
     captchaUuid.value = res.data.uuid
-    // 将 SVG 转换为 Data URL
     const svgBlob = new Blob([res.data.img], { type: 'image/svg+xml' })
     captchaImg.value = URL.createObjectURL(svgBlob)
   } catch (error) {
@@ -145,55 +196,68 @@ const refreshCaptcha = async () => {
   }
 }
 
-// 登录处理
-const handleLogin = async () => {
+/** 提交表单 */
+const handleSubmit = async () => {
   const valid = await formRef.value?.validate()
-  if (!valid) {
-    message.error('请填写完整信息')
-    return
-  }
+  if (!valid) return
 
   loading.value = true
   try {
-    const res = await login({
+    const payload = {
       user_name: formData.user_name,
       password: formData.password,
       code: formData.code,
       uuid: captchaUuid.value,
-    })
+    }
 
-    // 保存 token
-    userStore.setToken(res.data.token)
-    
-    // ✅ 若依标准流程：保存用户信息
-    userStore.setUserInfo({
-      user_id: res.data.user_id,
-      user_name: res.data.user_name,
-      nick_name: res.data.nick_name,
-      avatar: res.data.avatar,
-      email: res.data.email,
-      phonenumber: res.data.phonenumber,
-      roles: res.data.roles,
-      permissions: res.data.permissions || [],
-    })
+    if (isRegisterMode.value) {
+      const registerPayload = {
+        user_name: formData.user_name,
+        password: formData.password,
+        nick_name: formData.nick_name,
+        email: formData.email,
+        phonenumber: formData.phonenumber,
+        code: formData.code,
+        uuid: captchaUuid.value,
+      }
+      await register(registerPayload)
+      message.success('注册成功，请登录')
+      isRegisterMode.value = false
+      formData.password = ''
+      formData.confirm_password = ''
+      formData.nick_name = ''
+      formData.email = ''
+      formData.phonenumber = ''
+      formData.code = ''
+      refreshCaptcha()
+    } else {
+      const res = await login(payload)
+      userStore.setToken(res.data.token)
+      userStore.setUserInfo({
+        user_id: res.data.user_id,
+        user_name: res.data.user_name,
+        nick_name: res.data.nick_name,
+        avatar: res.data.avatar,
+        roles: res.data.roles,
+        permissions: res.data.permissions || [],
+      })
 
-    console.log('✅ [Login] 用户信息已保存:', userStore.userInfo)
-    console.log('✅ [Login] Token 已保存:', userStore.token)
-    console.log('✅ [Login] 权限状态:', permissionStore.isPermissionLoaded)
+      // 记住密码逻辑
+      if (formData.rememberMe) {
+        localStorage.setItem(
+          'rememberUser',
+          JSON.stringify({ user_name: formData.user_name, password: formData.password }),
+        )
+      } else {
+        localStorage.removeItem('rememberUser')
+      }
 
-    message.success('登录成功')
-
-    // ✅ 若依标准流程：重置权限状态，让路由守卫重新加载
-    // 这样确保每次登录都从后端获取最新的菜单和权限
-    permissionStore.resetPermission()
-    
-    // 跳转到 dashboard，路由守卫会自动调用 GetInfo 和 GenerateRoutes
-    const redirect = route.query.redirect || '/dashboard'
-    console.log('🚀 [Login] 即将跳转到:', redirect)
-    router.push(redirect)
+      permissionStore.resetPermission()
+      message.success('登录成功')
+      router.push(route.query.redirect || '/dashboard')
+    }
   } catch (error) {
-    message.error(error.message || '登录失败，请检查用户名和密码')
-    // 登录失败后刷新验证码
+    message.error(error.message || '操作失败')
     refreshCaptcha()
     formData.code = ''
   } finally {
@@ -201,50 +265,30 @@ const handleLogin = async () => {
   }
 }
 
-// 注册处理
-const handleRegister = async () => {
-  const valid = await formRef.value?.validate()
-  if (!valid) {
-    message.error('请填写完整信息')
-    return
-  }
-
-  loading.value = true
-  try {
-    await register({
-      user_name: formData.user_name,
-      password: formData.password,
-      code: formData.code,
-      uuid: captchaUuid.value,
-    })
-
-    message.success('注册成功，请登录')
-    isRegisterMode.value = false
-    formData.password = ''
-    formData.confirm_password = ''
-    formData.code = ''
-    refreshCaptcha()
-  } catch (error) {
-    message.error(error.message || '注册失败')
-    refreshCaptcha()
-    formData.code = ''
-  } finally {
-    loading.value = false
-  }
-}
-
-// 切换登录/注册模式
+/** 切换登录/注册 */
 const toggleMode = () => {
   isRegisterMode.value = !isRegisterMode.value
   formData.password = ''
   formData.confirm_password = ''
+  formData.nick_name = ''
+  formData.email = ''
+  formData.phonenumber = ''
   formData.code = ''
   formRef.value?.restoreValidation()
   refreshCaptcha()
 }
 
-// 组件挂载时获取验证码
 onMounted(() => {
+  // 自动填充记住的密码
+  const remember = localStorage.getItem('rememberUser')
+  if (remember) {
+    try {
+      const { user_name, password } = JSON.parse(remember)
+      formData.user_name = user_name
+      formData.password = password
+      formData.rememberMe = true
+    } catch (e) {}
+  }
   refreshCaptcha()
 })
 </script>
@@ -255,70 +299,55 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f0f2f5;
 }
 
 .login-card {
   width: 400px;
-  padding: 40px 32px;
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 0 25px #cac6c6;
   background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+:deep(.n-form-item) {
+  margin-bottom: 0 !important;
+  --n-blank-height: 4px !important;
+  --n-label-height: 10px !important;
+  --n-feedback-height: 10px !important;
+  --n-feedback-padding: 10px !important;
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 32px;
 }
 
-.login-header h1 {
-  font-size: 28px;
+.login-title {
+  color: #707070;
   font-weight: 600;
-  margin-bottom: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-size: 18px;
+  margin-bottom: 4px;
+  display: block;
 }
 
 .login-header p {
-  font-size: 14px;
-  color: #666;
+  font-size: 13px;
+  color: #999;
+  margin: 0;
 }
 
-.login-footer {
-  text-align: center;
-  margin-top: 24px;
-  font-size: 14px;
-  color: #666;
-}
-
-.login-footer span {
-  margin-right: 8px;
-}
-
-/* 验证码样式 */
-.captcha-wrapper {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.captcha-wrapper .n-input {
-  flex: 1;
-}
-
+/* 验证码图片 */
 .captcha-image {
-  width: 120px;
-  height: 40px;
-  cursor: pointer;
-  border: 1px solid #e0e0e0;
+  width: 100%;
+  height: 38px;
   border-radius: 4px;
+  border: 1px solid #dcdfe6;
   overflow: hidden;
+  cursor: pointer;
+  background: #f5f7fa;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f0f0f0;
   transition: all 0.3s;
 }
 
@@ -336,5 +365,18 @@ onMounted(() => {
 .captcha-image span {
   font-size: 12px;
   color: #999;
+}
+
+/* 删除旧的按钮样式覆盖 */
+
+.login-footer {
+  margin-top: 5px;
+  text-align: center;
+  font-size: 14px;
+  color: #999;
+}
+
+.login-footer span {
+  margin-right: 8px;
 }
 </style>

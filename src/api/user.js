@@ -29,7 +29,7 @@ export const getUserDetail = (user_id) => axios.get(`${API_PREFIX}/users/${user_
  * @param {string} data.avatarUrl - 头像URL
  * @returns {Promise} 返回创建的用户
  */
-export const createUser = (data) => axios.post(`${API_PREFIX}/users/register`, data)
+export const createUser = (data) => axios.post(`${API_PREFIX}/users`, data)
 
 /**
  * 更新用户信息
@@ -55,14 +55,14 @@ export const batchDeleteUser = (user_ids) =>
   axios.post(`${API_PREFIX}/users/batch-delete`, { ids: user_ids })
 
 /**
- * 为用户分配角色
+ * 为用户分配角色（批量分配，覆盖原有角色）
  * @param {string} user_id - 用户ID
  * @param {Object} data - 角色数据
- * @param {string} data.role_id - 角色ID
+ * @param {number[]} data.role_ids - 角色ID数组
  * @returns {Promise} 返回分配结果
  */
 export const assignRole = (user_id, data) =>
-  axios.post(`${API_PREFIX}/users/${user_id}/roles`, data)
+  axios.put(`${API_PREFIX}/users/${user_id}/roles`, data)
 
 /**
  * 移除用户角色

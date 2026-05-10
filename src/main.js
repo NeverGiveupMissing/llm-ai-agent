@@ -28,6 +28,10 @@ const pinia = createPinia()
 // 创建应用
 const app = createApp(App)
 
+console.log('🚀 Vue 应用开始初始化...')
+console.log('📦 Pinia 实例:', pinia)
+console.log('🛣️ Router 实例:', router)
+
 // 按顺序使用插件
 app.use(pinia) // 1. 先使用 pinia
 app.use(router) // 2. 再使用路由
@@ -53,4 +57,28 @@ const menuStore = useMenuStore()
 console.log('菜单选项:', menuStore.menuOptions) // 调试：查看菜单是否有数据
 
 // 挂载应用
+console.log('✅ Vue 应用准备挂载到 #app')
 app.mount('#app')
+console.log('✅ Vue 应用已成功挂载！')
+
+// 调试：检查 DOM 结构
+setTimeout(() => {
+  const appElement = document.getElementById('app')
+  console.log('🔍 DOM 检查:', appElement?.innerHTML?.substring(0, 500))
+  
+  // 检查路由当前状态
+  const currentRoute = router.currentRoute.value
+  console.log('🛣️ 当前路由:', currentRoute)
+  console.log('🛣️ 当前路由 name:', currentRoute.name)
+  console.log('🛣️ 当前路由 matched:', currentRoute.matched)
+  console.log('🛣️ 路由 matched 长度:', currentRoute.matched?.length)
+  
+  if (currentRoute.matched && currentRoute.matched.length > 0) {
+    console.log('✅ 路由已匹配！组件信息:')
+    currentRoute.matched.forEach((route, index) => {
+      console.log(`  [${index}]`, route.name, '->', route.path, route.components)
+    })
+  } else {
+    console.error('❌ 没有匹配任何路由！')
+  }
+}, 500)

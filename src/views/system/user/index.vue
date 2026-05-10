@@ -78,6 +78,7 @@
 import { ref, reactive, h, computed } from 'vue'
 import { useMessage, useDialog, useLoadingBar } from 'naive-ui'
 import { useTable } from '@/components/BaseTable/useTable'
+import { formatDate } from '@/utils'
 import {
   getUserList,
   createUser,
@@ -107,9 +108,8 @@ const showSearch = ref(true)
 const searchForm = reactive({
   user_name: '',
   phonenumber: '',
-  status: null,
-  begin_time: null,
-  end_time: null,
+  status: '', // ✅ 空字符串而不是 null，确保字段始终传递
+  dateRange: null, // ✅ 使用时间段选择器
 })
 
 const statusOptions = [
@@ -142,18 +142,11 @@ const searchFields = [
     options: statusOptions,
   },
   {
-    key: 'begin_time',
+    key: 'dateRange',
     label: '创建时间',
-    type: 'date',
-    placeholder: '开始时间',
-    width: '160px',
-  },
-  {
-    key: 'end_time',
-    label: '',
-    type: 'date',
-    placeholder: '结束时间',
-    width: '160px',
+    type: 'date-range',
+    placeholder: '请选择时间范围',
+    width: '300px',
   },
 ]
 
@@ -261,15 +254,20 @@ const handleStatusChange = async (row) => {
 
 // 搜索点击
 const handleSearchClick = () => {
-  // ✅ 直接使用下划线命名的搜索参数
+  // ✅ 保留所有搜索字段（包括空值），后端统一处理
   const searchParams = { ...searchForm }
-
-  // 移除空值
-  Object.keys(searchParams).forEach((key) => {
-    if (searchParams[key] === '' || searchParams[key] === null || searchParams[key] === undefined) {
-      delete searchParams[key]
-    }
-  })
+  
+  // 处理 dateRange 转换为 start_time/end_time
+  if (searchParams.dateRange && Array.isArray(searchParams.dateRange)) {
+    const [start, end] = searchParams.dateRange
+    searchParams.start_time = start ? formatDate(start) : ''
+    searchParams.end_time = end ? formatDate(end) : ''
+    delete searchParams.dateRange
+  } else {
+    // 如果没有选择日期范围，也添加空字段
+    searchParams.start_time = ''
+    searchParams.end_time = ''
+  }
 
   handleSearch(searchParams)
 }
@@ -278,9 +276,8 @@ const handleSearchClick = () => {
 const handleResetClick = () => {
   searchForm.user_name = ''
   searchForm.phonenumber = ''
-  searchForm.status = null
-  searchForm.begin_time = null
-  searchForm.end_time = null
+  searchForm.status = '' // ✅ 重置为空字符串而不是 null
+  searchForm.dateRange = null
   handleReset()
 }
 
@@ -482,7 +479,7 @@ const handleFormSuccess = () => {
 const handleAssignRoles = async (role_ids) => {
   try {
     if (role_ids && role_ids.length > 0) {
-      const res = await assignRole(currentRow.value.user_id, { role_id: role_ids[0] })
+      const res = await assignRole(currentRow.value.user_id, { role_ids: role_ids })
       message.success(res.message || '角色分配成功')
       showRoleModal.value = false
       fetchData()

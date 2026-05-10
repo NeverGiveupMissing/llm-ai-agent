@@ -2,8 +2,8 @@
   <n-space>
     <n-date-picker
       :value="selectedDate"
-      type="date"
-      placeholder="选择日期"
+      type="datetime"
+      placeholder="选择日期时间"
       clearable
       @update:value="handleDateChange"
     />

@@ -72,7 +72,7 @@
 </template>
 
 <script setup name="InterfaceManagement">
-import { ref, reactive, h, computed } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useMessage, useDialog } from 'naive-ui'
 import { useTable } from '@/components/BaseTable/useTable'
 import {
@@ -213,16 +213,14 @@ const formFields = computed(() => [
 
 // 搜索点击
 const handleSearchClick = () => {
-  // ✅ 直接使用下划线命名的搜索参数
-  const searchParams = { ...searchForm }
-
-  // 移除空值
-  Object.keys(searchParams).forEach((key) => {
-    if (searchParams[key] === '' || searchParams[key] === null || searchParams[key] === undefined) {
-      delete searchParams[key]
-    }
-  })
-
+  // 统一使用下划线命名（与数据库字段保持一致）
+  const searchParams = {
+    api_name: searchForm.api_name || '',
+    api_url: searchForm.api_url || '',
+    api_method: searchForm.api_method || '',
+    status: searchForm.status || '',
+  }
+  // 保留所有字段，空值由后端统一处理
   handleSearch(searchParams)
 }
 
@@ -254,7 +252,9 @@ const handleEdit = (row) => {
 // 批量删除（CommonButton 已内置二次确认）
 const handleBatchDelete = async () => {
   try {
-    await Promise.all(selectedKeys.value.map((id) => deleteInterface(id)))
+    // 将字符串ID转换为数字类型
+    const numericIds = selectedKeys.value.map(id => Number(id))
+    await Promise.all(numericIds.map((id) => deleteInterface(id)))
     message.success('批量删除成功')
     fetchData()
   } catch (error) {

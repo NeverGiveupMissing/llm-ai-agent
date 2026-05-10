@@ -98,7 +98,7 @@ const showSearch = ref(true)
 const searchForm = ref({
   role_name: '',
   role_key: '',
-  status: null,
+  status: '', // ✅ 空字符串而不是 null，确保字段始终传递
 })
 
 const statusOptions = [
@@ -134,16 +134,8 @@ const searchFields = [
 
 // 搜索点击
 const handleSearchClick = () => {
-  // ✅ 直接使用下划线命名的搜索参数
+  // ✅ 保留所有搜索字段（包括空值），后端统一处理
   const searchParams = { ...searchForm.value }
-
-  // 移除空值
-  Object.keys(searchParams).forEach((key) => {
-    if (searchParams[key] === '' || searchParams[key] === null || searchParams[key] === undefined) {
-      delete searchParams[key]
-    }
-  })
-
   handleSearch(searchParams)
 }
 
@@ -151,7 +143,7 @@ const handleSearchClick = () => {
 const handleResetClick = () => {
   searchForm.value.role_name = ''
   searchForm.value.role_key = ''
-  searchForm.value.status = null
+  searchForm.value.status = '' // ✅ 重置为空字符串而不是 null
   handleReset()
 }
 

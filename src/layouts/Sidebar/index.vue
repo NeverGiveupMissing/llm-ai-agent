@@ -1,5 +1,5 @@
 <template>
-  <div class="sidebar">
+  <div class="sidebar" style="background: #001529 !important;">
     <SidebarLogo />
     <SidebarMenu />
   </div>

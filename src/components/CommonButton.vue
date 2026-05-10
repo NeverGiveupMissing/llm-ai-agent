@@ -260,7 +260,7 @@ const handleClick = (event) => {
 
 // 处理确认事件
 const handleConfirm = (event) => {
+  // ✅ 删除类型按钮：只触发 confirm 事件，不触发 click，避免 BaseTable 中 onClick + onConfirm 双重执行
   emit('confirm', event)
-  emit('click', event)
 }
 </script>

@@ -373,9 +373,9 @@ const getFieldProps = (field) => {
     case 'date-range':
       return {
         ...baseProps,
-        type: 'daterange',
-        startPlaceholder: '开始日期',
-        endPlaceholder: '结束日期',
+        type: 'datetimerange', // ✅ 支持选择时分秒
+        startPlaceholder: '开始日期时间',
+        endPlaceholder: '结束日期时间',
         style: { width: '100%' },
       }
     case 'icon-picker':

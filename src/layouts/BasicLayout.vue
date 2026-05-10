@@ -62,6 +62,9 @@ import LayoutHeader from './Header/index.vue'
 import Breadcrumb from './Breadcrumb/index.vue'
 import CopyrightFooter from '@/components/CopyrightFooter.vue'
 
+// ✅ 组件挂载时立即输出日志
+console.log('🏗️ [BasicLayout] 组件 script setup 执行')
+
 const route = useRoute()
 
 // 常量
@@ -71,6 +74,8 @@ const COLLAPSED_SIDEBAR_WIDTH = 64
 const appStore = useAppStore()
 const permissionStore = usePermissionStore()
 const menuStore = useMenuStore()
+
+console.log('🏗️ [BasicLayout] store 初始化完成')
 
 // 计算 Header 样式，根据侧边栏折叠状态动态调整
 const headerStyle = computed(() => ({
@@ -85,24 +90,24 @@ const isChatPage = computed(() => {
 
 // 组件挂载时检查权限是否加载
 onMounted(() => {
-  // console.log('🏗️ [BasicLayout] 组件已挂载')
-  // console.log('️ [BasicLayout] isLoaded:', permissionStore.isLoaded)
-  // console.log('️ [BasicLayout] menuTree:', permissionStore.menuTree?.length)
-  // console.log('️ [BasicLayout] menuOptions:', menuStore.menuOptions?.length)
+  console.log('️ [BasicLayout] 组件已挂载')
+  console.log('🔍 [BasicLayout] isLoaded:', permissionStore.isLoaded)
+  console.log(' [BasicLayout] menuTree:', permissionStore.menuTree?.length)
+  console.log(' [BasicLayout] menuOptions:', menuStore.menuOptions?.length)
 
   // 如果权限未加载，手动触发加载
   if (permissionStore.isNotLoaded) {
-    // console.log('🔄 [BasicLayout] 权限未加载，手动触发...')
+    console.log('🔄 [BasicLayout] 权限未加载，手动触发...')
     permissionStore.fetchUserPermissions()
   } else if (
     permissionStore.isLoaded &&
     permissionStore.menuTree?.length > 0 &&
     menuStore.menuOptions?.length === 0
   ) {
-    // ✅ 权限已加载但菜单未生成（缓存加载情况），强制重新生成
-    // console.log(' [BasicLayout] 权限已加载但菜单为空，强制重新生成...')
+    // ✅ 权限已加载但菜单未生成，强制重新生成
+    console.log('🔄 [BasicLayout] 权限已加载但菜单为空，强制重新生成...')
     menuStore.setMenuFromTree(permissionStore.menuTree)
-    // console.log('✅ [BasicLayout] 菜单生成完成:', menuStore.menuOptions?.length, '个')
+    console.log('✅ [BasicLayout] 菜单生成完成:', menuStore.menuOptions?.length, '个')
   }
 })
 
@@ -110,24 +115,24 @@ onMounted(() => {
 watch(
   () => permissionStore.isLoaded,
   async (loaded) => {
-    // console.log(' [BasicLayout] 权限加载状态变化:', loaded)
-    // console.log(' [BasicLayout] menuTree 长度:', permissionStore.menuTree?.length)
-    // console.log(' [BasicLayout] menuOptions 长度:', menuStore.menuOptions?.length)
+    console.log('🔄 [BasicLayout] 权限加载状态变化:', loaded)
+    console.log('🔄 [BasicLayout] menuTree 长度:', permissionStore.menuTree?.length)
+    console.log(' [BasicLayout] menuOptions 长度:', menuStore.menuOptions?.length)
 
     if (loaded === true) {
-      // console.log(' [BasicLayout] 权限已加载，菜单数据已就绪')
-      // console.log(' [BasicLayout] permissionStore.menuTree:', permissionStore.menuTree)
-      // console.log(' [BasicLayout] menuStore.menuOptions:', menuStore.menuOptions)
+      console.log('✅ [BasicLayout] 权限已加载，菜单数据已就绪')
+      console.log(' [BasicLayout] permissionStore.menuTree:', permissionStore.menuTree)
+      console.log(' [BasicLayout] menuStore.menuOptions:', menuStore.menuOptions)
 
       // ✅ 关键修复：权限加载完成后，强制重新生成菜单
       await nextTick()
       if (permissionStore.menuTree?.length > 0) {
-        // console.log(' [BasicLayout] 重新生成菜单...')
+        console.log('🔄 [BasicLayout] 重新生成菜单...')
         menuStore.setMenuFromTree(permissionStore.menuTree)
-        // console.log(' [BasicLayout] 菜单重新生成完成:', menuStore.menuOptions)
-        // console.log(' [BasicLayout] 菜单选项数量:', menuStore.menuOptions?.length)
+        console.log('✅ [BasicLayout] 菜单重新生成完成:', menuStore.menuOptions)
+        console.log('✅ [BasicLayout] 菜单选项数量:', menuStore.menuOptions?.length)
       } else {
-        // console.error(' [BasicLayout] permissionStore.menuTree 为空！')
+        console.error('❌ [BasicLayout] permissionStore.menuTree 为空！')
       }
     }
   },

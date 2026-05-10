@@ -7,7 +7,7 @@
     @confirm="handleConfirm"
     @closed="handleClosed"
   >
-    <BaseForm ref="baseFormRef" v-model="formData" :fields="fields" :cols="2" label-width="80px" />
+    <BaseForm ref="formRef" v-model="formData" :fields="fields" :cols="2" label-width="80px" />
   </BaseModal>
 </template>
 
@@ -59,7 +59,7 @@ const getInitialValues = () => {
   return initialValues
 }
 
-const { formData, loading, resetForm, setFormData, submitForm } = useForm(getInitialValues())
+const { formData, formRef, loading, resetForm, setFormData, submitForm } = useForm(getInitialValues())
 
 watch(
   () => props.row,
@@ -68,8 +68,6 @@ watch(
   },
   { immediate: true },
 )
-
-const baseFormRef = ref(null)
 
 const handleConfirm = async () => {
   // ✅ 调用封装后的 submitForm，校验逻辑已在 useForm 内部处理
@@ -82,12 +80,23 @@ const handleConfirm = async () => {
       throw new Error('请输入正确的邮箱地址')
     }
 
+    // ✅ 新增用户必须填写密码
+    if (!isEdit.value && (!data.password || data.password.trim() === '')) {
+      throw new Error('密码不能为空')
+    }
+
+    // ✅ 编辑用户时，如果密码为空则删除该字段（不修改密码）
+    const submitData = { ...data }
+    if (isEdit.value && (!submitData.password || submitData.password.trim() === '')) {
+      delete submitData.password
+    }
+
     // ✅ 业务逻辑：调用 API
     if (isEdit.value) {
-      const res = await updateUser(data.user_id, data)
+      const res = await updateUser(submitData.user_id, submitData)
       message.success(res.message || '修改成功')
     } else {
-      const res = await createUser(data)
+      const res = await createUser(submitData)
       message.success(res.message || '新增成功')
     }
     

@@ -19,6 +19,15 @@ const handleBusinessError = (data, config) => {
 }
 
 /**
+ * 不需要 Token 的接口白名单
+ */
+const NO_TOKEN_URLS = [
+  '/captcha/image',
+  '/login',
+  '/register',
+]
+
+/**
  * 请求拦截器
  */
 export const requestInterceptor = (config) => {
@@ -29,29 +38,30 @@ export const requestInterceptor = (config) => {
     config.headers.Authorization = `Bearer ${token}`
     console.log('🔑 [请求拦截器] Token 已添加:', config.url)
   } else {
-    console.warn('⚠️ [请求拦截器] 缺少 Token:', config.url)
+    // 检查是否在白名单中
+    const isNoTokenUrl = NO_TOKEN_URLS.some((url) => config.url?.includes(url))
+    if (!isNoTokenUrl) {
+      console.warn('⚠️ [请求拦截器] 缺少 Token:', config.url)
+    }
   }
 
-  if (config.method?.toUpperCase() === 'GET' && config.params) {
-    config.params._t = Date.now()
-  }
 
   // ✅ 导出请求权限校验
   if (config.url?.includes('/export')) {
     try {
       const userStore = useUserStore()
       const permissionStore = usePermissionStore()
-      
+
       // 检查是否是超级管理员
       const isAdmin = checkIsAdmin(userStore.userInfo.roles)
-      
+
       if (!isAdmin) {
         // 不是 admin，检查是否有导出权限
         const hasExportPermission = permissionStore.hasAnyPermission([
           'system:common:export',
           'database:export', // 数据库导出特定权限
         ])
-        
+
         if (!hasExportPermission) {
           message.error('您没有导出权限，请联系管理员')
           throw new Error('没有导出权限')
@@ -83,17 +93,17 @@ export const responseInterceptor = async (response) => {
     // ✅ 企业级方案：不要立即删除 Token，先检查是否真的过期
     // 可能是并行请求的竞态条件导致的临时 401
     const token = localStorage.getItem('access_token')
-    
+
     // ✅ 显示具体错误信息
     const errorMessage = response.data?.msg || response.data?.message || '登录已过期'
     message.error(errorMessage)
-    
+
     if (token) {
       // Token 存在但返回 401，说明确实过期了
       console.warn('️ Token 已失效，清除并跳转到登录页')
       localStorage.removeItem('access_token')
       localStorage.removeItem('refresh_token')
-      
+
       if (!window.location.pathname.includes('/login')) {
         // 延迟跳转，让用户看到错误提示
         setTimeout(() => {
@@ -102,7 +112,7 @@ export const responseInterceptor = async (response) => {
       }
     }
     // 如果 Token 不存在，说明已经清除过了，不需要重复处理
-    
+
     return Promise.reject(new Error(errorMessage))
   }
 

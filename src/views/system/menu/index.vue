@@ -75,7 +75,7 @@ const searchForm = reactive({
   menu_name: '',
   menu_type: '',
   perms: '',
-  status: null,
+  status: '', // ✅ 空字符串而不是 null，确保字段始终传递
 })
 
 const menuTypeOptions = [
@@ -245,16 +245,7 @@ const columns = [
 
 // 搜索
 const handleSearchClick = () => {
-  // ✅ 直接使用下划线命名的搜索参数
-  const searchParams = { ...searchForm }
-
-  // 移除空值
-  Object.keys(searchParams).forEach((key) => {
-    if (searchParams[key] === '' || searchParams[key] === null || searchParams[key] === undefined) {
-      delete searchParams[key]
-    }
-  })
-
+  // ✅ 直接使用页面的 searchForm 进行搜索
   fetchData()
 }
 
@@ -264,7 +255,7 @@ const handleResetClick = () => {
   searchForm.menu_name = ''
   searchForm.menu_type = ''
   searchForm.perms = ''
-  searchForm.status = null
+  searchForm.status = '' // ✅ 重置为空字符串而不是 null
   fetchData()
 }
 

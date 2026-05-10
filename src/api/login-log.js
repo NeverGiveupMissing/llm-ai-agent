@@ -18,8 +18,8 @@ export const getMyLoginLogs = (params) => axios.get(`${API_PREFIX}/login-logs/my
  * @param {number} params.limit - 每页数量
  * @param {string} params.username - 用户名筛选
  * @param {string} params.status - 状态筛选
- * @param {string} params.startDate - 开始日期
- * @param {string} params.endDate - 结束日期
+ * @param {string} params.start_time - 开始时间
+ * @param {string} params.end_time - 结束时间
  * @param {string} params.keyword - 搜索关键词
  * @returns {Promise} 返回登录日志列表
  */

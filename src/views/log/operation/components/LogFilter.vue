@@ -51,7 +51,7 @@ const filterFields = [
   {
     key: 'dateRange',
     label: '日期范围',
-    type: 'date-range',
+    type: 'daterange',
     width: '240px',
   },
 ]

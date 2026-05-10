@@ -95,7 +95,14 @@ export async function permissionGuard({
 
   // 2. 已登录访问登录页 → 跳转首页
   if (hasToken && to.path === loginPath) {
-    return { path: '/dashboard', replace: true }
+    // 如果权限已加载，直接跳转到 dashboard
+    if (permissionStore.isLoaded) {
+      console.log('✅ [PermissionGuard] 已登录且权限已加载，跳转到 dashboard')
+      return { path: '/dashboard', replace: true }
+    }
+    // 如果权限未加载，跳转到 / 让权限加载完成后再重定向
+    console.log('⏳ [PermissionGuard] 已登录但权限未加载，跳转到 /')
+    return { path: '/', replace: true }
   }
 
   // 3. 权限正在加载中 → 直接放行（由 watch 监听处理 UI 更新）
@@ -127,15 +134,11 @@ export async function permissionGuard({
       // 获取权限和菜单（内部会设置 loading 状态）
       await permissionStore.fetchUserPermissions()
 
-      // ✅ 若依标准方案：权限加载完成后，使用 next({ ...to, replace: true }) 确保路由注册完成
-      console.log('✅ [PermissionGuard] 权限加载完成，重新导航...')
-      // 返回一个 Promise，让路由守卫等待导航完成
-      return new Promise((resolve) => {
-        // 使用 setTimeout 确保路由已注册
-        setTimeout(() => {
-          resolve({ ...to, replace: true })
-        }, 0)
-      })
+      // ✅ 权限加载完成，路由已注册
+      // router.addRoute() 在导航过程中注册的路由，当前导航的 matched 不会更新
+      // 必须返回重定向对象，让 Vue Router 使用新的路由表重新匹配
+      console.log('✅ [PermissionGuard] 权限加载完成，路由已注册，重新导航到:', to.path)
+      return { path: to.path, query: to.query, replace: true }
     } catch (error) {
       console.error('❌ [PermissionGuard] 权限加载失败:', error)
       permissionStore.setFailed()
@@ -153,35 +156,11 @@ export async function permissionGuard({
     }
   }
 
-  // 5. 页面级权限检查（权限已加载后）
-  // 🔑 注意：菜单级别（M/C）不检查 perms，只检查是否登录
-  // 按钮级别（F）的权限检查在组件中通过 v-permission 指令和后端 API 验证
-  if (hasToken && permissionStore.isLoaded && !publicPaths.includes(to.path)) {
-    // 可选：如果路由明确标记需要权限检查（如某些敏感页面）
-    // 可以在 meta 中添加 requirePermission: true
-    if (to.meta?.requirePermission) {
-      const perms = getPermsArray(to.meta?.perms)
-      
-      if (perms.length > 0) {
-        const hasAccess = permissionStore.hasAnyPermission(perms)
-        
-        if (!hasAccess) {
-          console.warn(`⚠️ [PermissionGuard] 权限不足: ${to.path} 需要权限: ${perms.join(',')}`)
-          return {
-            path: forbiddenPath,
-            query: { perms: perms.join(',') },
-            replace: true
-          }
-        }
-      }
-    }
-  }
-
-  // 6. 设置页面标题
+  // 5. 设置页面标题
   if (to.meta?.title) {
     document.title = `${to.meta.title} - AI Agent`
   }
 
-  // 7. 正常放行
+  // 6. 正常放行
   return true
 }

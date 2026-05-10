@@ -4,9 +4,7 @@
       <div class="error-code">404</div>
       <h1 class="error-title">页面不存在</h1>
       <p class="error-description">抱歉，您访问的页面不存在或已被移除</p>
-      <n-button type="primary" size="large" @click="goHome">
-        返回首页
-      </n-button>
+      <n-button type="primary" size="large" @click="goHome"> 返回首页 </n-button>
     </div>
   </div>
 </template>
@@ -17,7 +15,10 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const goHome = () => {
-  router.push('/')
+  // ✅ 直接跳转到 dashboard，避免经过 Layout 的 redirect
+  // 如果用户已登录且权限已加载，会直接进入首页
+  // 如果用户未登录或权限未加载，权限守卫会自动处理
+  router.push('/dashboard')
 }
 </script>
 

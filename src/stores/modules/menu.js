@@ -40,75 +40,81 @@ export const useMenuStore = defineStore('menu', {
   }),
 
   actions: {
-    /**
-     * 从后端菜单树生成菜单配置
-     */
     setMenuFromTree(menuTree) {
-      // console.log('🌲 [MenuStore] setMenuFromTree 被调用')
-      // console.log(' [MenuStore] 原始菜单树:', JSON.stringify(menuTree, null, 2))
-      // console.log('🌲 [MenuStore] 菜单树长度:', menuTree?.length)
+      console.log('🌲 [MenuStore] setMenuFromTree 被调用')
+      console.log(' [MenuStore] menuTree 类型:', typeof menuTree, Array.isArray(menuTree))
+      console.log(' [MenuStore] menuTree 长度:', menuTree?.length)
+      if (menuTree?.length > 0) {
+        console.log(' [MenuStore] 第一个菜单项完整数据:', JSON.stringify(menuTree[0], null, 2))
+        console.log(' [MenuStore] visible 值:', menuTree[0].visible, '类型:', typeof menuTree[0].visible)
+        console.log(' [MenuStore] status 值:', menuTree[0].status, '类型:', typeof menuTree[0].status)
+      }
 
       const options = this.buildMenuOptions(menuTree)
 
-      // console.log('✅ [MenuStore] 构建后的菜单选项:', options)
-      // console.log('✅ [MenuStore] 菜单选项数量:', options?.length)
+      console.log('✅ [MenuStore] 构建后的菜单选项:', options)
+      console.log('✅ [MenuStore] 菜单选项数量:', options?.length)
 
       this.menuOptions = options
     },
 
-    /**
-     * 递归构建菜单选项（下划线字段，与后端保持一致）
-     */
     buildMenuOptions(menus, parentPath = '') {
       if (!menus || menus.length === 0) {
-        console.warn('⚠️ [MenuStore] buildMenuOptions: 菜单数据为空')
+        console.warn(' [MenuStore] buildMenuOptions: 菜单数据为空')
         return []
       }
 
-      console.log(`🔍 [MenuStore] buildMenuOptions 处理 ${menus.length} 个菜单项`)
+      console.log(` [MenuStore] buildMenuOptions 处理 ${menus.length} 个菜单项`)
+      console.log(' [MenuStore] 第一个菜单示例:', menus[0])
 
-      return menus
+      let filteredCount = 0
+      let keptCount = 0
+
+      const result = menus
         .map((menu) => {
-          // ✅ 统一使用下划线命名（与后端数据库保持一致）
           const { menu_id, menu_name, menu_type, path, visible, status, icon, perms, children } =
             menu
 
-          // 跳过按钮类型（F）
+          console.log(`   [调试] 菜单 ${menu_name}: menu_type=${menu_type}, visible=${visible}(${typeof visible}), status=${status}(${typeof status})`)
+
           if (menu_type === 'F') {
+            console.log(`   [调试] 跳过按钮: ${menu_name}`)
+            filteredCount++
             return null
           }
 
-          // 跳过隐藏菜单（visible !== '0'）
           if (String(visible) !== '0') {
+            console.log(`   [调试] 跳过隐藏: ${menu_name} (visible=${visible})`)
+            filteredCount++
             return null
           }
 
-          // 跳过停用菜单（status !== '0'）
           if (String(status) !== '0') {
+            console.log(`   [调试] 跳过停用: ${menu_name} (status=${status})`)
+            filteredCount++
             return null
           }
 
-          // ✅ 拼接完整路径
+          keptCount++
+          console.log(`   [调试] 保留菜单: ${menu_name}`)
+
           let fullPath = ''
           if (path && path !== '') {
             const cleanPath = path.startsWith('/') ? path.slice(1) : path
 
             if (parentPath && parentPath !== '') {
-              // 非顶级菜单，拼接父路径
               fullPath = `${parentPath}/${cleanPath}`
             } else {
-              // 顶级菜单，直接使用 path
               fullPath = `/${cleanPath}`
             }
           }
 
           const option = {
-            label: menu_name, // ✅ 使用下划线
-            key: fullPath || perms || menu_name, // ✅ 使用完整路径作为 key
-            icon: this.getIconComponent(icon), // ✅ 使用下划线
+            label: menu_name,
+            key: fullPath || perms || menu_name,
+            icon: this.getIconComponent(icon),
           }
 
-          // ✅ 只有目录（M）才能折叠，菜单（C）即使有子节点也不显示为可折叠
           if (menu_type === 'M' && children && children.length > 0) {
             const childOptions = this.buildMenuOptions(children, fullPath)
             const validChildren = childOptions.filter((child) => child !== null)
@@ -120,14 +126,13 @@ export const useMenuStore = defineStore('menu', {
           return option
         })
         .filter((item) => item !== null)
+
+      console.log(` [调试] buildMenuOptions: 保留 ${keptCount} 个菜单项，过滤掉 ${filteredCount} 个菜单项`)
+
+      return result
     },
 
-    /**
-     * 获取图标组件（支持 @vicons/ionicons5 图标）
-     * Naive UI 的 n-menu 的 icon 属性需要一个渲染函数
-     */
     getIconComponent(iconType) {
-      // ✅ 图标映射（与 IconPicker 组件中的图标名保持一致）
       const iconMap = {
         home: HomeOutline,
         dashboard: GridOutline,
@@ -160,13 +165,9 @@ export const useMenuStore = defineStore('menu', {
       }
 
       const IconComponent = iconMap[iconType] || GridOutline
-      // 返回渲染函数，而不是直接返回组件对象
       return () => h(NIcon, null, { default: () => h(IconComponent) })
     },
 
-    /**
-     * 重置菜单
-     */
     resetMenu() {
       this.menuOptions = []
     },

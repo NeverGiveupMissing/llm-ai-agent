@@ -46,6 +46,7 @@ import { ref, reactive, h } from 'vue'
 import { NTooltip, NIcon } from 'naive-ui'
 import { SearchOutline, RefreshOutline } from '@vicons/ionicons5'
 import { useTable } from '@/components/BaseTable/useTable'
+import { formatDate } from '@/utils'
 import { getOperationLogs } from '@/api/operation-log'
 
 // 使用 useTable 组合式函数
@@ -69,8 +70,7 @@ const showSearch = ref(true)
 // 搜索表单
 const searchForm = reactive({
   username: '',
-  startDate: null,
-  endDate: null,
+  dateRange: null, // ✅ 使用时间段选择器
 })
 
 // 格式化时长
@@ -90,29 +90,36 @@ const searchFields = [
     width: '160px',
   },
   {
-    key: 'startDate',
-    label: '开始日期',
-    type: 'date',
-    width: '160px',
-  },
-  {
-    key: 'endDate',
-    label: '结束日期',
-    type: 'date',
-    width: '160px',
+    key: 'dateRange',
+    label: '操作时间',
+    type: 'date-range',
+    width: '240px',
   },
 ]
 
 // 搜索点击
 const handleSearchClick = () => {
-  handleSearch(searchForm)
+  const searchParams = { ...searchForm }
+  
+  // 处理 dateRange 转换为 start_time/end_time
+  if (searchParams.dateRange && Array.isArray(searchParams.dateRange)) {
+    const [start, end] = searchParams.dateRange
+    if (start) {
+      searchParams.start_time = formatDate(start)
+    }
+    if (end) {
+      searchParams.end_time = formatDate(end)
+    }
+    delete searchParams.dateRange
+  }
+  
+  handleSearch(searchParams)
 }
 
 // 重置点击
 const handleResetClick = () => {
   searchForm.username = ''
-  searchForm.startDate = null
-  searchForm.endDate = null
+  searchForm.dateRange = null
   handleReset()
 }
 
