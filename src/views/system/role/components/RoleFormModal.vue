@@ -32,13 +32,13 @@ const message = useMessage() // ✅ 初始化 message
 const formRef = ref(null)
 const submitting = ref(false)
 
-const isEdit = computed(() => !!props.row?.roleId) // ✅ 后端已通过中间件转换为驼峰
+const isEdit = computed(() => !!props.row?.role_id) // ✅ 使用下划线命名
 
 // 表单数据
 const formData = reactive({
-  roleKey: '', // ✅ 角色标识（英文）
-  roleName: '', // ✅ 角色名称
-  roleSort: 0, // ✅ 显示排序
+  role_key: '', // ✅ 角色标识（英文）
+  role_name: '', // ✅ 角色名称
+  role_sort: 0, // ✅ 显示排序
   status: '0', // ✅ 状态（0正常 1停用）
   remark: '', // ✅ 备注
 })
@@ -46,7 +46,7 @@ const formData = reactive({
 // 表单字段配置
 const formFields = computed(() => [
   {
-    key: 'roleKey',
+    key: 'role_key',
     label: '角色标识',
     type: 'input',
     required: true,
@@ -61,14 +61,14 @@ const formFields = computed(() => [
     ],
   },
   {
-    key: 'roleName',
+    key: 'role_name',
     label: '角色名称',
     type: 'input',
     required: true,
     placeholder: '请输入角色名称',
   },
   {
-    key: 'roleSort',
+    key: 'role_sort',
     label: '显示排序',
     type: 'input-number',
     min: 0,
@@ -99,9 +99,9 @@ const visible = computed({
 
 // 重置表单
 const resetForm = () => {
-  formData.roleKey = ''
-  formData.roleName = ''
-  formData.roleSort = 0
+  formData.role_key = ''
+  formData.role_name = ''
+  formData.role_sort = 0
   formData.status = '0'
   formData.remark = ''
   formRef.value?.restoreValidation()
@@ -112,10 +112,10 @@ watch(
   () => props.row,
   (row) => {
     if (row) {
-      // ✅ 编辑模式：直接赋值，使用后端返回的驼峰字段名
-      formData.roleKey = row.roleKey || ''
-      formData.roleName = row.roleName || ''
-      formData.roleSort = row.roleSort || 0
+      // ✅ 编辑模式：直接使用下划线字段名
+      formData.role_key = row.role_key || ''
+      formData.role_name = row.role_name || ''
+      formData.role_sort = row.role_sort || 0
       formData.status = row.status || '0'
       formData.remark = row.remark || ''
     } else {
@@ -132,9 +132,9 @@ const handleSubmit = async () => {
     // ✅ Naive UI 的 validate() 验证通过时返回 undefined，失败时抛出错误
     await formRef.value?.validate()
   } catch (error) {
-    // 验证失败，显示错误提示
+    // 统一捕获校验错误，禁止向上传递
+    console.warn('表单验证拦截:', error)
     message.error('请填写必填项')
-    console.log('表单验证失败:', error)
     return // 阻止提交
   }
 

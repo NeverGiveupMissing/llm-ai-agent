@@ -1,41 +1,40 @@
 <!-- 文件路径：D:\WorkSpace\code\MyProject\llm-ai-agent\vite-vue3-NaïveUI-pinia\src\views\memory\index.vue -->
 <template>
   <div class="memory-container">
-    <div class="page-header">
-      <div class="page-header-left">
-        <h1 class="page-title">记忆管理</h1>
-        <p class="page-description">
-          管理 AI 记住的关于你的信息。这些记忆帮助 AI 提供更个性化的回答。
-        </p>
-      </div>
-      <div class="page-header-actions">
-        <n-button type="primary" @click="handleCreate">
-          <template #icon
-            ><n-icon><AddOutline /></n-icon
-          ></template>
-          添加记忆
-        </n-button>
-        <n-button @click="handleRefresh">
-          <template #icon
-            ><n-icon><RefreshOutline /></n-icon
-          ></template>
-          刷新
-        </n-button>
-      </div>
-    </div>
+    <!-- 顶部操作栏 -->
+    <n-card :bordered="false" class="search-card">
+      <n-space align="center" justify="space-between">
+        <n-space align="center">
+          <span style="font-size: 16px; font-weight: 600">🧠 记忆管理</span>
+          <n-tag type="info" size="small">管理 AI 长期记忆</n-tag>
+        </n-space>
+        <n-space>
+          <CommonButton type="default" @click="handleRefresh" text="刷新" />
+          <CommonButton type="add" @click="handleCreate" text="添加记忆" />
+        </n-space>
+      </n-space>
+    </n-card>
 
-    <!-- 记忆统计 -->
-    <MemoryStats ref="statsRef" :user_id="user_id" />
+    <!-- 内容区域 -->
+    <n-card :bordered="false" class="content-card">
+      <!-- 记忆统计 -->
+      <MemoryStats ref="statsRef" :user_id="user_id" />
 
-    <!-- 记忆列表与检索 -->
-    <n-tabs v-model:value="activeTab" type="line" animated class="detail-tabs">
-      <n-tab-pane name="list" tab="记忆列表">
-        <MemoryList ref="listRef" :user_id="user_id" @refresh="handleRefresh" @edit="handleEdit" />
-      </n-tab-pane>
-      <n-tab-pane name="retrieval" tab="检索测试">
-        <MemoryRetrieval :user_id="user_id" />
-      </n-tab-pane>
-    </n-tabs>
+      <!-- 记忆列表与检索 -->
+      <n-tabs v-model:value="activeTab" type="line" animated style="margin-top: 16px">
+        <n-tab-pane name="list" tab="记忆列表">
+          <MemoryList
+            ref="listRef"
+            :user_id="user_id"
+            @refresh="handleRefresh"
+            @edit="handleEdit"
+          />
+        </n-tab-pane>
+        <n-tab-pane name="retrieval" tab="检索测试">
+          <MemoryRetrieval :user_id="user_id" />
+        </n-tab-pane>
+      </n-tabs>
+    </n-card>
 
     <!-- 添加/编辑记忆表单 -->
     <MemoryForm
@@ -48,8 +47,8 @@
 </template>
 <script setup name="Memory">
 import { ref, computed } from 'vue'
-import { useMessage, useDialog, NButton, NIcon } from 'naive-ui'
-import { AddOutline, RefreshOutline } from '@vicons/ionicons5'
+import { useMessage, useDialog } from 'naive-ui'
+import CommonButton from '@/components/CommonButton.vue'
 import MemoryStats from './components/MemoryStats.vue'
 import MemoryList from './components/MemoryList.vue'
 import MemoryRetrieval from './components/MemoryRetrieval.vue'
@@ -104,71 +103,7 @@ const handleRefresh = () => {
 </script>
 
 <style scoped>
-.memory-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-.page-header {
-  margin-bottom: 32px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-}
-
-.page-header-left {
-  flex: 1;
-}
-
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: #0d0d0d;
-  margin: 0 0 8px 0;
-}
-
-.page-description {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #6e6e80;
-  margin: 0;
-  max-width: 600px;
-}
-
-.page-header-actions {
-  display: flex;
-  gap: 12px;
-  flex-shrink: 0;
-}
-
-.detail-tabs {
-  margin-top: 32px;
-  background: #ffffff;
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  padding: 24px;
-}
-
-:deep(.detail-tabs .n-tabs-nav) {
-  border-bottom: 1px solid #e5e5e5;
-  margin-bottom: 20px;
-}
-
-:deep(.detail-tabs .n-tabs-tab) {
-  font-size: 14px;
-  color: #6e6e80;
-  padding: 12px 0;
-  margin-right: 32px;
-}
-
-:deep(.detail-tabs .n-tabs-tab--active) {
-  color: #0d0d0d;
-  font-weight: 500;
-}
-
-:deep(.detail-tabs .n-tabs-tab-indicator) {
-  background: #0d0d0d;
+.search-card {
+  margin-bottom: 16px;
 }
 </style>

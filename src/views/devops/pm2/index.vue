@@ -89,11 +89,7 @@
 <script setup>
 import { ref, reactive, h, onMounted } from 'vue'
 import { useMessage, useDialog, NTag, NButton } from 'naive-ui'
-import {
-  RefreshOutline,
-  TrashOutline,
-  CopyOutline,
-} from '@vicons/ionicons5'
+import { RefreshOutline, TrashOutline, CopyOutline } from '@vicons/ionicons5'
 import { getPm2Logs, getPm2LogFiles, clearPm2Logs } from '@/api/pm2'
 
 const message = useMessage()
@@ -121,9 +117,8 @@ const typeOptions = [
 // 分页配置
 const pagination = reactive({
   page: 1,
-  pageSize: 10,
+  page_size: 10,
   showSizePicker: true,
-  pageSizes: [5, 10, 20, 50],
 })
 
 // 表格列定义
@@ -299,16 +294,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.pm2-logs-container {
-  padding: 20px;
-}
-
 .log-content {
   max-height: 600px;
   overflow-y: auto;
   background: #1e1e1e;
   color: #d4d4d4;
-  padding: 16px;
   border-radius: 8px;
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 13px;

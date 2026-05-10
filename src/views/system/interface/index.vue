@@ -96,6 +96,7 @@ const showSearch = ref(true)
 const searchForm = reactive({
   api_name: '',
   api_url: '',
+  api_method: '',
   status: null,
 })
 
@@ -118,7 +119,7 @@ const searchFields = [
     label: '接口名称',
     type: 'input',
     placeholder: '请输入接口名称',
-    width: '200px',
+    width: '180px',
   },
   {
     key: 'api_url',
@@ -126,6 +127,14 @@ const searchFields = [
     type: 'input',
     placeholder: '请输入接口路径',
     width: '200px',
+  },
+  {
+    key: 'api_method',
+    label: '请求方式',
+    type: 'select',
+    placeholder: '请求方式',
+    width: '120px',
+    options: methodOptions,
   },
   {
     key: 'status',
@@ -155,7 +164,7 @@ const {
 // 表单字段配置
 const formFields = computed(() => [
   {
-    key: 'apiName',
+    key: 'api_name',
     label: '接口名称',
     type: 'input',
     required: true,
@@ -163,7 +172,7 @@ const formFields = computed(() => [
     span: 2,
   },
   {
-    key: 'apiUrl',
+    key: 'api_url',
     label: '接口路径',
     type: 'input',
     required: true,
@@ -171,7 +180,7 @@ const formFields = computed(() => [
     span: 2,
   },
   {
-    key: 'apiMethod',
+    key: 'api_method',
     label: '请求方式',
     type: 'select',
     required: true,
@@ -179,7 +188,7 @@ const formFields = computed(() => [
     options: methodOptions,
   },
   {
-    key: 'apiCategory',
+    key: 'api_category',
     label: '所属模块',
     type: 'input',
     required: true,
@@ -204,13 +213,24 @@ const formFields = computed(() => [
 
 // 搜索点击
 const handleSearchClick = () => {
-  handleSearch(searchForm)
+  // ✅ 直接使用下划线命名的搜索参数
+  const searchParams = { ...searchForm }
+
+  // 移除空值
+  Object.keys(searchParams).forEach((key) => {
+    if (searchParams[key] === '' || searchParams[key] === null || searchParams[key] === undefined) {
+      delete searchParams[key]
+    }
+  })
+
+  handleSearch(searchParams)
 }
 
 // 重置点击
 const handleResetClick = () => {
   searchForm.api_name = ''
   searchForm.api_url = ''
+  searchForm.api_method = ''
   searchForm.status = null
   handleReset()
 }
@@ -246,7 +266,9 @@ const handleBatchDelete = async () => {
 const handleFormSuccess = async ({ isEdit, data }) => {
   try {
     if (isEdit) {
-      await updateInterface(currentRow.value.api_id, data)
+      // ✅ 使用下划线字段名的 api_id
+      const apiId = currentRow.value?.api_id || currentRow.value?.apiId
+      await updateInterface(apiId, data)
       message.success('修改成功')
     } else {
       await createInterface(data)
@@ -360,11 +382,6 @@ const handleActionClick = ({ perms, row }) => {
 </script>
 
 <style scoped>
-.interface-management-container {
-  padding: 16px;
-  background: #f0f2f5;
-}
-
 .search-card {
   margin-bottom: 16px;
   border: 1px solid #ebeef5 !important;

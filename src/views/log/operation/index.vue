@@ -200,19 +200,9 @@ const columns = [
         {
           default: () => row.error_message,
           trigger: () => h('span', { style: 'color: #d03050; cursor: pointer;' }, '查看'),
-        }
+        },
       )
     },
   },
 ]
 </script>
-
-<style scoped>
-.operation-log-container {
-  padding: 20px;
-}
-
-.search-card {
-  margin-bottom: 16px;
-}
-</style>

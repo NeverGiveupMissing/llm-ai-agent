@@ -192,12 +192,12 @@ console.log('已注册路由:', router.getRoutes())
 ```json
 [
   {
-    "id": "uuid",
-    "name": "AI对话",
-    "code": "chat:view",
+    "menu_id": 1,
+    "menu_name": "AI对话",
+    "perms": "chat:view",
     "path": "/chat",
     "icon": "chat",
-    "type": "menu",
+    "menu_type": "C",
     "children": []
   }
 ]
@@ -207,10 +207,10 @@ console.log('已注册路由:', router.getRoutes())
 ```json
 [
   {
-    "id": "uuid",
-    "name": "查看对话",
-    "code": "chat:view",
-    "type": "button"
+    "menu_id": 2,
+    "menu_name": "查看对话",
+    "perms": "chat:view",
+    "menu_type": "F"
   }
 ]
 ```

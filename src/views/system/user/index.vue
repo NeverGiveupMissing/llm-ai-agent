@@ -105,46 +105,55 @@ const showSearch = ref(true)
 
 // 搜索表单
 const searchForm = reactive({
-  keyword: '',
+  user_name: '',
   phonenumber: '',
   status: null,
-  dateRange: null,
+  begin_time: null,
+  end_time: null,
 })
 
 const statusOptions = [
-  { label: '正常', value: '1' },
-  { label: '停用', value: '0' },
+  { label: '正常', value: '1' }, // ✅ 自定义：1=正常
+  { label: '停用', value: '0' }, // ✅ 自定义：0=停用
 ]
 
 // 搜索字段配置
 const searchFields = [
   {
-    key: 'keyword',
+    key: 'user_name',
     label: '用户名称',
     type: 'input',
-    placeholder: '请输入用户名称/昵称/邮箱',
-    width: '220px',
+    placeholder: '请输入用户名称',
+    width: '200px',
   },
   {
     key: 'phonenumber',
     label: '手机号码',
     type: 'input',
     placeholder: '请输入手机号码',
-    width: '220px',
+    width: '180px',
   },
   {
     key: 'status',
     label: '状态',
     type: 'select',
     placeholder: '用户状态',
-    width: '160px',
+    width: '120px',
     options: statusOptions,
   },
   {
-    key: 'dateRange',
+    key: 'begin_time',
     label: '创建时间',
-    type: 'date-range',
-    width: '240px',
+    type: 'date',
+    placeholder: '开始时间',
+    width: '160px',
+  },
+  {
+    key: 'end_time',
+    label: '',
+    type: 'date',
+    placeholder: '结束时间',
+    width: '160px',
   },
 ]
 
@@ -215,10 +224,10 @@ const formFields = computed(() => [
     key: 'status',
     label: '状态',
     type: 'switch',
-    defaultValue: '1',
-    checkedValue: '1',
-    uncheckedValue: '0',
-    checkedText: '启用',
+    defaultValue: '1', // ✅ 自定义：默认正常状态
+    checkedValue: '1', // ✅ 自定义：1=正常（开启）
+    uncheckedValue: '0', // ✅ 自定义：0=停用（关闭）
+    checkedText: '正常',
     uncheckedText: '停用',
   },
   {
@@ -252,25 +261,26 @@ const handleStatusChange = async (row) => {
 
 // 搜索点击
 const handleSearchClick = () => {
-  // 处理搜索参数，对齐后端接口
+  // ✅ 直接使用下划线命名的搜索参数
   const searchParams = { ...searchForm }
 
-  // 处理日期范围
-  if (searchParams.dateRange && searchParams.dateRange.length === 2) {
-    searchParams.beginTime = searchParams.dateRange[0]
-    searchParams.endTime = searchParams.dateRange[1]
-    delete searchParams.dateRange
-  }
+  // 移除空值
+  Object.keys(searchParams).forEach((key) => {
+    if (searchParams[key] === '' || searchParams[key] === null || searchParams[key] === undefined) {
+      delete searchParams[key]
+    }
+  })
 
   handleSearch(searchParams)
 }
 
 // 重置点击
 const handleResetClick = () => {
-  searchForm.keyword = ''
+  searchForm.user_name = ''
   searchForm.phonenumber = ''
   searchForm.status = null
-  searchForm.dateRange = null
+  searchForm.begin_time = null
+  searchForm.end_time = null
   handleReset()
 }
 
@@ -323,8 +333,8 @@ const columns = [
     width: 80,
     align: 'center',
     tagMap: {
-      1: { text: '正常', type: 'success' },
-      0: { text: '停用', type: 'error' },
+      1: { text: '正常', type: 'success' }, // ✅ 自定义：1=正常
+      0: { text: '停用', type: 'error' }, // ✅ 自定义：0=停用
     },
   },
   {
@@ -359,9 +369,10 @@ const fetchRoleList = async () => {
 
     const list = res?.data?.list || []
 
+    // ✅ 确保 value 统一为数字类型，避免子组件类型不匹配
     roleOptions.value = list.map((role) => ({
       label: role.role_name,
-      value: role.role_id,
+      value: Number(role.role_id),
     }))
   } catch (error) {
     console.error('获取角色列表失败:', error)
@@ -487,7 +498,6 @@ fetchRoleList()
 
 <style scoped>
 .user-management-container {
-  padding: 16px;
   background: #f0f2f5;
 }
 

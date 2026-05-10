@@ -15,8 +15,8 @@ export function getCurrentRouteButtons(permissionStore, route) {
     return []
   }
 
-  console.log('🔵 getCurrentRouteButtons - 当前路由:', route.path, route.name)
-  console.log('🔵 getCurrentRouteButtons - 菜单树:', menuTree)
+  // console.log('🔵 getCurrentRouteButtons - 当前路由:', route.path, route.name)
+  // console.log('🔵 getCurrentRouteButtons - 菜单树:', menuTree)
 
   // 递归查找匹配当前路由的菜单节点
   const findMenu = (menus) => {
@@ -24,16 +24,9 @@ export function getCurrentRouteButtons(permissionStore, route) {
       const menuPath = menu.path
       const menuName = menu.name || menu.routeName || menu.route_name
 
-      console.log('🔍 检查菜单:', {
-        menuPath,
-        menuName,
-        routePath: route.path,
-        routeName: route.name,
-      })
-
       // ✅ 修复：匹配 path 或 name
       if ((menuPath && menuPath === route.path) || (menuName && menuName === route.name)) {
-        console.log('✅ 找到匹配菜单:', menu)
+        // console.log('✅ 找到匹配菜单:', menu)
         return menu
       }
       if (menu.children) {
@@ -76,23 +69,38 @@ export function getCurrentRouteButtons(permissionStore, route) {
 export function mapPermsToType(perms) {
   if (!perms) return 'primary'
 
-  // ✅ 完整覆盖所有业务后缀
+  // ✅ 完整覆盖所有业务后缀（统一使用下划线命名 snake_case）
   const suffixMap = {
-    ':add': 'add',
-    ':create': 'add',
-    ':edit': 'edit',
-    ':update': 'edit',
-    ':remove': 'delete',
-    ':delete': 'delete',
-    ':query': 'query',
-    ':search': 'query',
-    ':list': 'query',
-    ':export': 'export',
-    ':assign_role': 'assign_role',
-    ':assign': 'assign_role',
-    ':reset_pwd': 'reset',
-    ':reset': 'reset',
-    ':import': 'import',
+    // 新增操作
+    ':add': 'add', // 通用新增
+    ':create': 'add', // 通用新增（兼容写法）
+
+    // 编辑操作
+    ':edit': 'edit', // 通用编辑
+    ':update': 'edit', // 通用编辑（兼容写法）
+
+    // 删除操作
+    ':remove': 'delete', // 通用删除（若依标准）
+    ':delete': 'delete', // 通用删除（兼容写法）
+
+    // 查询操作
+    ':query': 'query', // 通用查询
+    ':search': 'query', // 搜索（兼容写法）
+    ':list': 'query', // 列表查询（兼容写法）
+
+    // 导出操作
+    ':export': 'export', // 通用导出
+
+    // 分配操作
+    ':assign_role': 'assign_role', // 用户管理-分配角色（下划线）
+    ':assign_permission': 'assign_role', // 角色管理-分配权限（下划线）
+
+    // 重置操作
+    ':reset_pwd': 'reset', // 重置密码
+    ':reset': 'reset', // 通用重置（兼容写法）
+
+    // 导入操作
+    ':import': 'import', // 通用导入
   }
 
   // ✅ 从后往前匹配，确保精确匹配

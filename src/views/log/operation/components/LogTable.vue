@@ -7,7 +7,7 @@
       :pagination="paginationConfig"
       :row-key="(row) => row.id"
       @update:page="handlePageChange"
-      @update:page-size="handlePageSizeChange"
+      @update:page-size="handlepage_sizeChange"
     />
   </div>
 </template>
@@ -140,7 +140,7 @@ const columns = [
         {
           default: () => row.error_message,
           trigger: () => h('span', { style: 'color: #d03050' }, '查看'),
-        }
+        },
       )
     },
   },
@@ -149,10 +149,10 @@ const columns = [
 // 分页配置
 const paginationConfig = {
   page: props.pagination.page,
-  pageSize: props.pagination.pageSize,
+  page_size: props.pagination.page_size,
   itemCount: props.pagination.itemCount,
   showSizePicker: props.pagination.showSizePicker,
-  pageSizes: props.pagination.pageSizes,
+  page_sizes: props.pagination.page_sizes,
 }
 
 // 页码变化
@@ -161,8 +161,8 @@ const handlePageChange = (page) => {
 }
 
 // 每页条数变化
-const handlePageSizeChange = (pageSize) => {
-  emit('page-size-change', pageSize)
+const handlepage_sizeChange = (page_size) => {
+  emit('page-size-change', page_size)
 }
 </script>
 

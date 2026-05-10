@@ -194,15 +194,13 @@ const indexColumns = [
 
 // 分页配置
 const pagination = {
-  pageSize: 20,
+  page_size: 20,
   showSizePicker: true,
-  pageSizes: [10, 20, 50, 100],
 }
 
 const indexPagination = {
-  pageSize: 10,
+  page_size: 10,
   showSizePicker: true,
-  pageSizes: [10, 20, 50],
 }
 
 // 加载表详细信息（字段 + 注释 + 索引）

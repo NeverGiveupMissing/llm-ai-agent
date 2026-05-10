@@ -36,7 +36,7 @@ export const constantRoutes = [
   // ✅ 优化：重定向逻辑交由路由守卫处理，这里仅作为占位符
   {
     path: '/',
-    name: 'LayoutRoot', // ✅ 改名避免冲突
+    name: 'Layout', // ✅ 与 index.js 保持一致
     component: Layout,
     redirect: '/dashboard', // 默认重定向，实际跳转由守卫控制
     children: [],

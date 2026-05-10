@@ -14,8 +14,8 @@
           <MenuPermissionTab
             :menu-tree-data="menuTreeData"
             :menu-tree-loading="menuTreeLoading"
-            :checked-menu-keys="checkedMenuKeys"
-            @update:checked-menu-keys="checkedMenuKeys = $event"
+            :checked-keys="checked_keys_menu"
+            @update:checked-keys="checked_keys_menu = $event"
           />
         </n-tab-pane>
 
@@ -24,8 +24,8 @@
           <ButtonPermissionTab
             :button-tree-data="buttonTreeData"
             :button-tree-loading="buttonTreeLoading"
-            :checked-button-keys="checkedButtonKeys"
-            @update:checked-button-keys="checkedButtonKeys = $event"
+            :checked-keys="checked_keys_button"
+            @update:checked-keys="checked_keys_button = $event"
           />
         </n-tab-pane>
 
@@ -34,8 +34,8 @@
           <ApiPermissionTab
             :api-tree-data="apiTreeData"
             :api-permission-loading="apiPermissionLoading"
-            :checked-api-keys="checkedApiKeys"
-            @update:checked-api-keys="checkedApiKeys = $event"
+            :checked-keys="checked_keys_api"
+            @update:checked-keys="checked_keys_api = $event"
           />
         </n-tab-pane>
       </n-tabs>
@@ -47,7 +47,7 @@
 import { ref, watch, computed } from 'vue'
 import { useMessage } from 'naive-ui'
 import { getMenuList } from '@/api/menu'
-import { getRoleMenuIds } from '@/api/role'
+import { getRolemenu_ids, getRoleApiPaths } from '@/api/role'
 import MenuPermissionTab from './MenuPermissionTab.vue'
 import ButtonPermissionTab from './ButtonPermissionTab.vue'
 import ApiPermissionTab from './ApiPermissionTab.vue'
@@ -72,17 +72,17 @@ const saving = ref(false)
 // 菜单权限相关
 const menuTreeData = ref([])
 const menuTreeLoading = ref(false)
-const checkedMenuKeys = ref([])
+const checked_keys_menu = ref([])
 
 // 按钮权限相关
 const buttonTreeData = ref([])
 const buttonTreeLoading = ref(false)
-const checkedButtonKeys = ref([])
+const checked_keys_button = ref([])
 
 // 接口权限相关
 const apiTreeData = ref([])
 const apiPermissionLoading = ref(false)
-const checkedApiKeys = ref([])
+const checked_keys_api = ref([])
 
 // 角色名称（兼容两种命名）
 const roleName = computed(() => {
@@ -107,11 +107,11 @@ watch(
     } else if (!newVal) {
       // 弹窗关闭时清空数据
       menuTreeData.value = []
-      checkedMenuKeys.value = []
+      checked_keys_menu.value = []
       buttonTreeData.value = []
-      checkedButtonKeys.value = []
+      checked_keys_button.value = []
       apiTreeData.value = []
-      checkedApiKeys.value = []
+      checked_keys_api.value = []
     }
   },
 )
@@ -178,58 +178,142 @@ const loadApiPermissions = async () => {
   try {
     apiPermissionLoading.value = true
 
-    // 模拟数据，按模块分类
-    const apiData = [
-      // 菜单管理接口
-      {
-        module: '菜单管理',
-        apis: [
-          { path: '/api/menu/list', method: 'GET', description: '获取菜单列表' },
-          { path: '/api/menu/create', method: 'POST', description: '创建菜单' },
-          { path: '/api/menu/update', method: 'PUT', description: '更新菜单' },
-          { path: '/api/menu/delete', method: 'DELETE', description: '删除菜单' },
-        ],
-      },
-      // 角色管理接口
-      {
-        module: '角色管理',
-        apis: [
-          { path: '/api/role/list', method: 'GET', description: '获取角色列表' },
-          { path: '/api/role/create', method: 'POST', description: '创建角色' },
-          { path: '/api/role/update', method: 'PUT', description: '更新角色' },
-          { path: '/api/role/delete', method: 'DELETE', description: '删除角色' },
-          { path: '/api/role/assign-permission', method: 'POST', description: '分配权限' },
-        ],
-      },
-      // 用户管理接口
-      {
-        module: '用户管理',
-        apis: [
-          { path: '/api/user/list', method: 'GET', description: '获取用户列表' },
-          { path: '/api/user/create', method: 'POST', description: '创建用户' },
-          { path: '/api/user/update', method: 'PUT', description: '更新用户' },
-          { path: '/api/user/delete', method: 'DELETE', description: '删除用户' },
-          { path: '/api/user/reset-password', method: 'POST', description: '重置密码' },
-        ],
-      },
-    ]
+    // ✅ 从后端 sys_interface 表获取接口权限
+    const { getInterfaceList } = await import('@/api/interface')
+    const res = await getInterfaceList({ page: 1, page_size: 1000 })
 
-    // 构建树形结构
-    apiTreeData.value = apiData.map((module) => ({
-      path: `module-${module.module}`,
-      name: module.module,
-      isModule: true,
-      children: module.apis.map((api) => ({
-        ...api,
-        name: api.description,
-      })),
-    }))
+    let interfaceData = []
+    if (res.data && Array.isArray(res.data.list)) {
+      interfaceData = res.data.list
+    } else if (res.data && Array.isArray(res.data)) {
+      interfaceData = res.data
+    }
+
+    console.log('✅ 后端返回的接口数据:', interfaceData)
+
+    // 转换为接口权限树格式
+    apiTreeData.value = transformInterfaceToTree(interfaceData)
+
+    console.log('✅ 接口权限树数据:', apiTreeData.value)
   } catch (error) {
     console.error('获取接口权限列表失败:', error)
     message.error(error.message || '获取接口权限列表失败')
   } finally {
     apiPermissionLoading.value = false
   }
+}
+
+// 将接口数据转换为树形结构（按 api_category 分组）
+const transformInterfaceToTree = (interfaces) => {
+  const modules = {}
+
+  interfaces.forEach((item) => {
+    // ✅ 使用 api_category 作为模块名（中文）
+    const category = item.api_category || '其他'
+
+    if (!modules[category]) {
+      modules[category] = {
+        api_id: `category-${category}`,
+        api_name: category,
+        isModule: true,
+        children: [],
+      }
+    }
+
+    // ✅ 添加接口节点
+    modules[category].children.push({
+      api_id: item.api_id,
+      api_name: item.api_name,
+      api_path: item.api_url,
+      api_method: item.api_method,
+      status: item.status,
+      remark: item.remark,
+    })
+  })
+
+  return Object.values(modules)
+}
+
+// 提取接口权限（从菜单树中提取有 perms 的节点）
+const extractApiPermissions = (menus) => {
+  const apis = []
+  const traverse = (items) => {
+    items.forEach((item) => {
+      // ✅ 严格使用下划线命名
+      const perms = item.perms
+      const path = item.path
+      const menu_id = Number(item.menu_id)
+      const menu_name = item.menu_name
+      const menu_type = item.menu_type
+
+      // 只要有 perms 且不是按钮类型，就作为接口权限
+      if (perms && menu_type !== 'F') {
+        apis.push({
+          api_id: menu_id,
+          api_path: path || '',
+          api_name: menu_name || '',
+          perms: perms,
+          method: 'GET', // 默认GET
+        })
+      }
+
+      if (item.children && item.children.length > 0) {
+        traverse(item.children)
+      }
+    })
+  }
+  traverse(menus)
+  return apis
+}
+
+// 按模块分组（使用菜单中文名称作为模块名）
+const groupByModule = (apis) => {
+  const modules = {}
+  apis.forEach((api) => {
+    // 优先使用 api_name（中文名称）作为模块名
+    let module_name = '其他'
+    let module_label = '其他'
+
+    if (api.api_name && api.api_name.includes('（')) {
+      // 如果 api_name 包含括号，提取括号前的中文名称
+      const parts = api.api_name.split('（')
+      module_label = parts[0]
+      // 从 perms 提取英文模块名
+      if (api.perms && api.perms.includes(':')) {
+        module_name = api.perms.split(':')[0]
+      }
+    } else if (api.perms && api.perms.includes(':')) {
+      // 从 perms 提取模块名
+      module_name = api.perms.split(':')[0]
+      module_label = module_name
+    } else if (api.api_path) {
+      // 如果 perms 不可用，尝试从 api_path 提取
+      const parts = api.api_path.split('/').filter((p) => p)
+      if (parts.length > 1) {
+        module_name = parts[1]
+        module_label = module_name
+      }
+    }
+
+    if (!modules[module_name]) {
+      modules[module_name] = {
+        module: module_name,
+        module_label: module_label,
+        apis: [],
+      }
+    }
+    modules[module_name].apis.push(api)
+  })
+
+  return Object.values(modules).map((module) => ({
+    api_id: `module-${module.module}`,
+    api_name: module.module_label,
+    isModule: true,
+    children: module.apis.map((api) => ({
+      ...api,
+      api_name: `${api.api_name} (${api.api_path})`,
+    })),
+  }))
 }
 
 // 切换接口权限选中状态
@@ -258,8 +342,8 @@ const getAllApiPaths = (apis) => {
   const paths = []
   const traverse = (items) => {
     items.forEach((item) => {
-      if (!item.isModule && item.path) {
-        paths.push(item.path)
+      if (!item.isModule && item.api_path) {
+        paths.push(item.api_path)
       }
       if (item.children && item.children.length > 0) {
         traverse(item.children)
@@ -286,63 +370,128 @@ const getMethodType = (method) => {
   return typeMap[method?.toUpperCase()] || 'default'
 }
 
-// 过滤指定类型的菜单（保留树形结构）
+// 过滤指定类型的菜单（展平为一层结构，按父级菜单名称分组）
 const filterMenuType = (menus, types) => {
-  const filtered = []
-  for (const menu of menus) {
-    // 递归处理子节点
-    const filteredChildren = menu.children ? filterMenuType(menu.children, types) : []
+  const result = []
+  const groupMap = new Map()
 
-    // 如果当前节点是指定类型，或者子节点中有匹配项，保留它
-    if (types.includes(menu.menuType) || filteredChildren.length > 0) {
-      filtered.push({
-        ...menu,
-        children: filteredChildren,
-      })
+  // 递归收集所有按钮节点及其父级路径
+  const collectButtons = (items, parentPath = []) => {
+    for (const menu of items) {
+      const menu_type = menu.menu_type
+      const menu_name = menu.menu_name
+      const perms = menu.perms
+      const menu_id = Number(menu.menu_id)
 
-      // 调试：输出被保留的节点
-      if (menu.menuType === 'F') {
-        console.log('保留按钮节点:', menu.menuName, 'perms:', menu.perms)
+      if (types.includes(menu_type)) {
+        // 是目标类型节点
+        // 使用父级路径作为分组键（排除根节点）
+        const groupKey = parentPath.length > 0 ? parentPath.join(' / ') : '其他'
+
+        if (!groupMap.has(groupKey)) {
+          groupMap.set(groupKey, {
+            menu_id: `group-${groupKey}`,
+            menu_name: parentPath.length > 0 ? parentPath[parentPath.length - 1] : groupKey,
+            menu_type: 'M', // 虚拟目录节点
+            is_group: true,
+            children: [],
+          })
+        }
+
+        groupMap.get(groupKey).children.push({
+          ...menu,
+          menu_id: menu_id,
+        })
+      }
+
+      // 递归处理子节点
+      if (menu.children && menu.children.length > 0) {
+        const newParentPath =
+          menu_type === 'M' || menu_type === 'C' ? [...parentPath, menu_name] : parentPath
+        collectButtons(menu.children, newParentPath)
       }
     }
   }
-  return filtered
+
+  collectButtons(menus)
+
+  return Array.from(groupMap.values())
 }
 
 // 加载角色已有权限
 const loadRolePermissions = async () => {
   try {
-    const roleId = props.role?.role_id
+    const role_id = props.role?.role_id
 
-    if (!roleId) {
-      console.warn('角色ID不存在')
+    if (!role_id) {
+      console.warn('角色 ID 不存在')
       return
     }
 
-    const res = await getRoleMenuIds(roleId)
-    const allMenuIds = res.data || []
+    console.log('===== 开始加载角色权限 =====')
+    console.log('角色 ID:', role_id)
 
-    // 根据权限ID分配给不同的checkedKeys
-    checkedMenuKeys.value = allMenuIds.filter((id) => {
+    const res = await getRolemenu_ids(role_id)
+    const allmenu_ids = res.data || []
+
+    console.log('后端返回的菜单 ID 列表:', allmenu_ids)
+    console.log('菜单树数据:', menuTreeData.value)
+    console.log('按钮树数据:', buttonTreeData.value)
+
+    // ✅ 强制类型转换：确保所有勾选的 ID 都是数字类型
+    const menuIds = allmenu_ids.map((id) => Number(id))
+
+    // 根据权限 ID 分配给不同的 checked_keys
+    checked_keys_menu.value = menuIds.filter((id) => {
       return menuTreeData.value.some((menu) => matchMenuId(menu, id))
     })
 
-    checkedButtonKeys.value = allMenuIds.filter((id) => {
+    checked_keys_button.value = menuIds.filter((id) => {
       return buttonTreeData.value.some((menu) => matchMenuId(menu, id))
     })
+
+    console.log('匹配后的菜单勾选:', checked_keys_menu.value)
+    console.log('匹配后的按钮勾选:', checked_keys_button.value)
+
+    // ✅ 加载接口权限回显
+    await loadRoleApiPermissions(role_id)
   } catch (error) {
     console.error('获取角色权限失败:', error)
     message.error(error.message || '获取角色权限失败')
   }
 }
 
-// 递归查找菜单ID是否匹配
+// 递归查找菜单 ID 是否匹配
 const matchMenuId = (menu, targetId) => {
-  if (String(menu.menuId) === String(targetId)) return true
+  // ✅ 严格使用下划线命名
+  const menu_id = Number(menu.menu_id)
+  if (menu_id === targetId) return true
   if (menu.children && menu.children.length > 0) {
     return menu.children.some((child) => matchMenuId(child, targetId))
   }
   return false
+}
+
+// 加载角色接口权限回显
+const loadRoleApiPermissions = async (role_id) => {
+  try {
+    console.log('===== 开始加载接口权限 =====')
+    console.log('角色 ID:', role_id)
+
+    const res = await getRoleApiPaths(role_id)
+    const apiList = res.data || []
+
+    console.log('后端返回的接口权限列表:', apiList)
+    console.log('接口树数据:', apiTreeData.value)
+
+    // apiList 格式: [{ api_id: 1, api_path: '/auth/login', method: 'POST' }, ...]
+    // checked_keys_api 存储的是 api_id，用于树形组件的勾选
+    checked_keys_api.value = apiList.map((api) => Number(api.api_id || api.api_path || ''))
+
+    console.log('匹配后的接口勾选:', checked_keys_api.value)
+  } catch (error) {
+    console.error('加载角色接口权限失败:', error)
+  }
 }
 
 // 保存权限分配
@@ -351,11 +500,11 @@ const handleSave = async () => {
     saving.value = true
 
     // 合并所有权限ID（菜单 + 按钮）
-    const allMenuIds = [...checkedMenuKeys.value, ...checkedButtonKeys.value]
+    const all_menu_ids = [...checked_keys_menu.value, ...checked_keys_button.value]
 
     emit('save', {
-      menuIds: allMenuIds,
-      apiPaths: checkedApiKeys.value.filter((key) => !key.startsWith('module-')), // 只保存接口路径，过滤掉模块ID
+      menu_ids: all_menu_ids,
+      api_paths: checked_keys_api.value.filter((key) => !key.startsWith('module-')), // 只保存接口路径，过滤掉模块ID
     })
   } catch (error) {
     console.error('保存权限失败:', error)
@@ -366,24 +515,48 @@ const handleSave = async () => {
 }
 
 // 递归获取所有菜单ID
-const getAllMenuIds = (menus) => {
+const getAllmenu_ids = (menus) => {
   const ids = []
   menus.forEach((menu) => {
-    ids.push(menu.menuId)
+    ids.push(menu.menu_id)
     if (menu.children && menu.children.length > 0) {
-      ids.push(...getAllMenuIds(menu.children))
+      ids.push(...getAllmenu_ids(menu.children))
     }
   })
   return ids
+}
+
+// 全选菜单
+const handleSelectAllMenus = () => {
+  const allKeys = getAllmenu_ids(menuTreeData.value)
+  checked_keys_menu.value = allKeys
+}
+
+// 取消全选菜单
+const handleUnselectAllMenus = () => {
+  checked_keys_menu.value = []
+}
+
+// 全选按钮
+const handleSelectAllButtons = () => {
+  const allKeys = getAllmenu_ids(buttonTreeData.value)
+  checked_keys_button.value = allKeys
+}
+
+// 取消全选按钮
+const handleUnselectAllButtons = () => {
+  checked_keys_button.value = []
 }
 </script>
 
 <style scoped>
 .permission-container {
-  max-height: 600px;
-  overflow: hidden;
+  max-height: 630px;
 }
-
+:deep(.n-tabs-pane-wrapper) {
+  height: 600px;
+  overflow-y: scroll;
+}
 .tree-wrapper {
   max-height: 450px;
   overflow-y: auto;

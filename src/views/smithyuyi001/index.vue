@@ -173,9 +173,8 @@ const typeOptions = [
 // 分页配置
 const pagination = reactive({
   page: 1,
-  pageSize: 10,
+  page_size: 10,
   showSizePicker: true,
-  pageSizes: [5, 10, 20, 50],
 })
 
 // 表格列定义

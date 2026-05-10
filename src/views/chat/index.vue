@@ -32,6 +32,28 @@
 
     <!-- 主内容区 -->
     <div class="chat-main">
+      <!-- API 配置提示 -->
+      <n-alert
+        v-if="showApiWarning"
+        type="warning"
+        closable
+        @close="showApiWarning = false"
+        style="margin: 16px 16px 0"
+      >
+        <template #header>
+          ⚠️ 记忆功能暂时不可用
+        </template>
+        检测到 Embedding API 配置问题，记忆提取功能暂时禁用，但不影响正常聊天。
+        <br />
+        <strong>解决建议：</strong>
+        <ol style="margin: 8px 0; padding-left: 20px">
+          <li>检查后端 <code>koa2/.env</code> 文件中的 <code>API_KEY</code> 是否有效</li>
+          <li>确认 <code>BASE_URL</code> 是否正确（当前：{{ apiBaseUrl }}）</li>
+          <li>验证 <code>EMBEDDING_MODEL</code> 是否受支持（当前：{{ embeddingModel }}）</li>
+          <li>联系 API 提供商确认账户额度和权限</li>
+        </ol>
+      </n-alert>
+
       <ChatMessageList
         :messages="messages"
         :session-id="currentSessionId"
@@ -52,14 +74,14 @@
       ref="memoryPanelRef"
       v-model:show="showMemoryPanel"
       :session-id="currentSessionId"
-      :user-id="currentuser_id"
+      :user_id="currentuser_id"
     />
   </div>
 </template>
 
 <script setup name="ChatMessageIndex">
 import { ref, onMounted, computed } from 'vue'
-import { useMessage, useDialog, NButton, NIcon } from 'naive-ui'
+import { useMessage, useDialog, NButton, NIcon, NAlert } from 'naive-ui'
 import { ChevronBackOutline, ChevronForwardOutline } from '@vicons/ionicons5'
 import ChatMessageList from './components/ChatMessageList.vue'
 import ChatInput from './components/ChatInput.vue'
@@ -86,11 +108,16 @@ const messages = ref([])
 const loading = ref(false)
 const showSessionList = ref(true) // 默认展开会话历史
 const showMemoryPanel = ref(false)
+const showApiWarning = ref(false) // 是否显示 API 配置警告
 const currentSessionId = ref('')
 const currentuser_id = ref('')
 const memoryPanelRef = ref(null)
 // SessionList 组件相关逻辑已被移除
 const editingMessage = ref(null)
+
+// API 配置信息（从环境变量读取）
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.laozhang.ai/v1'
+const embeddingModel = 'text-embedding-ada-002'
 
 // 计算会话列表切换按钮的位置
 const toggleBtnStyle = computed(() => {
@@ -269,7 +296,17 @@ const handleSend = async (content) => {
             memoryPanelRef.value
               .fetchExtractedMemories(fullHistory, { skipLoading: true })
               .catch((err) => {
-                console.error('提取记忆失败:', err)
+                // 友好提示：记忆提取失败不影响聊天
+                if (err.message?.includes('401') || err.message?.includes('Embedding')) {
+                  console.warn('⚠️ 记忆功能暂时不可用，但不影响聊天')
+                  // 显示警告提示
+                  showApiWarning.value = true
+                  msgApi.warning('记忆功能暂时不可用，但不影响聊天', {
+                    duration: 3000,
+                  })
+                } else {
+                  console.error('提取记忆失败:', err)
+                }
               })
           }
         },

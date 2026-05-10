@@ -47,11 +47,11 @@ export function getMenuList(params) {
 
 /**
  * 获取菜单详情
- * @param {number} menuId - 菜单ID
+ * @param {number} menu_id- 菜单ID
  * @returns {Promise<{data: SysMenu}>}
  */
-export function getMenuDetail(menuId) {
-  return axios.get(`${API_PREFIX}/menus/${menuId}`)
+export function getMenuDetail(menu_id) {
+  return axios.get(`${API_PREFIX}/menus/${menu_id}`)
 }
 
 /**
@@ -65,21 +65,21 @@ export function createMenu(data) {
 
 /**
  * 更新菜单
- * @param {number} menuId - 菜单ID
+ * @param {number} menu_id- 菜单ID
  * @param {Partial<SysMenu>} data - 菜单数据
  * @returns {Promise<{data: SysMenu}>}
  */
-export function updateMenu(menuId, data) {
-  return axios.put(`${API_PREFIX}/menus/${menuId}`, data)
+export function updateMenu(menu_id, data) {
+  return axios.put(`${API_PREFIX}/menus/${menu_id}`, data)
 }
 
 /**
  * 删除菜单
- * @param {number} menuId - 菜单ID
+ * @param {number} menu_id- 菜单ID
  * @returns {Promise<{message: string}>}
  */
-export function deleteMenu(menuId) {
-  return axios.delete(`${API_PREFIX}/menus/${menuId}`)
+export function deleteMenu(menu_id) {
+  return axios.delete(`${API_PREFIX}/menus/${menu_id}`)
 }
 
 /**

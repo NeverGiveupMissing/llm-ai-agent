@@ -8,7 +8,7 @@
             <n-tag type="info" size="medium">
               {{ props.selectedTable }}
             </n-tag>
-            <n-text depth="3" style="font-size: 12px;"> 共 {{ pagination.total }} 行 </n-text>
+            <n-text depth="3" style="font-size: 12px"> 共 {{ pagination.total }} 行 </n-text>
           </n-space>
           <n-space>
             <n-button type="primary" size="tiny" @click="loadTableData" :loading="loading">
@@ -22,14 +22,21 @@
       </div>
 
       <!-- 数据表格 -->
-      <div class="table-wrapper" v-if="tableData.length > 0">
+      <div v-if="loading" style="display: flex; justify-content: center; align-items: center; min-height: 200px">
+        <n-spin size="large" />
+      </div>
+      
+      <div v-else-if="tableData.length > 0" class="table-wrapper">
+        <!-- ✅ 添加调试信息 -->
+        <div style="margin-bottom: 8px; padding: 8px; background: #f0f0f0; font-size: 12px;">
+          调试信息：tableData.length = {{ tableData.length }}, columns.length = {{ columns.length }}
+        </div>
         <TableDataEditor
           ref="tableEditorRef"
           :columns="columns"
           :data="tableData"
           :primary-key="primaryKey"
           :table-name="props.selectedTable"
-          :scroll-x="scrollX"
           @update="handleUpdateRow"
           @delete="handleDeleteRow"
           @cancel="handleCancelEdit"
@@ -37,18 +44,16 @@
       </div>
 
       <n-empty v-else style="margin-top: 40px">
-        <template #description> 暂无数据 </template>
+        <template #description> 暂无数据 (tableData.length = {{ tableData.length }}) </template>
       </n-empty>
 
       <!-- 底部分页 -->
       <div class="pagination-wrapper" v-if="pagination.totalPages > 0">
-        <n-text type="info" style="font-size: 13px;">
-          共 {{ pagination.total }} 条记录
-        </n-text>
+        <n-text type="info" style="font-size: 13px"> 共 {{ pagination.total }} 条记录 </n-text>
         <n-pagination
           v-model:page="currentPage"
           :page-count="pagination.totalPages"
-          :page-size="pageSize"
+          :page-size="page_size"
           show-size-picker
           :page-sizes="[10, 20, 50, 100]"
           @update:page="handlePageChange"
@@ -89,10 +94,10 @@ const columns = ref([])
 const tableData = ref([])
 const primaryKey = ref('id')
 const currentPage = ref(1)
-const pageSize = ref(50)
+const page_size = ref(50)
 const pagination = ref({
   page: 1,
-  pageSize: 50,
+  page_size: 50,
   total: 0,
   totalPages: 0,
 })
@@ -101,8 +106,8 @@ const pagination = ref({
 const scrollX = computed(() => {
   if (columns.value.length === 0) return 0
   return columns.value.reduce((total, col) => {
-    // id 列宽度 280，其他列 120
-    return total + (col === 'id' ? 280 : 120)
+    // 主键列宽度 280，其他列 120
+    return total + (col === primaryKey.value ? 280 : 120)
   }, 0)
 })
 
@@ -127,19 +132,28 @@ async function loadTableData() {
 
   loading.value = true
   try {
-    console.log('📊 加载表数据:', { table: props.selectedTable, page: currentPage.value, pageSize: pageSize.value })
     const res = await getTableData(props.selectedTable, {
       page: currentPage.value,
-      pageSize: pageSize.value,
+      page_size: page_size.value,
     })
 
     if (res.code === 200) {
-      columns.value = res.data.columns || []
-      tableData.value = res.data.rows || []
-      primaryKey.value = res.data.primaryKey || 'id'
-      pagination.value = res.data.pagination
-      console.log('✅ 数据加载成功，共', tableData.value.length, '条记录')
+      // 后端返回的是嵌套格式：res.data.data
+      const responseData = res.data.data || res.data
+
+      columns.value = responseData.columns || []
+      tableData.value = responseData.rows || []
+      primaryKey.value = responseData.primaryKey || 'id'
+      pagination.value = responseData.pagination
       
+      console.log('数据加载完成:', {
+        columns: columns.value,
+        tableData: tableData.value,
+        tableDataLength: tableData.value.length,
+        primaryKey: primaryKey.value,
+        pagination: pagination.value
+      })
+
       // 刷新时清除所有编辑状态
       clearAllEditStates()
     }
@@ -167,7 +181,7 @@ function handlePageChange(page) {
 
 // 每页条数变化
 function handlePageSizeChange(size) {
-  pageSize.value = size
+  page_size.value = size
   currentPage.value = 1
   loadTableData()
 }
@@ -191,11 +205,11 @@ function handleUpdateRow({ primaryKey: pk, primaryValue, updates }) {
         if (res.code === 200) {
           console.log('✅ 更新成功响应:', res)
           message.success(res.message)
-          
+
           // 如果后端返回了更新后的数据，直接更新本地数据
           if (res.data && res.data.updatedRow) {
             console.log('🔄 使用后端返回的更新数据')
-            const index = tableData.value.findIndex(row => row[pk] === primaryValue)
+            const index = tableData.value.findIndex((row) => row[pk] === primaryValue)
             if (index !== -1) {
               tableData.value[index] = res.data.updatedRow
             }
@@ -279,6 +293,7 @@ function handleCancelEdit(rowIndex) {
   border: 1px solid #e8e8e8;
   border-top: none;
   border-radius: 0 0 4px 4px;
+  position: relative;
 }
 
 .pagination-wrapper {

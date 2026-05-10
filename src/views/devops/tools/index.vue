@@ -1,83 +1,76 @@
 <template>
   <div class="tools-container">
-    <div class="page-header">
-      <h1 class="page-title">工具</h1>
-      <p class="page-description">系统工具和实用功能集合。</p>
-    </div>
+    <!-- 顶部操作栏 -->
+    <n-card :bordered="false" class="header-card">
+      <n-space align="center" justify="space-between">
+        <n-space align="center">
+          <span style="font-size: 16px; font-weight: 600">🔧 系统工具</span>
+          <n-tag type="info" size="small">实用功能集合</n-tag>
+        </n-space>
+        <n-space>
+          <CommonButton type="default" @click="handleRefresh" text="刷新" />
+        </n-space>
+      </n-space>
+    </n-card>
 
-    <div class="tools-grid">
-      <div class="tool-card">
-        <div class="tool-icon">
-          <n-icon :size="32"><BuildOutline /></n-icon>
+    <!-- 内容区域 -->
+    <n-card :bordered="false" class="content-card">
+      <div class="tools-grid">
+        <div class="tool-card">
+          <div class="tool-icon">
+            <n-icon :size="32"><BuildOutline /></n-icon>
+          </div>
+          <div class="tool-content">
+            <h3>API 测试</h3>
+            <p>测试 API 接口功能和性能</p>
+          </div>
         </div>
-        <div class="tool-content">
-          <h3>API 测试</h3>
-          <p>测试 API 接口功能和性能</p>
+
+        <div class="tool-card">
+          <div class="tool-icon">
+            <n-icon :size="32"><DocumentOutline /></n-icon>
+          </div>
+          <div class="tool-content">
+            <h3>日志分析</h3>
+            <p>分析系统日志和运行数据</p>
+          </div>
+        </div>
+
+        <div class="tool-card">
+          <div class="tool-icon">
+            <n-icon :size="32"><RefreshOutline /></n-icon>
+          </div>
+          <div class="tool-content">
+            <h3>数据同步</h3>
+            <p>同步和备份数据</p>
+          </div>
+        </div>
+
+        <div class="tool-card">
+          <div class="tool-icon">
+            <n-icon :size="32"><PulseOutline /></n-icon>
+          </div>
+          <div class="tool-content">
+            <h3>系统监控</h3>
+            <p>监控系统运行状态</p>
+          </div>
         </div>
       </div>
-
-      <div class="tool-card">
-        <div class="tool-icon">
-          <n-icon :size="32"><DocumentOutline /></n-icon>
-        </div>
-        <div class="tool-content">
-          <h3>日志分析</h3>
-          <p>分析系统日志和运行数据</p>
-        </div>
-      </div>
-
-      <div class="tool-card">
-        <div class="tool-icon">
-          <n-icon :size="32"><RefreshOutline /></n-icon>
-        </div>
-        <div class="tool-content">
-          <h3>数据同步</h3>
-          <p>同步和备份数据</p>
-        </div>
-      </div>
-
-      <div class="tool-card">
-        <div class="tool-icon">
-          <n-icon :size="32"><PulseOutline /></n-icon>
-        </div>
-        <div class="tool-content">
-          <h3>系统监控</h3>
-          <p>监控系统运行状态</p>
-        </div>
-      </div>
-    </div>
+    </n-card>
   </div>
 </template>
 
 <script setup name="Tools">
 import { NIcon } from 'naive-ui'
 import { BuildOutline, DocumentOutline, RefreshOutline, PulseOutline } from '@vicons/ionicons5'
+import CommonButton from '@/components/CommonButton.vue'
+
+const handleRefresh = () => {
+  // 刷新逻辑
+}
 </script>
 
 <style scoped>
-.tools-container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.page-header {
-  margin-bottom: 32px;
-}
-
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: #0d0d0d;
-  margin: 0 0 8px 0;
-}
-
-.page-description {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #6e6e80;
-  margin: 0;
-}
-
 .tools-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

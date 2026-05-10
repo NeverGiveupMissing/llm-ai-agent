@@ -37,10 +37,18 @@ const props = defineProps({
 
 const emit = defineEmits(['update:show', 'confirm', 'cancel', 'closed'])
 
-const handleConfirm = () => {
-  emit('confirm')
-  if (props.closeOnConfirm) {
-    emit('update:show', false)
+// ✅ 统一的确认按钮处理逻辑
+const handleConfirm = async () => {
+  try {
+    // 触发业务层的 confirm 事件
+    await emit('confirm')
+
+    // 如果需要自动关闭
+    if (props.closeOnConfirm) emit('update:show', false)
+  } catch (error) {
+    // 统一捕获异常，禁止向上传递
+    console.warn('Modal confirm 处理异常:', error)
+    // 不关闭弹窗，让用户修正错误
   }
 }
 

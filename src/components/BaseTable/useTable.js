@@ -10,21 +10,18 @@ import { useMessage } from 'naive-ui'
 export function useTable(apiMethod, options = {}) {
   const message = useMessage()
 
-  const { defaultPageSize = 10, pageSizeOptions = [10, 20, 50, 100], immediate = true } = options
+  const { defaultPageSize = 10, page_sizes = [10, 20, 30, 50], immediate = true } = options
 
   // 表格数据
   const tableData = ref([])
   const loading = ref(false)
 
-  // 分页配置
+  // 分页配置（全链路统一下划线命名）
   const pagination = reactive({
-    page: 1,
-    pageSize: defaultPageSize,
-    itemCount: 0,
-    pageCount: 1,
-    pageSizes: pageSizeOptions,
-    showSizePicker: true,
-    showQuickJumper: true,
+    page_num: 1,
+    page_size: defaultPageSize,
+    total: 0,
+    page_sizes: page_sizes,
   })
 
   // 多选相关
@@ -42,16 +39,16 @@ export function useTable(apiMethod, options = {}) {
       loading.value = true
 
       const requestParams = {
-        page: pagination.page,
-        pageSize: pagination.pageSize,
+        page_num: pagination.page_num,
+        page_size: pagination.page_size,
         ...searchForm.value,
         ...params,
       }
 
-      // 处理日期范围
+      // 处理日期范围（统一转为下划线传给后端）
       if (requestParams.dateRange && Array.isArray(requestParams.dateRange)) {
-        requestParams.beginTime = requestParams.dateRange[0]
-        requestParams.endTime = requestParams.dateRange[1]
+        requestParams.begin_time = requestParams.dateRange[0]
+        requestParams.end_time = requestParams.dateRange[1]
         delete requestParams.dateRange
       }
 
@@ -60,22 +57,19 @@ export function useTable(apiMethod, options = {}) {
       if (res && res.code === 200 && res.data) {
         const { data } = res
 
-        // 统一返回格式：{ data: { list: [], pagination: { total, page, pageSize } } }
+        // 统一返回格式：{ data: { list: [], pagination: { total, page_num, page_size } } }
         if (data.list && Array.isArray(data.list)) {
           tableData.value = data.list
-          pagination.itemCount = data.pagination?.total || 0
+          pagination.total = data.pagination?.total || 0
         } else {
           console.error('❌ [useTable] Invalid response format:', res)
           tableData.value = []
-          pagination.itemCount = 0
+          pagination.total = 0
         }
       } else {
         tableData.value = []
-        pagination.itemCount = 0
+        pagination.total = 0
       }
-
-      // 同时更新 pageCount
-      pagination.pageCount = Math.ceil(pagination.itemCount / pagination.pageSize) || 1
 
       return res
     } catch (error) {
@@ -94,7 +88,7 @@ export function useTable(apiMethod, options = {}) {
     if (form) {
       searchForm.value = { ...form }
     }
-    pagination.page = 1
+    pagination.page_num = 1
     fetchData()
   }
 
@@ -103,7 +97,7 @@ export function useTable(apiMethod, options = {}) {
    */
   const handleReset = () => {
     searchForm.value = {}
-    pagination.page = 1
+    pagination.page_num = 1
     fetchData()
   }
 
@@ -111,7 +105,7 @@ export function useTable(apiMethod, options = {}) {
    * 处理页码变化
    */
   const handlePageChange = (page) => {
-    pagination.page = page
+    pagination.page_num = page
     fetchData()
   }
 
@@ -119,8 +113,8 @@ export function useTable(apiMethod, options = {}) {
    * 处理每页条数变化
    */
   const handlePageSizeChange = (pageSize) => {
-    pagination.pageSize = pageSize
-    pagination.page = 1
+    pagination.page_size = pageSize
+    pagination.page_num = 1
     fetchData()
   }
 

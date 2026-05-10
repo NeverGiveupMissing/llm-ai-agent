@@ -3,6 +3,8 @@ import BaseTable from './BaseTable/index.vue'
 import BaseForm from './BaseForm/index.vue'
 import BaseModal from './BaseModal/index.vue'
 import CommonButton from './CommonButton.vue'
+import FieldHelp from './FieldHelp/index.vue'
+import IconPicker from './IconPicker/index.vue'
 
 const components = {
   MemoryExport,
@@ -10,6 +12,8 @@ const components = {
   BaseForm,
   BaseModal,
   CommonButton,
+  FieldHelp,
+  IconPicker,
 }
 
 export const registerGlobalComponents = (app) => {

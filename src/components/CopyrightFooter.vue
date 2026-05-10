@@ -26,19 +26,19 @@
   border-top: 1px solid #e5e7eb;
   color: #9ca3af;
   padding: 10px 0;
+  clear: both;
 }
 
 .copyright-footer p {
   margin: 0;
 }
-
 .copyright-footer a {
-  color: #909399;
+  color: #409eff;
   text-decoration: none;
   transition: color 0.3s;
 }
 
 .copyright-footer a:hover {
-  color: #409eff;
+  color: #0c5196;
 }
 </style>

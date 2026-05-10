@@ -16,10 +16,20 @@
         <n-form-item
           v-for="field in visibleFields"
           :key="field.key"
-          :label="field.label"
           :path="field.key"
           :style="{ width: field.width || 'auto', minWidth: '180px' }"
         >
+          <template #label>
+            <span v-if="!field.helpContent">{{ field.label }}</span>
+            <div v-else style="display: inline-flex; align-items: center; white-space: nowrap">
+              <FieldHelp
+                :content="field.helpContent"
+                :size="field.helpSize || 14"
+                style="margin-right: 4px"
+              />
+              <span>{{ field.label }}</span>
+            </div>
+          </template>
           <!-- radio -->
           <n-radio-group
             v-if="field.type === 'radio'"
@@ -87,9 +97,19 @@
           v-for="field in visibleFields"
           :key="field.key"
           :span="field.span || 1"
-          :label="field.label"
           :path="field.key"
         >
+          <template #label>
+            <span v-if="!field.helpContent">{{ field.label }}</span>
+            <div v-else style="display: inline-flex; align-items: center; white-space: nowrap">
+              <FieldHelp
+                :content="field.helpContent"
+                :size="field.helpSize || 14"
+                style="margin-right: 4px"
+              />
+              <span>{{ field.label }}</span>
+            </div>
+          </template>
           <!-- radio -->
           <n-radio-group
             v-if="field.type === 'radio'"
@@ -169,6 +189,8 @@ import {
   NDatePicker,
   NTreeSelect,
 } from 'naive-ui'
+import FieldHelp from '@/components/FieldHelp/index.vue'
+import IconPicker from '@/components/IconPicker/index.vue'
 
 const props = defineProps({
   fields: { type: Array, default: () => [] },
@@ -186,12 +208,37 @@ const props = defineProps({
 // 过滤隐藏字段
 const visibleFields = computed(() => {
   return props.fields.filter((field) => {
+    // 支持 show 函数
+    if (typeof field.show === 'function') {
+      return field.show(props.modelValue)
+    }
+    // 支持 hidden 函数
     if (typeof field.hidden === 'function') {
       return !field.hidden(props.modelValue)
     }
+    // 支持 show 布尔值
+    if (field.show !== undefined) {
+      return field.show
+    }
+    // 支持 hidden 布尔值
     return !field.hidden
   })
 })
+
+// 渲染 label（带 help 图标 - 参考若依：图标在左侧）
+const renderLabel = (field) => {
+  if (!field.helpContent) {
+    return field.label
+  }
+  return h('div', { style: 'display: inline-flex; align-items: center; white-space: nowrap;' }, [
+    h(FieldHelp, {
+      content: field.helpContent,
+      size: field.helpSize || 14,
+      style: 'margin-right: 4px;',
+    }),
+    h('span', field.label),
+  ])
+}
 
 // 获取禁用状态
 const getDisabled = (field) => {
@@ -247,6 +294,7 @@ const getComponent = (type) => {
     datetime: NDatePicker,
     'date-range': NDatePicker,
     'tree-select': NTreeSelect,
+    'icon-picker': IconPicker, // ✅ 新增图标选择器
   }
   return componentMap[type] || NInput
 }
@@ -290,6 +338,11 @@ const getFieldProps = (field) => {
       return {
         ...baseProps,
         options: field.options,
+        placeholder: baseProps.placeholder,
+        clearable: field.clearable !== false,
+        // ✅ 透传多选、可搜索等属性
+        multiple: field.multiple,
+        filterable: field.filterable,
       }
     case 'radio':
       return {
@@ -324,6 +377,12 @@ const getFieldProps = (field) => {
         startPlaceholder: '开始日期',
         endPlaceholder: '结束日期',
         style: { width: '100%' },
+      }
+    case 'icon-picker':
+      return {
+        ...baseProps,
+        placeholder: field.placeholder || '请选择图标',
+        iconList: field.iconList, // ✅ 支持自定义图标列表
       }
     default:
       return {

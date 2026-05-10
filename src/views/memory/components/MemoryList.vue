@@ -28,28 +28,29 @@
       </div>
     </div>
 
-    <n-data-table
+    <!-- ✅ 使用 BaseTable 公共组件 -->
+    <BaseTable
+      ref="tableRef"
       :columns="columns"
       :data="memoryList"
-      :pagination="false"
-      :scroll-x="1200"
-      class="memory-table"
-    />
-
-    <div class="pagination-wrapper">
-      <n-pagination
-        v-model:page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :item-count="pagination.itemCount"
-        :page-sizes="pagination.pageSizes"
-        :page-slot="pagination.pageSlot"
-        show-size-picker
-        show-quick-jumper
-        :prefix="({ itemCount }) => `共 ${itemCount} 条`"
-        @update:page="handlePageChange"
-        @update:page-size="handlePageSizeChange"
-      />
-    </div>
+      :loading="loading"
+      :pagination="pagination"
+      :show-column-control="false"
+      @page-change="handlePageChange"
+      @page-size-change="handlePageSizeChange"
+    >
+      <template #actions="{ row }">
+        <n-space>
+          <n-button size="small" type="primary" text @click="emit('edit', row)">编辑</n-button>
+          <n-popconfirm @positive-click="handleDelete(row.id)">
+            <template #trigger>
+              <n-button size="small" type="error" text>删除</n-button>
+            </template>
+            确定要删除这条记忆吗？
+          </n-popconfirm>
+        </n-space>
+      </template>
+    </BaseTable>
   </div>
 </template>
 
@@ -58,6 +59,8 @@ import { ref, h, onMounted } from 'vue'
 import { useMessage, useDialog, NTag, NButton, NSpace, NPopconfirm, NIcon } from 'naive-ui'
 import { SearchOutline } from '@vicons/ionicons5'
 import { getMemoryList, deleteMemory } from '@/api/memory'
+import BaseTable from '@/components/BaseTable/index.vue'
+import { ColumnTypes } from '@/components/BaseTable/types'
 
 const props = defineProps({
   user_id: { type: String, required: true },
@@ -69,16 +72,17 @@ const message = useMessage()
 const dialog = useDialog()
 
 const memoryList = ref([])
+const loading = ref(false)
 const searchKeyword = ref('')
 const typeFilter = ref(null)
 const exportMemories = ref([]) // 用于导出的记忆数据
+const tableRef = ref(null)
 
+// ✅ 分页配置（全链路统一下划线）
 const pagination = ref({
-  page: 1,
-  pageSize: 10,
-  itemCount: 0,
-  pageSizes: [5, 10, 20, 50],
-  pageSlot: 7,
+  page_num: 1,
+  page_size: 10,
+  total: 0,
 })
 
 const typeOptions = [
@@ -171,43 +175,18 @@ const columns = [
   {
     title: '操作',
     key: 'actions',
+    type: ColumnTypes.ACTIONS,
     width: 160,
     fixed: 'right',
-    render: (row) => {
-      return h(
-        NSpace,
-        { size: 8 },
-        {
-          default: () => [
-            h(
-              NButton,
-              { size: 'small', type: 'primary', text: true, onClick: () => emit('edit', row) },
-              { default: () => '编辑' },
-            ),
-            h(
-              NPopconfirm,
-              { onPositiveClick: () => handleDelete(row.id) },
-              {
-                trigger: () =>
-                  h(
-                    NButton,
-                    { size: 'small', type: 'error', text: true },
-                    { default: () => '删除' },
-                  ),
-                default: () => '确定要删除这条记忆吗？',
-              },
-            ),
-          ],
-        },
-      )
-    },
+    actions: [],
   },
 ]
 const fetchMemories = async () => {
   try {
+    loading.value = true
     const params = {
-      limit: pagination.value.pageSize,
-      offset: (pagination.value.page - 1) * pagination.value.pageSize,
+      page_num: pagination.value.page_num,
+      page_size: pagination.value.page_size,
     }
 
     if (props.user_id) {
@@ -226,35 +205,37 @@ const fetchMemories = async () => {
 
     const result = res.data
     memoryList.value = result.list
-    pagination.value.itemCount = result.total
+    pagination.value.total = result.total
 
     // 第一页时更新导出数据
-    if (pagination.value.page === 1) {
+    if (pagination.value.page_num === 1) {
       exportMemories.value = result.list
     }
   } catch (error) {
     message.error(error.message || '获取记忆列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
 const handlePageChange = (page) => {
-  pagination.value.page = page
+  pagination.value.page_num = page
   fetchMemories()
 }
 
 const handlePageSizeChange = (pageSize) => {
-  pagination.value.pageSize = pageSize
-  pagination.value.page = 1
+  pagination.value.page_size = pageSize
+  pagination.value.page_num = 1
   fetchMemories()
 }
 
 const handleFilterChange = () => {
-  pagination.value.page = 1
+  pagination.value.page_num = 1
   fetchMemories()
 }
 
 const handleSearch = () => {
-  pagination.value.page = 1
+  pagination.value.page_num = 1
   fetchMemories()
 }
 

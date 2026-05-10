@@ -5,7 +5,7 @@
     :pagination="pagination"
     :row-key="(row) => row.id"
     @update:page="handlePageChange"
-    @update:page-size="handlePageSizeChange"
+    @update:page-size="handlepage_sizeChange"
   />
 </template>
 
@@ -27,7 +27,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'update:page',
-  'update:pageSize',
+  'update:page_size',
   'edit',
   'assign-role',
   'reset-password',
@@ -169,7 +169,7 @@ const handlePageChange = (page) => {
   emit('update:page', page)
 }
 
-const handlePageSizeChange = (pageSize) => {
-  emit('update:pageSize', pageSize)
+const handlepage_sizeChange = (page_size) => {
+  emit('update:page_size', page_size)
 }
 </script>

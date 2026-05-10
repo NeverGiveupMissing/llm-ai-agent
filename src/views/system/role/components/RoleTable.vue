@@ -5,7 +5,7 @@
     :pagination="pagination"
     :row-key="(row) => row.id"
     @update:page="handlePageChange"
-    @update:page-size="handlePageSizeChange"
+    @update:page-size="handlepage_sizeChange"
   />
 </template>
 
@@ -25,7 +25,14 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['update:page', 'update:pageSize', 'edit', 'assign-permissions', 'toggle-status', 'delete'])
+const emit = defineEmits([
+  'update:page',
+  'update:page_size',
+  'edit',
+  'assign-permissions',
+  'toggle-status',
+  'delete',
+])
 
 const permissionStore = usePermissionStore()
 
@@ -60,7 +67,7 @@ const columns = [
       return h(
         NTag,
         { type: row.is_system ? 'warning' : 'success' },
-        { default: () => (row.is_system ? '系统' : '正常') }
+        { default: () => (row.is_system ? '系统' : '正常') },
       )
     },
   },
@@ -79,7 +86,7 @@ const columns = [
     fixed: 'right',
     render(row) {
       const buttons = []
-      
+
       // 编辑按钮
       if (permissionStore.hasPermission('role:update')) {
         buttons.push(
@@ -89,11 +96,11 @@ const columns = [
               size: 'small',
               onClick: () => emit('edit', row),
             },
-            { default: () => '编辑' }
-          )
+            { default: () => '编辑' },
+          ),
         )
       }
-      
+
       // 分配权限按钮
       if (permissionStore.hasPermission('role:assign-permission')) {
         buttons.push(
@@ -104,11 +111,11 @@ const columns = [
               type: 'primary',
               onClick: () => emit('assign-permissions', row),
             },
-            { default: () => '分配权限' }
-          )
+            { default: () => '分配权限' },
+          ),
         )
       }
-      
+
       // 启用/禁用按钮
       if (permissionStore.hasPermission('role:update') && !row.is_system) {
         buttons.push(
@@ -119,11 +126,11 @@ const columns = [
               type: row.status === 'active' ? 'warning' : 'success',
               onClick: () => emit('toggle-status', row),
             },
-            { default: () => (row.status === 'active' ? '禁用' : '启用') }
-          )
+            { default: () => (row.status === 'active' ? '禁用' : '启用') },
+          ),
         )
       }
-      
+
       // 删除按钮
       if (permissionStore.hasPermission('role:delete') && !row.is_system) {
         buttons.push(
@@ -141,13 +148,13 @@ const columns = [
                     size: 'small',
                     type: 'error',
                   },
-                  { default: () => '删除' }
+                  { default: () => '删除' },
                 ),
-            }
-          )
+            },
+          ),
         )
       }
-      
+
       return h(NSpace, {}, { default: () => buttons })
     },
   },
@@ -158,7 +165,7 @@ const handlePageChange = (page) => {
   emit('update:page', page)
 }
 
-const handlePageSizeChange = (pageSize) => {
-  emit('update:pageSize', pageSize)
+const handlepage_sizeChange = (page_size) => {
+  emit('update:page_size', page_size)
 }
 </script>

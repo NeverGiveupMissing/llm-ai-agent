@@ -1,70 +1,72 @@
 <template>
   <div class="dashboard-container">
-    <div class="page-header">
-      <h1 class="page-title">工作台</h1>
-      <p class="page-description">欢迎使用 AI Agent 平台。快速访问常用功能，查看系统概览。</p>
-    </div>
+    <n-card :bordered="false" class="content-card">
+      <div class="page-header">
+        <h1 class="page-title">工作台</h1>
+        <p class="page-description">欢迎使用 AI Agent 平台。快速访问常用功能，查看系统概览。</p>
+      </div>
 
-    <div class="dashboard-grid">
-      <div class="dashboard-card" @click="$router.push('/chat')">
-        <div class="card-icon chat">
-          <n-icon :size="32"><ChatbubbleEllipsesOutline /></n-icon>
+      <div class="dashboard-grid">
+        <div class="dashboard-card" @click="$router.push('/chat')">
+          <div class="card-icon chat">
+            <n-icon :size="32"><ChatbubbleEllipsesOutline /></n-icon>
+          </div>
+          <div class="card-content">
+            <h3>AI 对话</h3>
+            <p>与 AI 助手进行智能对话，支持长期记忆和上下文理解</p>
+          </div>
+          <div class="card-arrow">
+            <n-icon :size="20"><ChevronForwardOutline /></n-icon>
+          </div>
         </div>
-        <div class="card-content">
-          <h3>AI 对话</h3>
-          <p>与 AI 助手进行智能对话，支持长期记忆和上下文理解</p>
+
+        <div class="dashboard-card" @click="$router.push('/memory')">
+          <div class="card-icon memory">
+            <n-icon :size="32"><LayersOutline /></n-icon>
+          </div>
+          <div class="card-content">
+            <h3>记忆管理</h3>
+            <p>管理 AI 的长期记忆，查看和优化记忆数据</p>
+          </div>
+          <div class="card-arrow">
+            <n-icon :size="20"><ChevronForwardOutline /></n-icon>
+          </div>
         </div>
-        <div class="card-arrow">
-          <n-icon :size="20"><ChevronForwardOutline /></n-icon>
+
+        <div class="dashboard-card" @click="$router.push('/ChatLogs')">
+          <div class="card-icon logs">
+            <n-icon :size="32"><DocumentTextOutline /></n-icon>
+          </div>
+          <div class="card-content">
+            <h3>对话日志</h3>
+            <p>查看历史对话记录，分析系统运行状态</p>
+          </div>
+          <div class="card-arrow">
+            <n-icon :size="20"><ChevronForwardOutline /></n-icon>
+          </div>
+        </div>
+
+        <div class="dashboard-card" @click="$router.push('/settings')">
+          <div class="card-icon settings">
+            <n-icon :size="32"><SettingsOutline /></n-icon>
+          </div>
+          <div class="card-content">
+            <h3>系统设置</h3>
+            <p>配置系统参数和个性化选项</p>
+          </div>
+          <div class="card-arrow">
+            <n-icon :size="20"><ChevronForwardOutline /></n-icon>
+          </div>
         </div>
       </div>
 
-      <div class="dashboard-card" @click="$router.push('/memory')">
-        <div class="card-icon memory">
-          <n-icon :size="32"><LayersOutline /></n-icon>
-        </div>
-        <div class="card-content">
-          <h3>记忆管理</h3>
-          <p>管理 AI 的长期记忆，查看和优化记忆数据</p>
-        </div>
-        <div class="card-arrow">
-          <n-icon :size="20"><ChevronForwardOutline /></n-icon>
+      <div class="quick-stats">
+        <h2 class="section-title">系统概览</h2>
+        <div class="stats-info">
+          <n-alert type="info" :show-icon="false"> 当前系统运行正常，所有服务状态良好。 </n-alert>
         </div>
       </div>
-
-      <div class="dashboard-card" @click="$router.push('/ChatLogs')">
-        <div class="card-icon logs">
-          <n-icon :size="32"><DocumentTextOutline /></n-icon>
-        </div>
-        <div class="card-content">
-          <h3>对话日志</h3>
-          <p>查看历史对话记录，分析系统运行状态</p>
-        </div>
-        <div class="card-arrow">
-          <n-icon :size="20"><ChevronForwardOutline /></n-icon>
-        </div>
-      </div>
-
-      <div class="dashboard-card" @click="$router.push('/settings')">
-        <div class="card-icon settings">
-          <n-icon :size="32"><SettingsOutline /></n-icon>
-        </div>
-        <div class="card-content">
-          <h3>系统设置</h3>
-          <p>配置系统参数和个性化选项</p>
-        </div>
-        <div class="card-arrow">
-          <n-icon :size="20"><ChevronForwardOutline /></n-icon>
-        </div>
-      </div>
-    </div>
-
-    <div class="quick-stats">
-      <h2 class="section-title">系统概览</h2>
-      <div class="stats-info">
-        <n-alert type="info" :show-icon="false"> 当前系统运行正常，所有服务状态良好。 </n-alert>
-      </div>
-    </div>
+    </n-card>
   </div>
 </template>
 
@@ -83,11 +85,6 @@ const router = useRouter()
 </script>
 
 <style scoped>
-.dashboard-container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
 .page-header {
   margin-bottom: 32px;
 }
@@ -199,6 +196,6 @@ const router = useRouter()
   background: #ffffff;
   border: 1px solid #e5e5e5;
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px;
 }
 </style>

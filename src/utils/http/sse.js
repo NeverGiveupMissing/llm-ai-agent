@@ -34,12 +34,22 @@ export async function streamSSE(options) {
   const { onMessage, onComplete, onError } = callbacks
 
   try {
+    // 获取 Token
+    const token = localStorage.getItem('access_token')
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'text/event-stream',
+    }
+    
+    // 添加 Authorization 头
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+    
     const response = await fetch(`${BASE_URL}${url}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'text/event-stream',
-      },
+      headers,
       body: JSON.stringify(data),
       signal,
     })

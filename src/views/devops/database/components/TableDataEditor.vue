@@ -1,19 +1,24 @@
 <template>
   <div class="table-data-editor">
+    <!-- ✅ 调试信息 -->
+    <div style="margin-bottom: 8px; padding: 8px; background: #f0f0f0;">
+      数据条数: {{ tableDataList.length }}, 列数: {{ tableColumns.length }}
+    </div>
+    
     <n-data-table
       :columns="tableColumns"
-      :data="tableData"
+      :data="tableDataList"
       :bordered="true"
       :single-line="false"
       size="small"
       :row-class-name="rowClassName"
-      :scroll-x="props.scrollX"
+      :max-height="500"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, h, computed } from 'vue'
+import { ref, h, computed, watch } from 'vue'
 import { NButton, NInput, NPopconfirm, useMessage } from 'naive-ui'
 import { CheckmarkOutline, CloseOutline, TrashOutline } from '@vicons/ionicons5'
 
@@ -40,18 +45,42 @@ const props = defineProps({
   },
 })
 
-const tableData = computed(() => props.data)
+const tableDataList = computed(() => props.data)
 const emit = defineEmits(['update', 'delete', 'cancel'])
 
 const message = useMessage()
 
 // 编辑状态管理
-const editingCells = ref(new Map()) // Map<rowIndex_columnName, { originalValue, newValue }>
-const modifiedRows = ref(new Set()) // Set<rowIndex>
-const rowEdits = ref(new Map()) // Map<rowIndex, Record<string, any>>
+const editingCells = ref(new Map())
+const modifiedRows = ref(new Set())
+const rowEdits = ref(new Map())
+
+// ✅ 添加调试日志
+watch(
+  () => props.data,
+  (newData) => {
+    console.log('📊 TableDataEditor 接收到数据:', {
+      length: newData?.length,
+      isArray: Array.isArray(newData),
+      firstRow: newData?.[0],
+      columns: props.columns
+    })
+  },
+  { immediate: true }
+)
 
 // 创建表格列配置
 const tableColumns = computed(() => {
+  console.log('🔧 tableColumns computed 执行', {
+    columnsLength: props.columns.length,
+    dataLength: props.data.length
+  })
+  
+  if (props.columns.length === 0) {
+    console.warn('⚠️ columns 为空数组')
+    return []
+  }
+  
   const cols = props.columns.map((col) => ({
     title: col,
     key: col,
@@ -102,7 +131,7 @@ const tableColumns = computed(() => {
             minHeight: '32px',
             display: 'flex',
             alignItems: 'center',
-            backgroundColor: isModified ? '#fff3cd' : 'transparent',
+            'background-color': isModified ? '#fff3cd' : 'transparent',
             borderRadius: '4px',
           },
           onClick: () => handleCellClick(cellKey, rowIndex, originalValue),
@@ -295,8 +324,7 @@ defineExpose({
 <style scoped>
 .table-data-editor {
   width: 100%;
-  height: 100%;
-  overflow: auto;
+  min-height: 300px;
 }
 
 :deep(.modified-row) {

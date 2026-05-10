@@ -24,12 +24,12 @@
       :show-search="showSearch"
       :show-pagination="showPagination"
       :pagination="pagination"
-      :page-size="pagination.pageSize"
+      :page-size="pagination.page_size"
       @refresh="handleRefresh"
       @column-change="handleColumnChange"
       @update:show-search="handleShowSearchUpdate"
       @page-change="handlePageChange"
-      @page-size-change="handlePageSizeChange"
+      @page-size-change="handlepage_sizeChange"
       @update:expanded-row-keys="handleExpandedRowKeysChange"
     >
       <template #toolbar-left>
@@ -90,12 +90,12 @@ const props = defineProps({
     default: true,
   },
   // 默认每页条数
-  defaultPageSize: {
+  defaultpage_size: {
     type: Number,
     default: 10,
   },
   // 每页条数选项
-  pageSizeOptions: {
+  page_sizeOptions: {
     type: Array,
     default: () => [10, 20, 50, 100],
   },
@@ -216,7 +216,7 @@ const configurableColumns = computed(() => {
 const dynamicActions = computed(() => {
   const routeButtons = getCurrentRouteButtons(permissionStore, route)
   console.log('🔵 BaseTable - 当前路由按钮:', routeButtons)
-  
+
   // ✅ Label 映射：避免显示原始数据库菜单名
   const labelMap = {
     add: '新增',
@@ -224,15 +224,15 @@ const dynamicActions = computed(() => {
     delete: '删除',
     query: '查询',
     export: '导出',
-    assign_role: '分配角色',
+    assign_role: '分配权限', // ✅ 角色管理-分配权限，用户管理-分配角色
     reset: '重置密码',
     import: '导入',
   }
-  
+
   return routeButtons.map((btn) => {
     // ✅ 完全信任 mapPermsToType，移除冗余判断
     const actionType = mapPermsToType(btn.perms)
-    
+
     return {
       label: labelMap[actionType] || btn.label,
       type: actionType,
@@ -383,9 +383,9 @@ function processColumn(col) {
   // 序号列
   if (col.type === ColumnTypes.INDEX) {
     column.render = (_, index) => {
-      const pageIndex = props.pagination.page || 1
-      const pageSize = props.pagination.pageSize || 10
-      return (pageIndex - 1) * pageSize + index + 1
+      const pageIndex = props.pagination.page_num || 1
+      const page_size = props.pagination.page_size || 10
+      return (pageIndex - 1) * page_size + index + 1
     }
   }
 
@@ -414,56 +414,54 @@ function processColumn(col) {
   if (col.type === ColumnTypes.ACTIONS && col.actions) {
     column.width = col.actionsWidth || 200
     column.render = (row) => {
-      const filteredActions = col.actions
-        .filter((action) => {
-          // ✅ 权限控制
-          if (action.permission) {
-            const userStore = useUserStore()
-            const isAdmin = checkIsAdmin(userStore.userInfo.roles)
-            if (!isAdmin) {
-              const hasPerm = permissionStore.hasPermission(action.permission)
-              if (!hasPerm) return false
-            }
+      const filteredActions = col.actions.filter((action) => {
+        // ✅ 权限控制
+        if (action.permission) {
+          const userStore = useUserStore()
+          const isAdmin = checkIsAdmin(userStore.userInfo.roles)
+          if (!isAdmin) {
+            const hasPerm = permissionStore.hasPermission(action.permission)
+            if (!hasPerm) return false
           }
-          
-          // 操作列过滤：只显示 edit、delete、assign_role 类型的按钮
-          const allowedActionTypes = ['edit', 'delete', 'assign_role']
-          if (action.type && !allowedActionTypes.includes(action.type)) {
-            return false
-          }
-          
-          // 自定义显示条件
-          if (action.show && typeof action.show === 'function') {
-            return action.show(row)
-          }
-          return true
+        }
+
+        // 操作列过滤：只显示 edit、delete、assign_role 类型的按钮
+        const allowedActionTypes = ['edit', 'delete', 'assign_role']
+        if (action.type && !allowedActionTypes.includes(action.type)) {
+          return false
+        }
+
+        // 自定义显示条件
+        if (action.show && typeof action.show === 'function') {
+          return action.show(row)
+        }
+        return true
+      })
+
+      const buttons = filteredActions.map((action) => {
+        // ✅ action.type 是业务类型（由 mapPermsToType 返回）
+        // CommonButton 内部会自动将其映射为 UI 类型
+        const commonButtonType = action.type || 'primary'
+
+        // ✅ 支持 confirmText 为函数或字符串
+        const confirmMessage =
+          typeof action.confirmText === 'function'
+            ? action.confirmText(row)
+            : action.confirmText || `确定要${action.label}吗？`
+
+        // ✅ 使用 CommonButton，它会自动处理业务类型 → UI 类型的映射
+        const button = h(CommonButton, {
+          type: commonButtonType,
+          text: action.label,
+          size: 'small', // ✅ 表格内统一使用 small
+          perms: action.permission,
+          confirmMessage: confirmMessage,
+          onClick: () => action.onClick(row),
+          onConfirm: () => action.onClick(row), // delete 类型使用 onConfirm
         })
-      
-      const buttons = filteredActions
-        .map((action) => {
-          // ✅ action.type 是业务类型（由 mapPermsToType 返回）
-          // CommonButton 内部会自动将其映射为 UI 类型
-          const commonButtonType = action.type || 'primary'
 
-          // ✅ 支持 confirmText 为函数或字符串
-          const confirmMessage =
-            typeof action.confirmText === 'function'
-              ? action.confirmText(row)
-              : action.confirmText || `确定要${action.label}吗？`
-
-          // ✅ 使用 CommonButton，它会自动处理业务类型 → UI 类型的映射
-          const button = h(CommonButton, {
-            type: commonButtonType,
-            text: action.label,
-            size: 'small', // ✅ 表格内统一使用 small
-            perms: action.permission,
-            confirmMessage: confirmMessage,
-            onClick: () => action.onClick(row),
-            onConfirm: () => action.onClick(row), // delete 类型使用 onConfirm
-          })
-
-          return button
-        })
+        return button
+      })
 
       // ✅ 使用 NSpace 控制按钮间距，默认 8px，支持外部传递 actionGap
       return h(
@@ -536,14 +534,16 @@ function handleCopy(text) {
  * 处理页码变化
  */
 function handlePageChange(page) {
+  // ✅ 通过 emit 将新值传回父组件，不直接修改 props
   emit('page-change', page)
 }
 
 /**
  * 处理每页条数变化
  */
-function handlePageSizeChange(pageSize) {
-  emit('page-size-change', pageSize)
+function handlepage_sizeChange(page_size) {
+  // ✅ 通过 emit 将新值传回父组件，不直接修改 props
+  emit('page-size-change', page_size)
 }
 
 /**

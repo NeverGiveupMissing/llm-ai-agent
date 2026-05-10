@@ -118,11 +118,6 @@ const refreshIframe = () => {
 </script>
 
 <style scoped>
-.api-docs-container {
-  height: 100%;
-  padding: 16px;
-}
-
 .api-docs-card {
   height: 100%;
   display: flex;

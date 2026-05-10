@@ -109,7 +109,7 @@ const searchFields = [
     key: 'menu_type',
     label: '菜单类型',
     type: 'select',
-    placeholder: '菜单类型',
+    placeholder: '请选择菜单类型',
     width: '140px',
     options: menuTypeOptions,
   },
@@ -124,7 +124,7 @@ const searchFields = [
     key: 'status',
     label: '菜单状态',
     type: 'select',
-    placeholder: '菜单状态',
+    placeholder: '请选择菜单状态',
     width: '140px',
     options: statusOptions,
   },
@@ -245,6 +245,16 @@ const columns = [
 
 // 搜索
 const handleSearchClick = () => {
+  // ✅ 直接使用下划线命名的搜索参数
+  const searchParams = { ...searchForm }
+
+  // 移除空值
+  Object.keys(searchParams).forEach((key) => {
+    if (searchParams[key] === '' || searchParams[key] === null || searchParams[key] === undefined) {
+      delete searchParams[key]
+    }
+  })
+
   fetchData()
 }
 
@@ -277,16 +287,16 @@ const fetchData = async () => {
 
 // 构建菜单选项（树形结构）
 const buildMenuOptions = (menus) => {
-  const options = [{ menuId: 0, menuName: '主类目', children: [] }]
+  const options = [{ menu_id: 0, menu_name: '主类目', children: [] }]
 
   const convert = (items) => {
     return items.map((item) => {
       const node = {
-        menuId: item.menuId,
-        menuName: item.menuName,
-        perms: item.perms || '', // ✅ 保留 perms 字段用于权限标识生成
-        path: item.path || '', // ✅ 保留 path 字段作为备选
-        disabled: item.menuType === 'F', // 按钮不能作为父菜单
+        menu_id: item.menu_id,
+        menu_name: item.menu_name,
+        perms: item.perms || '',
+        path: item.path || '',
+        disabled: item.menu_type === 'F',
       }
 
       if (item.children && item.children.length > 0) {
@@ -311,7 +321,7 @@ const toggleExpand = () => {
       let keys = []
       for (const item of data) {
         if (item.children && item.children.length > 0) {
-          keys.push(item.menuId)
+          keys.push(item.menu_id)
           keys = keys.concat(getAllKeys(item.children))
         }
       }
@@ -344,8 +354,8 @@ const handleEdit = (row) => {
 const handleAddChild = (row) => {
   // 传递父菜单信息，由子组件处理
   currentRow.value = {
-    parentId: row.menuId,
-    parentMenuType: row.menuType,
+    parent_id: row.menu_id,
+    parent_menu_type: row.menu_type,
   }
   showFormModal.value = true
 }
@@ -353,7 +363,7 @@ const handleAddChild = (row) => {
 // 删除（CommonButton 已内置二次确认）
 const handleDelete = async (row) => {
   try {
-    await deleteMenu(row.menuId)
+    await deleteMenu(row.menu_id)
     message.success('删除成功')
     fetchData()
   } catch (error) {
@@ -377,12 +387,12 @@ const handleActionClick = ({ perms, row }) => {
   } else if (perms.endsWith(':remove') || perms.endsWith(':delete')) {
     dialog.warning({
       title: '确认删除',
-      content: `确定要删除菜单「${row.menuName}」吗？`,
+      content: `确定要删除菜单「${row.menu_name}」吗？`,
       positiveText: '确定',
       negativeText: '取消',
       onPositiveClick: async () => {
         try {
-          await deleteMenu(row.menuId)
+          await deleteMenu(row.menu_id)
           message.success('删除成功')
           fetchData()
         } catch (error) {
@@ -400,12 +410,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.menu-management-container {
-  padding: 16px;
-  background: #f0f2f5;
-  min-height: calc(100vh - 64px);
-}
-
 .search-card {
   margin-bottom: 12px;
 }

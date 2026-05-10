@@ -44,11 +44,11 @@ const formData = reactive({
 // 表单字段配置
 const formFields = computed(() => [
   {
-    key: 'userName',
+    key: 'user_name',
     label: '用户',
     type: 'input',
     disabled: true,
-    defaultValue: props.user?.userName || '',
+    defaultValue: props.user?.user_name || '',
   },
   {
     key: 'newPassword',
@@ -91,7 +91,11 @@ const visible = computed({
 // 提交表单
 const handleSubmit = async () => {
   const valid = await formRef.value?.validate()
-  if (!valid) return
+  if (!valid) {
+    // ✅ 统一捕获校验错误，禁止向上传递
+    console.warn('表单验证拦截:', valid)
+    return
+  }
 
   submitting.value = true
   try {

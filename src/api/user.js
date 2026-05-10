@@ -58,7 +58,7 @@ export const batchDeleteUser = (user_ids) =>
  * 为用户分配角色
  * @param {string} user_id - 用户ID
  * @param {Object} data - 角色数据
- * @param {string} data.roleId - 角色ID
+ * @param {string} data.role_id - 角色ID
  * @returns {Promise} 返回分配结果
  */
 export const assignRole = (user_id, data) =>
@@ -67,11 +67,11 @@ export const assignRole = (user_id, data) =>
 /**
  * 移除用户角色
  * @param {string} user_id - 用户ID
- * @param {string} roleId - 角色ID
+ * @param {string} role_id - 角色ID
  * @returns {Promise} 返回移除结果
  */
-export const removeRole = (user_id, roleId) =>
-  axios.delete(`${API_PREFIX}/users/${user_id}/roles/${roleId}`)
+export const removeRole = (user_id, role_id) =>
+  axios.delete(`${API_PREFIX}/users/${user_id}/roles/${role_id}`)
 
 /**
  * 获取用户的所有角色

@@ -1,18 +1,23 @@
 <template>
   <div class="chat-logs-container">
-    <div class="page-header">
-      <div class="page-header-left">
-        <h1 class="page-title">对话日志</h1>
-        <p class="page-description">
-          查看所有 AI 对话的历史记录和系统运行日志。支持按日期、状态和关键词筛选。
-        </p>
-      </div>
-    </div>
+    <!-- 顶部操作栏 -->
+    <n-card :bordered="false" class="search-card">
+      <n-space align="center" justify="space-between">
+        <n-space align="center">
+          <span style="font-size: 16px; font-weight: 600">📋 对话日志</span>
+          <n-tag type="info" size="small">AI 对话历史记录</n-tag>
+        </n-space>
+        <n-space>
+          <CommonButton type="default" @click="handleRefresh" text="刷新" />
+        </n-space>
+      </n-space>
+    </n-card>
 
-    <LogsStats :stats="stats" />
+    <!-- 内容区域 -->
+    <n-card :bordered="false" class="content-card">
+      <LogsStats :stats="stats" />
 
-    <div class="content-section">
-      <div class="filter-bar">
+      <div class="filter-bar" style="margin-top: 16px">
         <LogsFilter
           :selected-date="selectedDate"
           :filter-status="filterStatus"
@@ -25,31 +30,32 @@
         />
       </div>
 
-      <div class="table-wrapper">
+      <div class="table-wrapper" style="margin-top: 16px">
         <LogsTable :logs="logs" />
       </div>
 
       <div class="pagination-wrapper">
         <n-pagination
           v-model:page="pagination.page"
-          v-model:page-size="pagination.pageSize"
+          v-model:page-size="pagination.page_size"
           :item-count="pagination.itemCount"
-          :page-sizes="pagination.pageSizes"
+          :page-sizes="pagination.page_sizes"
           :page-slot="pagination.pageSlot"
           show-size-picker
           show-quick-jumper
           :prefix="({ itemCount }) => `共 ${itemCount} 条`"
           @update:page="handlePageChange"
-          @update:page-size="handlePageSizeChange"
+          @update:page-size="handlepage_sizeChange"
         />
       </div>
-    </div>
+    </n-card>
   </div>
 </template>
 
 <script setup name="ChatLogs">
 import { onMounted } from 'vue'
 import { NPagination } from 'naive-ui'
+import CommonButton from '@/components/CommonButton.vue'
 import { useLogs } from './components/useLogs'
 import LogsFilter from './components/LogsFilter.vue'
 import LogsStats from './components/LogsStats.vue'
@@ -66,7 +72,7 @@ const {
   fetchStats,
   resetFilters,
   handlePageChange,
-  handlePageSizeChange,
+  handlepage_sizeChange,
 } = useLogs()
 
 const handleFilterChange = () => {
@@ -79,6 +85,11 @@ const handleReset = () => {
   resetFilters()
 }
 
+const handleRefresh = () => {
+  fetchLogs()
+  fetchStats()
+}
+
 onMounted(() => {
   fetchLogs()
   fetchStats()
@@ -86,32 +97,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.chat-logs-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-.page-header {
-  margin-bottom: 32px;
-}
-
-.page-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: #0d0d0d;
-  margin: 0 0 8px 0;
-}
-
-.page-description {
-  font-size: 14px;
-  line-height: 1.6;
-  color: #6e6e80;
-  margin: 0;
-}
-
-.content-section {
-  margin-top: 24px;
+.content-card {
+  min-height: calc(100vh - 200px);
 }
 
 .filter-bar {

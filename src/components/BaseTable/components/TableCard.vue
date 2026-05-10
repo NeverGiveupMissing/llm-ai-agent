@@ -30,11 +30,11 @@
     <div
       class="table-body-wrapper"
       data-test="table-wrapper"
-      :class="{ 'overflow-auto': data.length > pageSize }"
+      :class="{ 'overflow-auto': data.length > page_size }"
     >
       <n-data-table
         ref="tableRef"
-        :key="columns.length" 
+        :key="columns.length"
         :columns="columns"
         :data="data"
         :loading="loading"
@@ -50,7 +50,7 @@
 
     <!-- 独立分页组件（封装在 BaseTable 内部） -->
     <PaginationArea
-      v-if="showPagination && pagination.itemCount > 0"
+      v-if="showPagination && pagination.total > 0"
       :pagination="pagination"
       @page-change="$emit('page-change', $event)"
       @page-size-change="$emit('page-size-change', $event)"
@@ -79,7 +79,7 @@ const props = defineProps({
   expandedRowKeys: Array,
   showPagination: Boolean,
   pagination: Object,
-  pageSize: Number,
+  page_size: Number,
 })
 
 defineEmits([

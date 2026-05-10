@@ -1,5 +1,5 @@
 <template>
-  <n-card title="📚 记忆列表" :bordered="false" size="small">
+  <n-card title=" 记忆列表" :bordered="false" size="small">
     <template #header-extra>
       <n-space>
         <ImportanceFilter v-model="minImportance" />
@@ -25,21 +25,24 @@
       </n-space>
     </template>
 
-    <n-data-table :columns="columns" :data="memoryList" :pagination="false" :scroll-x="1200" />
-
-    <div style="display: flex; justify-content: flex-end; margin-top: 16px">
-      <n-pagination
-        v-model:page="pagination.page"
-        v-model:page-size="pagination.pageSize"
-        :item-count="pagination.itemCount"
-        :page-sizes="pagination.pageSizes"
-        :page-slot="pagination.pageSlot"
-        show-size-picker
-        show-quick-jumper
-        @update:page="handlePageChange"
-        @update:page-size="handlePageSizeChange"
-      />
-    </div>
+    <!-- ✅ 使用 BaseTable 公共组件 -->
+    <BaseTable
+      ref="tableRef"
+      :columns="columns"
+      :data="memoryList"
+      :loading="loading"
+      :pagination="pagination"
+      :show-column-control="false"
+      @page-change="handlePageChange"
+      @page-size-change="handlePageSizeChange"
+    >
+      <template #actions="{ row }">
+        <n-space>
+          <n-button text type="primary" size="small" @click="emit('edit', row)">编辑</n-button>
+          <n-button text type="error" size="small" @click="handleDelete(row.id)">删除</n-button>
+        </n-space>
+      </template>
+    </BaseTable>
   </n-card>
 </template>
 
@@ -48,6 +51,8 @@ import { ref, computed, onMounted, h } from 'vue'
 import { useMessage, useDialog } from 'naive-ui'
 import { getMemoryList, deleteMemory } from '@/api/memory'
 import ImportanceFilter from '@/views/chat/components/MemoryPanel/components/ImportanceFilter.vue'
+import BaseTable from '@/components/BaseTable/index.vue'
+import { ColumnTypes } from '@/components/BaseTable/types'
 
 const props = defineProps({
   user_id: { type: String, required: true },
@@ -59,10 +64,12 @@ const message = useMessage()
 const dialog = useDialog()
 
 const memoryList = ref([])
+const loading = ref(false)
 const typeFilter = ref(null)
 const searchKeyword = ref('')
 const exportMemories = ref([]) // 用于导出的记忆数据
 const minImportance = ref(4)
+const tableRef = ref(null)
 
 // ✅ 记忆类型选项
 const typeOptions = [
@@ -73,12 +80,11 @@ const typeOptions = [
   { label: '观点', value: 'opinion' },
 ]
 
+// ✅ 分页配置（全链路统一下划线）
 const pagination = ref({
-  page: 1,
-  pageSize: 10,
-  itemCount: 0,
-  pageSizes: [10, 20, 50, 100],
-  pageSlot: 7,
+  page_num: 1,
+  page_size: 10,
+  total: 0,
 })
 
 const columns = [
@@ -142,44 +148,19 @@ const columns = [
   {
     title: '操作',
     key: 'actions',
+    type: ColumnTypes.ACTIONS,
     width: 120,
     fixed: 'right',
-    render(row) {
-      return h(
-        'n-space',
-        {},
-        {
-          default: () => [
-            h(
-              'n-button',
-              {
-                text: true,
-                type: 'primary',
-                onClick: () => emit('edit', row),
-              },
-              () => '编辑',
-            ),
-            h(
-              'n-button',
-              {
-                text: true,
-                type: 'error',
-                onClick: () => handleDelete(row.id),
-              },
-              () => '删除',
-            ),
-          ],
-        },
-      )
-    },
+    actions: [],
   },
 ]
 
 const fetchMemories = async () => {
   try {
+    loading.value = true
     const params = {
-      limit: pagination.value.pageSize,
-      offset: (pagination.value.page - 1) * pagination.value.pageSize,
+      page_num: pagination.value.page_num,
+      page_size: pagination.value.page_size,
     }
 
     if (props.user_id) {
@@ -198,17 +179,19 @@ const fetchMemories = async () => {
 
     const result = res.data
     memoryList.value = result.list
-    pagination.value.itemCount = result.total
+    pagination.value.total = result.total
 
     // 如果是第一页且有搜索关键词，加载所有匹配的记忆用于导出
-    if (pagination.value.page === 1 && searchKeyword.value) {
+    if (pagination.value.page_num === 1 && searchKeyword.value) {
       await fetchAllMemories()
-    } else if (pagination.value.page === 1 && !searchKeyword.value) {
+    } else if (pagination.value.page_num === 1 && !searchKeyword.value) {
       // 没有搜索时，只加载当前页数据用于导出（避免加载过多数据）
       exportMemories.value = result.list
     }
   } catch (error) {
     message.error(error.message || '获取记忆列表失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -237,23 +220,23 @@ const fetchAllMemories = async () => {
 }
 
 const handlePageChange = (page) => {
-  pagination.value.page = page
+  pagination.value.page_num = page
   fetchMemories()
 }
 
 const handlePageSizeChange = (pageSize) => {
-  pagination.value.pageSize = pageSize
-  pagination.value.page = 1
+  pagination.value.page_size = pageSize
+  pagination.value.page_num = 1
   fetchMemories()
 }
 
 const handleFilterChange = () => {
-  pagination.value.page = 1
+  pagination.value.page_num = 1
   fetchMemories()
 }
 
 const handleSearch = () => {
-  pagination.value.page = 1
+  pagination.value.page_num = 1
   fetchMemories()
 }
 

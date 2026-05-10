@@ -4,7 +4,7 @@
     :title="isEdit ? '编辑接口' : '新增接口'"
     width="600px"
     :loading="submitting"
-    @ok="handleSubmit"
+    @confirm="handleSubmit"
     @cancel="handleCancel"
   >
     <BaseForm
@@ -92,6 +92,7 @@ watch(modalVisible, (val) => {
 const handleSubmit = async () => {
   if (!formRef.value) return
 
+  // ✅ 使用 BaseForm 的 validate 方法进行校验（在 submitForm 内部已处理）
   try {
     await formRef.value.validate()
     submitting.value = true
@@ -101,6 +102,8 @@ const handleSubmit = async () => {
       data: { ...formData.value },
     })
   } catch (error) {
+    // 统一捕获校验错误，禁止向上传递
+    console.warn('表单验证拦截:', error)
     if (error?.errors) {
       message.error('请填写必填项')
     }

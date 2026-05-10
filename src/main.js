@@ -39,6 +39,14 @@ registerGlobalComponents(app)
 // 注册权限指令
 app.directive('permission', permissionDirective)
 
+// ✅ 恢复用户信息（从 localStorage）
+import { useUserStore } from './stores/modules/user'
+const userStore = useUserStore()
+if (userStore.token) {
+  userStore.restoreUserInfo()
+  console.log('✅ 已恢复用户信息:', userStore.userInfo)
+}
+
 // 初始化菜单（可选，如果 state 中已定义则不需要）
 import { useMenuStore } from './stores/modules/menu'
 const menuStore = useMenuStore()

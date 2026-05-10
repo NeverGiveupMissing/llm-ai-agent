@@ -13,9 +13,9 @@ export const useLogs = () => {
 
   const pagination = ref({
     page: 1,
-    pageSize: 10,
+    page_size: 10,
     itemCount: 0,
-    pageSizes: [5, 10, 30, 50],
+    page_sizes: [5, 10, 30, 50],
     pageSlot: 7,
   })
 
@@ -28,8 +28,8 @@ export const useLogs = () => {
   const fetchLogs = async () => {
     try {
       const params = {
-        limit: pagination.value.pageSize,
-        offset: (pagination.value.page - 1) * pagination.value.pageSize,
+        limit: pagination.value.page_size,
+        offset: (pagination.value.page - 1) * pagination.value.page_size,
       }
       if (selectedDate.value) {
         params.date = formatDate(selectedDate.value)
@@ -82,15 +82,15 @@ export const useLogs = () => {
     pagination.value.page = page
   }
 
-  const handlePageSizeChange = (pageSize) => {
-    pagination.value.pageSize = pageSize
+  const handlepage_sizeChange = (page_size) => {
+    pagination.value.page_size = page_size
     pagination.value.page = 1
   }
 
   watch(
-    () => [pagination.value.page, pagination.value.pageSize],
-    ([newPage, newPageSize], [oldPage, oldPageSize]) => {
-      if (oldPage !== undefined && (newPage !== oldPage || newPageSize !== oldPageSize)) {
+    () => [pagination.value.page, pagination.value.page_size],
+    ([newPage, newpage_size], [oldPage, oldpage_size]) => {
+      if (oldPage !== undefined && (newPage !== oldPage || newpage_size !== oldpage_size)) {
         fetchLogs()
       }
     },
@@ -109,6 +109,6 @@ export const useLogs = () => {
     refreshData,
     resetFilters,
     handlePageChange,
-    handlePageSizeChange,
+    handlepage_sizeChange,
   }
 }

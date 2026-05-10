@@ -1,16 +1,8 @@
 <template>
-  <n-alert type="info" :bordered="false" style="margin-bottom: 16px">
-    为角色分配接口访问权限，勾选后点击确定保存
-  </n-alert>
-          
   <!-- 全选/取消全选按钮 -->
   <div class="tree-actions" v-if="apiTreeData.length > 0">
-    <n-button size="small" @click="handleSelectAllApis">
-      全选
-    </n-button>
-    <n-button size="small" @click="handleUnselectAllApis">
-      取消全选
-    </n-button>
+    <n-button size="small" @click="$emit('update:checkedKeys', getAllApiPaths(apiTreeData))"> 全选 </n-button>
+    <n-button size="small" @click="$emit('update:checkedKeys', [])"> 取消全选 </n-button>
   </div>
           
   <!-- 接口权限列表 -->
@@ -19,7 +11,7 @@
       <n-tree
         v-if="apiTreeData.length > 0"
         :data="apiTreeData"
-        :checked-keys="checkedApiKeys"
+        :checked-keys="checkedKeys"
         :render-label="renderApiLabel"
         checkable
         cascade
@@ -27,10 +19,11 @@
         block-line
         show-irrelevant-nodes
         default-expand-all
-        key-field="path"
-        label-field="name"
-        children-field="children"
-        @update:checked-keys="handleApiCheckedChange"
+        virtual-scroll
+        :key-field="'api_id'"
+        :label-field="'api_name'"
+        :children-field="'children'"
+        @update:checked-keys="$emit('update:checkedKeys', $event)"
       />
       <n-empty v-else description="暂无接口权限数据" />
     </n-spin>
@@ -50,13 +43,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  checkedApiKeys: {
+  checkedKeys: {
     type: Array,
     default: () => [],
   },
 })
 
-const emit = defineEmits(['update:checked-keys'])
+const emit = defineEmits(['update:checkedKeys'])
 
 // 获取 HTTP 方法对应的标签类型
 const getMethodType = (method) => {
@@ -73,20 +66,21 @@ const getMethodType = (method) => {
 const renderApiLabel = ({ option }) => {
   // 模块节点只显示名称
   if (option.isModule) {
-    return h('span', { class: 'api-module-name' }, option.name)
+    return h('span', { class: 'api-module-name' }, option.api_name)
   }
   
   // API节点显示：描述 + 方法标签 + 路径标签
   return h('div', { class: 'api-tree-node' }, [
-    h('span', { class: 'api-name' }, option.name),
+    h('span', { class: 'api-name' }, option.api_name),
+    // ✅ 修复：后端返回的是 api_method 字段，不是 method
     h(
       NTag,
       {
-        type: getMethodType(option.method),
+        type: getMethodType(option.api_method),
         size: 'small',
         class: 'method-tag',
       },
-      { default: () => option.method }
+      { default: () => option.api_method || 'GET' }
     ),
     h(
       NTag,
@@ -95,42 +89,22 @@ const renderApiLabel = ({ option }) => {
         size: 'small',
         class: 'path-tag',
       },
-      { default: () => option.path }
+      { default: () => option.api_path }
     ),
   ])
 }
 
-// 全选接口
-const handleSelectAllApis = () => {
-  const allKeys = getAllApiPaths(props.apiTreeData)
-  emit('update:checked-keys', allKeys)
-}
-
-// 取消全选接口
-const handleUnselectAllApis = () => {
-  emit('update:checked-keys', [])
-}
-
-// 递归获取所有接口路径
+// 递归获取所有接口 ID（用于全选，包括模块节点和接口节点）
 const getAllApiPaths = (apis) => {
-  const paths = []
-  const traverse = (items) => {
-    items.forEach((item) => {
-      if (!item.isModule && item.path) {
-        paths.push(item.path)
-      }
-      if (item.children && item.children.length > 0) {
-        traverse(item.children)
-      }
-    })
-  }
-  traverse(apis)
-  return paths
-}
-
-// 接口权限勾选变化
-const handleApiCheckedChange = (keys) => {
-  emit('update:checked-keys', keys)
+  const ids = []
+  apis.forEach((item) => {
+    // 收集所有节点的 api_id（包括模块节点）
+    ids.push(item.api_id)
+    if (item.children && item.children.length > 0) {
+      ids.push(...getAllApiPaths(item.children))
+    }
+  })
+  return ids
 }
 </script>
 

@@ -72,7 +72,17 @@ watch(
 const baseFormRef = ref(null)
 
 const handleConfirm = async () => {
-  return await submitForm(async (data) => {
+  // ✅ 调用封装后的 submitForm，校验逻辑已在 useForm 内部处理
+  await submitForm(async (data) => {
+    // ✅ 严格使用下划线字段进行二次校验
+    if (data.phonenumber && !/^1[3-9]\d{9}$/.test(data.phonenumber)) {
+      throw new Error('请输入正确的手机号码')
+    }
+    if (data.email && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(data.email)) {
+      throw new Error('请输入正确的邮箱地址')
+    }
+
+    // ✅ 业务逻辑：调用 API
     if (isEdit.value) {
       const res = await updateUser(data.user_id, data)
       message.success(res.message || '修改成功')
@@ -80,6 +90,8 @@ const handleConfirm = async () => {
       const res = await createUser(data)
       message.success(res.message || '新增成功')
     }
+    
+    // ✅ 成功后关闭弹窗并触发成功事件
     emit('success')
     visible.value = false
   })

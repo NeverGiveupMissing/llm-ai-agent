@@ -3,7 +3,7 @@
     v-model:show="visible"
     :title="isEdit ? '编辑菜单' : '新增菜单'"
     :loading="submitting"
-    width="700px"
+    width="800px"
     @confirm="handleSubmit"
     @closed="handleClosed"
   >
@@ -11,42 +11,21 @@
       ref="formRef"
       v-model="formData"
       :fields="formFields"
-      label-width="100px"
       :rules="rules"
-    >
-      <template #field-parentId>
-        <n-tree-select
-          v-model:value="formData.parentId"
-          :options="menuOptions"
-          placeholder="请选择上级菜单"
-          clearable
-          label-field="menuName"
-          key-field="menuId"
-          children-field="children"
-          default-expand-all
-        />
-      </template>
-      <template #field-businessType>
-        <div>
-          <n-select
-            v-model:value="businessType"
-            :options="businessTypeOptions.map((opt) => ({ label: opt.label, value: opt.value }))"
-            placeholder="请选择业务类型"
-            clearable
-          />
-          <n-text depth="3" style="display: block; margin-top: 8px; font-size: 12px;">
-            💡 选择业务类型将自动应用对应的权限拦截逻辑与标准颜色
-          </n-text>
-        </div>
-      </template>
-    </BaseForm>
+      :cols="2"
+      label-placement="left"
+      label-width="100px"
+    />
   </BaseModal>
 </template>
 
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
-import { useMessage, NText } from 'naive-ui'
+import { useMessage } from 'naive-ui'
 import { createMenu, updateMenu } from '@/api/menu'
+import FieldHelp from '@/components/FieldHelp/index.vue'
+import IconPicker from '@/components/IconPicker/index.vue'
+import BaseForm from '@/components/BaseForm/index.vue'
 
 const props = defineProps({
   show: {
@@ -70,25 +49,25 @@ const formRef = ref(null)
 const submitting = ref(false)
 
 // 是否编辑模式
-const isEdit = computed(() => !!props.row?.menuId)
+const isEdit = computed(() => !!props.row?.menu_id)
 
 // 表单数据
 const formData = reactive({
-  menuName: '',
-  parentId: '0',
-  orderNum: 0,
+  menu_name: '',
+  parent_id: '0',
+  order_num: 0,
   path: '',
   component: '',
   query: '',
-  routeName: '',
-  isFrame: 1,
-  isCache: 0,
-  menuType: 'C',
+  route_name: '',
+  is_frame: 0, // 默认非外链
+  menu_type: 'C',
   visible: '0',
   status: '0',
   perms: '',
   icon: '',
   remark: '',
+  businessType: 'custom', // ✅ 业务类型字段加入 formData
 })
 
 // 业务类型选项
@@ -100,84 +79,6 @@ const businessTypeOptions = [
   { label: '其他 (custom)', value: 'custom', suffix: '', defaultName: '' },
 ]
 
-// 业务类型绑定值
-const businessType = ref('custom')
-
-// ✅ 监听 businessType 变化，触发联动逻辑
-watch(
-  () => businessType.value,
-  (newVal) => {
-    console.log('👀 Watch 监听到 businessType 变化:', newVal)
-    
-    if (formData.menuType !== 'F') {
-      console.log('⚠️ 不是按钮类型，跳过联动')
-      return
-    }
-    
-    const option = businessTypeOptions.find((opt) => opt.value === newVal)
-    if (!option) {
-      console.warn('⚠️ 未找到业务类型选项:', newVal)
-      return
-    }
-
-    console.log('🔵 执行业务类型联动:', option)
-
-    // 1. 自动填充菜单名称（如果为空）
-    if (!formData.menuName && option.defaultName) {
-      formData.menuName = option.defaultName
-      console.log('✅ 自动填充菜单名称:', formData.menuName)
-    }
-
-    // 2. 自动填充权限标识
-    if (formData.parentId && formData.parentId !== '0') {
-      // 查找上级菜单
-      const parentMenu = findMenuById(menuOptions.value, formData.parentId)
-      console.log('🔍 查找上级菜单:', {
-        parentId: formData.parentId,
-        parentMenu,
-        menuOptions: menuOptions.value,
-      })
-      
-      if (parentMenu) {
-        // 获取父级 perms 前缀
-        const parentPerms = parentMenu.perms || parentMenu.path || ''
-        const basePerms = parentPerms.split(':').slice(0, -1).join(':') || parentPerms
-        
-        // 拼接完整 perms
-        formData.perms = `${basePerms}${option.suffix}`
-        console.log('✅ 自动生成权限标识:', formData.perms)
-        
-        // 清除权限标识字段的校验错误
-        setTimeout(() => {
-          formRef.value?.restoreValidation()
-          console.log('✅ 已清除表单校验')
-        }, 100)
-      } else {
-        console.warn('⚠️ 未找到上级菜单，无法生成 perms')
-        console.log('🔍 可用的菜单选项:', menuOptions.value)
-      }
-    } else {
-      console.warn('⚠️ 未选择上级菜单或上级菜单为主类目，无法生成 perms', {
-        parentId: formData.parentId,
-      })
-    }
-  }
-)
-
-// ✅ 辅助函数：递归查找菜单节点
-const findMenuById = (menus, targetId) => {
-  for (const menu of menus) {
-    if (String(menu.menuId) === String(targetId)) {
-      return menu
-    }
-    if (menu.children && menu.children.length > 0) {
-      const found = findMenuById(menu.children, targetId)
-      if (found) return found
-    }
-  }
-  return null
-}
-
 // 菜单类型选项
 const menuTypeOptions = [
   { label: '目录', value: 'M' },
@@ -187,14 +88,8 @@ const menuTypeOptions = [
 
 // 是否外链选项
 const isFrameOptions = [
-  { label: '是', value: 0 },
-  { label: '否', value: 1 },
-]
-
-// 是否缓存选项
-const isCacheOptions = [
-  { label: '缓存', value: 0 },
-  { label: '不缓存', value: 1 },
+  { label: '是', value: 1 },
+  { label: '否', value: 0 },
 ]
 
 // 可见性选项
@@ -209,100 +104,198 @@ const statusOptions = [
   { label: '停用', value: '1' },
 ]
 
-// 动态表单字段
+// ✅ 表单字段配置（BaseForm 数据驱动）
 const formFields = computed(() => [
+  // 上级菜单
   {
-    key: 'parentId',
+    key: 'parent_id',
     label: '上级菜单',
-    type: 'custom',
+    type: 'tree-select',
+    span: 2,
+    options: props.menuOptions,
+    labelField: 'menu_name',
+    keyField: 'menu_id',
+    childrenField: 'children',
+    clearable: true,
+    placeholder: '请选择上级菜单',
   },
+  // 菜单类型
   {
-    key: 'menuType',
+    key: 'menu_type',
     label: '菜单类型',
     type: 'radio',
+    span: 2,
     options: menuTypeOptions,
   },
-  {
-    key: 'menuName',
-    label: '菜单名称',
-    type: 'input',
-    placeholder: '请输入菜单名称',
-  },
-  {
-    key: 'businessType',
-    label: '业务类型',
-    type: 'select',
-    placeholder: '请选择业务类型',
-    options: businessTypeOptions.map((opt) => ({ label: opt.label, value: opt.value })),
-    hidden: (formData) => formData.menuType !== 'F',
-  },
-  {
-    key: 'perms',
-    label: '权限标识',
-    type: 'input',
-    placeholder: '请输入权限标识（如：system:user:add）',
-    hidden: (formData) => formData.menuType === 'M',
-  },
+  // 菜单图标（非按钮类型显示）
   {
     key: 'icon',
     label: '菜单图标',
-    type: 'input',
-    placeholder: '请输入图标名称（如：home）',
-    hidden: (formData) => formData.menuType === 'F',
+    type: 'icon-picker',
+    placeholder: '请选择或输入图标名称',
+    show: (model) => model.menu_type !== 'F',
   },
+  // 显示顺序
   {
-    key: 'orderNum',
-    label: '显示排序',
+    key: 'order_num',
+    label: '显示顺序',
     type: 'input-number',
     min: 0,
-    placeholder: '请输入排序',
-    hidden: (formData) => formData.menuType === 'F',
+    step: 1,
+    style: { width: '100%' },
   },
+  // 菜单名称
+  {
+    key: 'menu_name',
+    label: '菜单名称',
+    type: 'input',
+    required: true,
+  },
+  // 是否外链（仅菜单类型显示）
+  {
+    key: 'is_frame',
+    label: '是否外链',
+    type: 'radio',
+    options: isFrameOptions,
+    helpContent: '选择是外链则路由地址需要以 http(s):// 开头',
+    disabled: (model) => !!model.component,
+    show: (model) => model.menu_type === 'C',
+  },
+  // 路由地址（非按钮类型显示）
   {
     key: 'path',
     label: '路由地址',
     type: 'input',
-    placeholder: '请输入路由地址',
-    hidden: (formData) => formData.menuType === 'F',
+    helpContent: '访问的路由地址，如：user，如外网地址需内链访问则以 http(s):// 开头',
+    show: (model) => model.menu_type !== 'F',
   },
+  // 组件路径（仅菜单类型显示）
   {
     key: 'component',
     label: '组件路径',
     type: 'input',
-    placeholder: '请输入组件路径（如：system/user/index）',
-    hidden: (formData) => formData.menuType !== 'C',
+    helpContent: '访问的组件路径，如：system/user/index，默认在 views 目录下',
+    show: (model) => model.menu_type === 'C',
   },
+  // 权限标识（非目录类型显示）
+  {
+    key: 'perms',
+    label: '权限标识',
+    type: 'input',
+    helpContent: '控制器中定义的权限字符，如：system:user:list',
+    show: (model) => model.menu_type !== 'M',
+  },
+  // 业务类型（仅按钮类型显示）
+  {
+    key: 'businessType',
+    label: '业务类型',
+    type: 'select',
+    span: 2,
+    options: businessTypeOptions.map((opt) => ({ label: opt.label, value: opt.value })),
+    placeholder: '请选择业务类型',
+    clearable: true,
+    show: (model) => model.menu_type === 'F',
+  },
+  // 显示状态（非按钮类型显示）
   {
     key: 'visible',
     label: '显示状态',
     type: 'radio',
     options: visibleOptions,
-    hidden: (formData) => formData.menuType === 'F',
+    helpContent: '选择隐藏则路由将不会出现在侧边栏，但仍然可以访问',
+    show: (model) => model.menu_type !== 'F',
   },
+  // 菜单状态（非按钮类型显示）
   {
     key: 'status',
     label: '菜单状态',
     type: 'radio',
     options: statusOptions,
+    helpContent: '选择停用则路由将不会出现在侧边栏，也不能被访问',
+    show: (model) => model.menu_type !== 'F',
+  },
+  // 备注（非按钮类型显示）
+  {
+    key: 'remark',
+    label: '备注',
+    type: 'textarea',
+    span: 2,
+    rows: 3,
+    show: (model) => model.menu_type !== 'F',
   },
 ])
+
+// ✅ 监听 businessType 变化，触发联动逻辑
+watch(
+  () => formData.businessType,
+  (newVal) => {
+    console.log('👀 Watch 监听到 businessType 变化:', newVal)
+
+    if (formData.menu_type !== 'F') {
+      console.log('️ 不是按钮类型,跳过联动')
+      return
+    }
+
+    const option = businessTypeOptions.find((opt) => opt.value === newVal)
+    if (!option) {
+      console.warn('⚠️ 未找到业务类型选项:', newVal)
+      return
+    }
+
+    console.log('🔵 执行业务类型联动:', option)
+
+    // 1. 自动填充菜单名称(如果为空)
+    if (!formData.menu_name && option.defaultName) {
+      formData.menu_name = option.defaultName
+      console.log('✅ 自动填充菜单名称:', formData.menu_name)
+    }
+
+    // 2. 自动填充权限标识
+    if (formData.parent_id && formData.parent_id !== '0') {
+      // 查找上级菜单
+      const parentMenu = findMenuById(props.menuOptions, formData.parent_id)
+      console.log('🔍 查找上级菜单:', {
+        parent_id: formData.parent_id,
+        parentMenu,
+        menuOptions: props.menuOptions,
+      })
+
+      if (parentMenu) {
+        // 获取父级 perms 前缀
+        const parentPerms = parentMenu.perms || parentMenu.path || ''
+        const basePerms = parentPerms.split(':').slice(0, -1).join(':') || parentPerms
+
+        // 拼接完整 perms
+        formData.perms = `${basePerms}${option.suffix}`
+        console.log('✅ 自动生成权限标识:', formData.perms)
+
+        // 清除权限标识字段的校验错误
+        setTimeout(() => {
+          formRef.value?.restoreValidation()
+          console.log('✅ 已清除表单校验')
+        }, 100)
+      } else {
+        console.warn('⚠️ 未找到上级菜单,无法生成 perms')
+        console.log('🔍 可用的菜单选项:', props.menuOptions)
+      }
+    } else {
+      console.warn('⚠️ 未选择上级菜单或上级菜单为主类目,无法生成 perms', {
+        parent_id: formData.parent_id,
+      })
+    }
+  },
+)
 
 // 表单验证规则
 const rules = computed(() => {
   const baseRules = {
-    menuName: [
-      { required: true, message: '请输入菜单名称', trigger: 'blur' },
-    ],
-    orderNum: [
-      { required: true, type: 'number', message: '请输入排序', trigger: 'blur' },
-    ],
+    menu_name: [{ required: true, message: '请输入菜单名称', trigger: 'blur' }],
+    order_num: [{ required: true, type: 'number', message: '请输入排序', trigger: 'blur' }],
   }
 
   // ✅ 按钮类型：业务类型和权限标识必填
-  if (formData.menuType === 'F') {
-    baseRules.perms = [
-      { required: true, message: '请输入权限标识', trigger: 'blur' },
-    ]
+  if (formData.menu_type === 'F') {
+    baseRules.perms = [{ required: true, message: '请输入权限标识', trigger: 'blur' }]
   }
 
   return baseRules
@@ -315,90 +308,96 @@ const visible = computed({
 
 // 重置表单
 const resetForm = () => {
-  formData.menuName = ''
-  formData.parentId = '0'
-  formData.orderNum = 0
+  formData.menu_name = ''
+  formData.parent_id = '0'
+  formData.order_num = 0
   formData.path = ''
   formData.component = ''
   formData.query = ''
-  formData.routeName = ''
-  formData.isFrame = 1
-  formData.isCache = 0
-  formData.menuType = 'C'
+  formData.route_name = ''
+  formData.is_frame = 0 // 默认非外链
+  formData.menu_type = 'C'
   formData.visible = '0'
   formData.status = '0'
   formData.perms = ''
   formData.icon = ''
   formData.remark = ''
-  businessType.value = 'custom' // ✅ 重置业务类型
+  formData.businessType = 'custom' // ✅ 重置业务类型
   formRef.value?.restoreValidation()
 }
 
 // 监听 menuType 变化，重置业务类型
 watch(
-  () => formData.menuType,
+  () => formData.menu_type,
   (newType) => {
     if (newType !== 'F') {
-      businessType.value = 'custom'
-    }
-  }
-)
-
-// ✅ 监听 businessType 变化，确保联动逻辑可靠执行
-watch(
-  () => businessType.value,
-  (newType, oldType) => {
-    // 只在从空值变为有效值时触发（避免与 @update:value 重复执行）
-    if (newType && newType !== oldType && formData.menuType === 'F') {
-      console.log('👀 Watch 监听到 businessType 变化:', oldType, '->', newType)
-      // 如果需要，可以在这里添加额外的联动逻辑
-    }
-  }
-)
-
-// 监听 row 变化回填数据
-watch(
-  () => props.row,
-  (row) => {
-    if (row) {
-      // 如果是新增子菜单（只有 parentId，没有 menuId）
-      if (row.parentId && !row.menuId) {
-        resetForm()
-        formData.parentId = String(row.parentId)
-        // 根据父菜单类型设置子菜单类型
-        if (row.parentMenuType === 'M') {
-          formData.menuType = 'C' // 目录的子菜单默认是菜单
-        } else {
-          formData.menuType = 'F' // 菜单的子菜单默认是按钮
-        }
-      } else if (row.menuId) {
-        // 编辑模式
-        Object.assign(formData, {
-          menuName: row.menuName || '',
-          parentId: row.parentId !== undefined ? String(row.parentId) : '0',
-          orderNum: row.orderNum || 0,
-          path: row.path || '',
-          component: row.component || '',
-          menuType: row.menuType || 'C',
-          visible: row.visible || '0',
-          status: row.status || '0',
-          perms: row.perms || '',
-          icon: row.icon || '',
-        })
-        
-        // ✅ 回填业务类型：根据 perms 后缀自动识别
-        if (row.menuType === 'F' && row.perms) {
-          const matchedOption = businessTypeOptions.find((opt) => row.perms.endsWith(opt.suffix))
-          businessType.value = matchedOption?.value || 'custom'
-        } else {
-          businessType.value = 'custom'
-        }
-      }
-    } else {
-      resetForm()
+      formData.businessType = 'custom'
     }
   },
-  { immediate: true }
+)
+
+// 监听弹窗显示状态
+watch(
+  () => props.show,
+  (val) => {
+    if (val) {
+      // 新增子菜单模式
+      if (props.row && !props.row.menu_id) {
+        formData.parent_id = String(props.row.parent_id)
+        // 根据父菜单类型设置子菜单类型
+        const parentMenuType = props.row.parent_menu_type
+        if (parentMenuType === 'M') {
+          formData.menu_type = 'C' // 目录的子菜单默认是菜单
+        } else {
+          formData.menu_type = 'F' // 菜单的子菜单默认是按钮
+        }
+      } else if (props.row?.menu_id) {
+        // 编辑模式:使用下划线格式
+        const row = props.row
+        const menuName = row.menu_name || ''
+        const parentId = row.parent_id !== undefined ? row.parent_id : '0'
+        const orderNum = row.order_num ?? 0
+        const path = row.path || ''
+        const component = row.component || ''
+        const menuType = row.menu_type || 'C'
+        const isFrame = row.is_frame !== undefined ? row.is_frame : 1
+        const visible = row.visible || '0'
+        const status = row.status || '0'
+        const perms = row.perms || ''
+        const icon = row.icon || ''
+
+        Object.assign(formData, {
+          menu_name: menuName,
+          parent_id: String(parentId),
+          order_num: orderNum,
+          path,
+          component,
+          menu_type: menuType,
+          is_frame: isFrame,
+          visible,
+          status,
+          perms,
+          icon,
+        })
+
+        console.log('===== 菜单表单回显数据 =====')
+        console.log('原始数据:', row)
+        console.log('回显后的表单数据:', formData)
+
+        // ✅ 回填业务类型:根据 perms 后缀自动识别
+        if (menuType === 'F' && perms) {
+          const matchedOption = businessTypeOptions.find((opt) => perms.endsWith(opt.suffix))
+          formData.businessType = matchedOption?.value || 'custom'
+          console.log('回显业务类型:', formData.businessType)
+        } else {
+          formData.businessType = 'custom'
+        }
+      } else {
+        resetForm()
+      }
+    }
+  },
+  { immediate: true },
 )
 
 // 提交表单
@@ -406,45 +405,54 @@ const handleSubmit = async () => {
   const valid = await formRef.value?.validate()
   if (!valid) {
     message.error('请填写必填项')
-    throw new Error('Validation failed')
+    // ✅ 统一捕获校验错误，禁止向上传递
+    console.warn('表单验证拦截:', valid)
+    return
   }
 
   submitting.value = true
   try {
-    // 数据净化：根据菜单类型清理无关字段
+    // 数据净化:根据菜单类型清理无关字段
     const submitData = { ...formData }
 
-    // 按钮类型：清空无关字段
-    if (submitData.menuType === 'F') {
+    // 按钮类型:清空无关字段
+    if (submitData.menu_type === 'F') {
       submitData.path = null
       submitData.component = null
       submitData.icon = null
-      submitData.orderNum = null
+      submitData.order_num = null
       submitData.visible = null
       submitData.status = null
     }
-    // 目录类型：清空组件路径和权限标识
-    else if (submitData.menuType === 'M') {
+    // 目录类型:清空组件路径和权限标识
+    else if (submitData.menu_type === 'M') {
       submitData.component = null
       submitData.perms = null
     }
 
-    // 转换为下划线命名（后端要求）- ✅ 现在由中间件自动处理，这里保持驼峰即可
+    // ✅ 使用下划线命名提交给后端
     const backendData = {
-      menuName: submitData.menuName,
-      parentId: Number(submitData.parentId),
-      menuType: submitData.menuType,
-      orderNum: submitData.orderNum,
+      menu_name: submitData.menu_name,
+      parent_id: Number(submitData.parent_id),
+      menu_type: submitData.menu_type,
+      order_num: submitData.order_num,
       path: submitData.path,
       component: submitData.component,
+      query: submitData.query || null,
+      route_name: submitData.route_name || null,
+      is_frame: submitData.is_frame,
       perms: submitData.perms,
       icon: submitData.icon,
       visible: submitData.visible,
       status: submitData.status,
+      remark: submitData.remark || null,
     }
 
+    // ✅ 获取菜单ID
+    const menu_id = props.row?.menu_id
+
     if (isEdit.value) {
-      await updateMenu(props.row.menuId, backendData)
+      await updateMenu(menu_id, backendData)
       message.success('菜单更新成功')
     } else {
       await createMenu(backendData)
@@ -468,12 +476,29 @@ const handleClosed = () => {
 
 <style scoped>
 /* 表单容器样式 */
-:deep(.base-form) {
+:deep(.n-form) {
   width: 100%;
 }
 
-/* 自定义字段样式 */
+/* 表单项样式 */
 :deep(.n-form-item) {
   margin-bottom: 16px;
+}
+
+/* Label 插槽布局 */
+:deep(.n-form-item-label) {
+  display: flex;
+  align-items: center;
+}
+
+/* Tooltip 样式增强 */
+:deep(.n-tooltip) {
+  background-color: #fff !important;
+  color: #333 !important;
+  border: 1px solid #e0e0e0 !important;
+}
+
+:deep(.n-tooltip .n-tooltip__content) {
+  color: #333 !important;
 }
 </style>

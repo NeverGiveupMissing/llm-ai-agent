@@ -63,7 +63,7 @@ export function importDatabase(file) {
 /**
  * 获取表数据（分页）
  * @param {string} tableName - 表名
- * @param {Object} params - 查询参数 { page, pageSize }
+ * @param {Object} params - 查询参数 { page, page_size }
  * @returns {Promise} 表数据
  */
 export function getTableData(tableName, params = {}) {

@@ -6,14 +6,10 @@
       :pagination="pagination"
       row-key="id"
       @page-change="handlePageChange"
-      @page-size-change="handlePageSizeChange"
+      @page-size-change="handlepage_sizeChange"
       @refresh="fetchData"
     />
-    <n-empty
-      v-if="tableData.length === 0"
-      description="暂无登录日志记录"
-      class="mt-5"
-    />
+    <n-empty v-if="tableData.length === 0" description="暂无登录日志记录" class="mt-5" />
   </div>
 </template>
 
@@ -28,13 +24,11 @@ const message = useMessage()
 // 表格数据
 const tableData = ref([])
 
-// 分页配置
+// 分页配置（全链路统一下划线）
 const pagination = reactive({
-  page: 1,
-  pageSize: 20,
-  itemCount: 0,
-  showSizePicker: true,
-  pageSizes: [10, 20, 50, 100],
+  page_num: 1,
+  page_size: 20,
+  total: 0,
 })
 
 // 表格列配置
@@ -96,30 +90,29 @@ const columns = [
 const fetchData = async () => {
   try {
     const res = await getMyLoginLogs({
-      page: pagination.page,
-      limit: pagination.pageSize,
+      page_num: pagination.page_num,
+      page_size: pagination.page_size,
     })
 
     // ✅ 拦截器返回完整响应 { code, message, data }，分页数据在 res.data 中
     tableData.value = res.data.list || []
-    pagination.itemCount = res.data.pagination.total || 0
+    pagination.total = res.data.pagination.total || 0
   } catch (error) {
     console.error('获取登录日志失败:', error)
     message.error(error.message || '获取登录日志失败')
-  } finally {
   }
 }
 
 // 页码变化
 const handlePageChange = (page) => {
-  pagination.page = page
+  pagination.page_num = page
   fetchData()
 }
 
 // 每页条数变化
 const handlePageSizeChange = (pageSize) => {
-  pagination.pageSize = pageSize
-  pagination.page = 1
+  pagination.page_size = pageSize
+  pagination.page_num = 1
   fetchData()
 }
 

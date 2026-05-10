@@ -136,7 +136,7 @@ const DEFAULT_TEXT_MAP = {
   export: '导出',
   delete: '删除',
   reset: '重置',
-  assign_role: '分配角色',
+  assign_role: '分配权限/角色', // ✅ 通用文本，具体由外层 text 属性覆盖
 }
 
 // ✅ 2. 智能计算属性

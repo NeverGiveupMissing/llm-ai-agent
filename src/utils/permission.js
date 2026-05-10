@@ -127,10 +127,15 @@ export async function permissionGuard({
       // 获取权限和菜单（内部会设置 loading 状态）
       await permissionStore.fetchUserPermissions()
 
-      // 权限加载完成后，重新导航以匹配动态路由
+      // ✅ 若依标准方案：权限加载完成后，使用 next({ ...to, replace: true }) 确保路由注册完成
       console.log('✅ [PermissionGuard] 权限加载完成，重新导航...')
-      // ✅ 使用 replace: true 重新触发路由匹配，让动态路由生效
-      return { ...to, replace: true }
+      // 返回一个 Promise，让路由守卫等待导航完成
+      return new Promise((resolve) => {
+        // 使用 setTimeout 确保路由已注册
+        setTimeout(() => {
+          resolve({ ...to, replace: true })
+        }, 0)
+      })
     } catch (error) {
       console.error('❌ [PermissionGuard] 权限加载失败:', error)
       permissionStore.setFailed()

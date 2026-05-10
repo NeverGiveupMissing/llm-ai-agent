@@ -10,7 +10,7 @@
       <n-avatar :size="32" color="#667eea">
         {{ getUserInitial() }}
       </n-avatar>
-      <span class="user-name">{{ userInfo.userName || userInfo.nickName || '用户' }}</span>
+      <span class="user-name">{{ userInfo.user_name || userInfo.nick_name || '用户' }}</span>
     </div>
   </n-dropdown>
 </template>
@@ -31,7 +31,7 @@ const userInfo = computed(() => userStore.userInfo)
 
 // 获取用户名称首字母
 const getUserInitial = () => {
-  const name = userInfo.value.userName || userInfo.value.nickName || '用户'
+  const name = userInfo.value.user_name || userInfo.value.nick_name || '用户'
   // 取第一个字符，如果是中文取第一个字，如果是英文取第一个字母并大写
   const firstChar = name.charAt(0)
   return /[a-zA-Z]/.test(firstChar) ? firstChar.toUpperCase() : firstChar

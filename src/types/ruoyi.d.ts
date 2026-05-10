@@ -54,7 +54,7 @@ export interface SysUser {
  */
 export interface SysRole {
   /** 角色ID */
-  roleId: number
+  role_id: number
   /** 角色名称 */
   roleName: string
   /** 角色权限字符串 */
@@ -82,7 +82,7 @@ export interface SysRole {
   /** 备注 */
   remark?: string
   /** 菜单ID列表（分配权限时） */
-  menuIds?: number[]
+  menu_ids?: number[]
   /** 用户ID列表（分配用户时） */
   user_ids?: number[]
 }
@@ -92,7 +92,7 @@ export interface SysRole {
  */
 export interface SysMenu {
   /** 菜单ID */
-  menuId: number
+  menu_id: number
   /** 菜单名称 */
   menuName: string
   /** 父菜单ID */
@@ -142,7 +142,7 @@ export interface SysUserRole {
   /** 用户ID */
   user_id: number
   /** 角色ID */
-  roleId: number
+  role_id: number
 }
 
 /**
@@ -150,9 +150,9 @@ export interface SysUserRole {
  */
 export interface SysRoleMenu {
   /** 角色ID */
-  roleId: number
+  role_id: number
   /** 菜单ID */
-  menuId: number
+  menu_id: number
 }
 
 /**
@@ -210,7 +210,7 @@ export interface PageQuery {
   /** 页码 */
   pageNum: number
   /** 每页数量 */
-  pageSize: number
+  page_size: number
   /** 排序字段 */
   orderByColumn?: string
   /** 排序方向（asc/desc） */
@@ -228,5 +228,5 @@ export interface PageResult<T> {
   /** 页码 */
   pageNum: number
   /** 每页数量 */
-  pageSize: number
+  page_size: number
 }

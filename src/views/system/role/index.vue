@@ -22,16 +22,34 @@
       :data="tableData"
       :loading="loading"
       :pagination="pagination"
+      :checkable="true"
       toolbar-title="角色列表"
       row-key="role_id"
+      show-search-toggle
+      v-model:show-search="showSearch"
       @page-change="handlePageChange"
       @page-size-change="handlePageSizeChange"
+      @selection-change="handleSelectionChange"
       @refresh="fetchData"
       @action-click="handleActionClick"
     >
       <!-- 工具栏左侧按钮 -->
       <template #toolbar-left>
-        <CommonButton type="add" perms="role:create" text="新增角色" @click="handleAdd" />
+        <CommonButton type="add" perms="role:create" @click="handleAdd" />
+        <CommonButton
+          type="edit"
+          :disabled="selectedKeys.length !== 1"
+          perms="role:update"
+          @click="handleEdit(selectedRows[0])"
+        />
+        <CommonButton
+          type="delete"
+          :disabled="selectedKeys.length === 0"
+          perms="role:delete"
+          :confirm-message="`确定要删除选中的 ${selectedKeys.length} 个角色吗？`"
+          @confirm="handleBatchDelete"
+        />
+        <CommonButton type="export" perms="role:export" text="导出" />
       </template>
     </BaseTable>
 
@@ -55,7 +73,15 @@
 import { ref } from 'vue'
 import { useMessage, useDialog } from 'naive-ui'
 import { useTable } from '@/components/BaseTable/useTable'
-import { getRoleList, createRole, updateRole, deleteRole, saveRoleMenus } from '@/api/role'
+import {
+  getRoleList,
+  createRole,
+  updateRole,
+  deleteRole,
+  batchDeleteRole,
+  saveRoleMenus,
+  saveRoleApis,
+} from '@/api/role'
 import RoleFormModal from './components/RoleFormModal.vue'
 import AssignPermissionModal from './components/AssignPermissionModal.vue'
 
@@ -70,28 +96,62 @@ const showSearch = ref(true)
 
 // 搜索表单
 const searchForm = ref({
-  keyword: '',
+  role_name: '',
+  role_key: '',
+  status: null,
 })
+
+const statusOptions = [
+  { label: '正常', value: '0' },
+  { label: '停用', value: '1' },
+]
 
 // 搜索字段配置
 const searchFields = [
   {
-    key: 'keyword',
+    key: 'role_name',
     label: '角色名称',
     type: 'input',
     placeholder: '请输入角色名称',
-    width: '200px',
+    width: '180px',
+  },
+  {
+    key: 'role_key',
+    label: '角色标识',
+    type: 'input',
+    placeholder: '请输入角色标识',
+    width: '180px',
+  },
+  {
+    key: 'status',
+    label: '状态',
+    type: 'select',
+    placeholder: '角色状态',
+    width: '120px',
+    options: statusOptions,
   },
 ]
 
 // 搜索点击
 const handleSearchClick = () => {
-  handleSearch(searchForm.value)
+  // ✅ 直接使用下划线命名的搜索参数
+  const searchParams = { ...searchForm.value }
+
+  // 移除空值
+  Object.keys(searchParams).forEach((key) => {
+    if (searchParams[key] === '' || searchParams[key] === null || searchParams[key] === undefined) {
+      delete searchParams[key]
+    }
+  })
+
+  handleSearch(searchParams)
 }
 
 // 重置点击
 const handleResetClick = () => {
-  searchForm.value.keyword = ''
+  searchForm.value.role_name = ''
+  searchForm.value.role_key = ''
+  searchForm.value.status = null
   handleReset()
 }
 
@@ -100,11 +160,14 @@ const {
   tableData,
   loading,
   pagination,
+  selectedKeys,
+  selectedRows,
   fetchData,
   handleSearch,
   handleReset,
   handlePageChange,
   handlePageSizeChange,
+  handleSelectionChange,
 } = useTable(getRoleList)
 
 // 列配置
@@ -156,7 +219,7 @@ const columns = [
     title: '操作',
     type: 'actions',
     fixed: 'right',
-    actionsWidth: 100, // ✅ 操作列宽度
+    actionsWidth: 180, // ✅ 操作列宽度
     // ✅ 不再手动定义 actions，由 BaseTable 根据数据库权限动态生成
   },
 ]
@@ -170,7 +233,10 @@ const currentRole = ref(null)
 const handleActionClick = ({ perms, row }) => {
   if (perms.endsWith(':edit') || perms.endsWith(':update')) {
     handleEdit(row)
-  } else if (perms.endsWith(':assign') || perms.endsWith(':permission')) {
+  } else if (
+    perms.endsWith(':assign_role') ||
+    perms.endsWith(':assign_permission') // ✅ 下划线命名
+  ) {
     handleAssignPermissions(row)
   } else if (perms.endsWith(':remove') || perms.endsWith(':delete')) {
     dialog.warning({
@@ -207,9 +273,9 @@ const handleEdit = (role) => {
 // 表单提交成功
 const handleFormSuccess = async (formData) => {
   try {
-    const roleId = currentRole.value?.roleId // ✅ 后端已通过中间件转换为驼峰
+    const role_id = currentRole.value?.role_id
 
-    // ✅ 直接使用 formData，字段名与后端一致（驼峰格式）
+    // ✅ 直接使用 formData，字段名与后端一致（下划线格式）
     const submitData = {
       role_key: formData.role_key,
       role_name: formData.role_name,
@@ -218,9 +284,9 @@ const handleFormSuccess = async (formData) => {
       remark: formData.remark || '',
     }
 
-    if (currentRole.value?.role_id) {
+    if (role_id) {
       // 编辑模式
-      const res = await updateRole(currentRole.value.role_id, submitData)
+      const res = await updateRole(role_id, submitData)
       message.success(res.message || '角色更新成功')
     } else {
       // 新增模式
@@ -245,20 +311,24 @@ const handleAssignPermissions = (role) => {
 // 保存权限分配
 const handleSavePermissions = async (permissionData) => {
   try {
-    const roleId = currentRole.value?.role_id
-    const { menuIds, apiPaths } = permissionData
+    const role_id = currentRole.value?.role_id
+    const { menu_ids, api_paths } = permissionData
 
     // 保存菜单权限（包括按钮）
-    if (menuIds && menuIds.length > 0) {
-      const res = await saveRoleMenus(roleId, { menuIds })
-      message.success(res.message || '权限分配成功')
+    if (menu_ids && menu_ids.length > 0) {
+      const res = await saveRoleMenus(role_id, { menu_ids })
+      message.success(res.message || '菜单权限分配成功')
     }
 
-    // TODO: 保存接口权限（apiPaths）
-    // 后端需要支持接口权限的存储和校验
-    if (apiPaths && apiPaths.length > 0) {
-      console.log('接口权限:', apiPaths)
-      // await saveRoleApiPaths(roleId, { apiPaths })
+    // 保存接口权限
+    // api_paths 格式: ['/api/xxx', '/api/yyy']，需要转换为 [{ path: '/api/xxx', method: 'GET' }, ...]
+    if (api_paths && api_paths.length > 0) {
+      const formattedApiPaths = api_paths.map((path) => ({
+        path,
+        method: 'GET', // 默认使用 GET 方法，后续可根据实际需求调整
+      }))
+      const res = await saveRoleApis(role_id, { api_paths: formattedApiPaths })
+      message.success(res.message || '接口权限分配成功')
     }
 
     permissionModalVisible.value = false
@@ -280,13 +350,21 @@ const handleDelete = async (row) => {
     message.error(error.message || '删除失败')
   }
 }
+
+// 批量删除（CommonButton 已内置二次确认）
+const handleBatchDelete = async () => {
+  try {
+    const res = await batchDeleteRole(selectedKeys.value)
+    message.success(res.message || '批量删除成功')
+    fetchData()
+  } catch (error) {
+    console.error('批量删除失败:', error)
+    message.error(error.message || '批量删除失败')
+  }
+}
 </script>
 
 <style scoped>
-.role-management-container {
-  padding: 20px;
-}
-
 .search-card {
   margin-bottom: 16px;
 }

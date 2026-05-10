@@ -9,7 +9,7 @@
         show-trigger
         collapse-mode="width"
         @update:collapsed="handleCollapse"
-        style="display: flex; flex-direction: column; height: 100%"
+        class="layout-sider"
       >
         <Sidebar />
       </n-layout-sider>
@@ -40,8 +40,8 @@
               </router-view>
             </div>
 
-            <!-- 底部版权 -->
-            <div class="copyright-footer">
+            <!-- 底部版权（聊天页面不显示） -->
+            <div v-if="!isChatPage" class="copyright-footer">
               <CopyrightFooter class="page-copyright" />
             </div>
           </div>
@@ -53,6 +53,7 @@
 
 <script setup name="BasicLayout">
 import { onMounted, watch, nextTick, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/modules/app'
 import { usePermissionStore } from '@/stores/modules/permission'
 import { useMenuStore } from '@/stores/modules/menu'
@@ -60,6 +61,8 @@ import Sidebar from './Sidebar/index.vue'
 import LayoutHeader from './Header/index.vue'
 import Breadcrumb from './Breadcrumb/index.vue'
 import CopyrightFooter from '@/components/CopyrightFooter.vue'
+
+const route = useRoute()
 
 // 常量
 const SIDEBAR_WIDTH = 210
@@ -74,6 +77,11 @@ const headerStyle = computed(() => ({
   left: appStore.collapsed ? `${COLLAPSED_SIDEBAR_WIDTH}px` : `${SIDEBAR_WIDTH}px`,
   width: `calc(100% - ${appStore.collapsed ? COLLAPSED_SIDEBAR_WIDTH : SIDEBAR_WIDTH}px)`,
 }))
+
+// 判断是否为聊天页面
+const isChatPage = computed(() => {
+  return route.path === '/chat' || route.path.startsWith('/chat/')
+})
 
 // 组件挂载时检查权限是否加载
 onMounted(() => {
@@ -102,28 +110,28 @@ onMounted(() => {
 watch(
   () => permissionStore.isLoaded,
   async (loaded) => {
-    // console.log('👀 [BasicLayout] 权限加载状态变化:', loaded)
-    // console.log('👀 [BasicLayout] menuTree 长度:', permissionStore.menuTree?.length)
-    // console.log('👀 [BasicLayout] menuOptions 长度:', menuStore.menuOptions?.length)
+    // console.log(' [BasicLayout] 权限加载状态变化:', loaded)
+    // console.log(' [BasicLayout] menuTree 长度:', permissionStore.menuTree?.length)
+    // console.log(' [BasicLayout] menuOptions 长度:', menuStore.menuOptions?.length)
 
     if (loaded === true) {
-      // console.log('✅ [BasicLayout] 权限已加载，菜单数据已就绪')
-      // console.log('🔍 [BasicLayout] permissionStore.menuTree:', permissionStore.menuTree)
-      // console.log('🔍 [BasicLayout] menuStore.menuOptions:', menuStore.menuOptions)
+      // console.log(' [BasicLayout] 权限已加载，菜单数据已就绪')
+      // console.log(' [BasicLayout] permissionStore.menuTree:', permissionStore.menuTree)
+      // console.log(' [BasicLayout] menuStore.menuOptions:', menuStore.menuOptions)
 
       // ✅ 关键修复：权限加载完成后，强制重新生成菜单
       await nextTick()
       if (permissionStore.menuTree?.length > 0) {
-        // console.log('🔄 [BasicLayout] 重新生成菜单...')
+        // console.log(' [BasicLayout] 重新生成菜单...')
         menuStore.setMenuFromTree(permissionStore.menuTree)
-        // console.log('✅ [BasicLayout] 菜单重新生成完成:', menuStore.menuOptions)
-        // console.log('✅ [BasicLayout] 菜单选项数量:', menuStore.menuOptions?.length)
+        // console.log(' [BasicLayout] 菜单重新生成完成:', menuStore.menuOptions)
+        // console.log(' [BasicLayout] 菜单选项数量:', menuStore.menuOptions?.length)
       } else {
-        // console.error('❌ [BasicLayout] permissionStore.menuTree 为空！')
+        // console.error(' [BasicLayout] permissionStore.menuTree 为空！')
       }
     }
   },
-  { immediate: true }, // ✅ 立即执行一次，防止加载竞态
+  { immediate: true },
 )
 
 const handleCollapse = (collapsed) => {
@@ -140,9 +148,14 @@ const handleCollapse = (collapsed) => {
 }
 
 .n-layout {
-  height: 100%;
+  height: 100vh !important;
   flex: 1;
-  overflow: hidden; /* 禁止 n-layout 自身滚动 */
+  overflow: hidden;
+}
+
+/* 侧边栏高度 */
+.layout-sider {
+  height: 100vh !important;
 }
 
 .main-layout {
@@ -160,20 +173,18 @@ const handleCollapse = (collapsed) => {
 
 .content-wrapper {
   height: 100%;
+  min-height: 400px;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 15px;
   padding-bottom: 15px;
-  background: #f0f2f5; /* ✅ 显式设置灰色背景 */
+  background: #f0f2f5;
 }
 
-.copyright-footer {
-  margin: 0 15px;
-}
-/* ✅ 确保版权组件可见，宽度与表格一致 */
+/* 版权组件样式 */
 .page-copyright {
-  margin-bottom: 0;
   /* ✅ 移除 width: 100%，让自然流式布局控制宽度 */
+  margin-bottom: 0;
   position: relative;
   z-index: 10;
 }

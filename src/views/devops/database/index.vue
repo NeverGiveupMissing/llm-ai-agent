@@ -5,7 +5,7 @@
       <n-layout-sider
         :width="180"
         bordered
-        content-style="padding: 0; display: flex; flex-direction: column; background: #f7f8fa;"
+        content-style="padding: 0; display: flex; flex-direction: column; background: #fff;"
       >
         <!-- 标题栏 -->
         <div class="list-header">
@@ -121,7 +121,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useMessage, useDialog, NButton, NTabs, NTabPane } from 'naive-ui'
 import dayjs from 'dayjs'
-import { PlayCircleOutline, DownloadOutline, GridOutline, CloudUploadOutline } from '@vicons/ionicons5'
+import {
+  PlayCircleOutline,
+  DownloadOutline,
+  GridOutline,
+  CloudUploadOutline,
+} from '@vicons/ionicons5'
 import SqlEditor from './components/SqlEditor.vue'
 import SqlResult from './components/SqlResult.vue'
 import SqlBuilder from './components/SqlBuilder.vue'
@@ -194,7 +199,7 @@ async function handleExecuteSql(sql) {
 
   // 判断 SQL 类型，决定是否显示确认弹窗
   const sqlType = getSQLType(sql.trim())
-  
+
   // 只有危险操作才需要确认
   if (sqlType === 'dangerous') {
     dialog.warning({
@@ -215,22 +220,22 @@ async function handleExecuteSql(sql) {
 // 判断 SQL 类型
 function getSQLType(sql) {
   const upperSQL = sql.toUpperCase().trim()
-  
+
   // 危险操作：DROP、TRUNCATE、ALTER
   if (/^(DROP|TRUNCATE|ALTER)\s+/i.test(upperSQL)) {
     return 'dangerous'
   }
-  
+
   // 常规操作：INSERT、UPDATE、DELETE
   if (/^(INSERT|UPDATE|DELETE)\s+/i.test(upperSQL)) {
     return 'normal'
   }
-  
+
   // 查询操作：SELECT、WITH
   if (/^(SELECT|WITH)\s+/i.test(upperSQL)) {
     return 'query'
   }
-  
+
   // 其他操作（CREATE、GRANT 等）视为危险操作
   return 'dangerous'
 }
@@ -339,7 +344,8 @@ function handleImportDatabase() {
   // 显示确认弹窗
   dialog.warning({
     title: '⚠️ 导入确认',
-    content: '导入 SQL 文件将执行其中的所有 SQL 语句，请确认文件来源可靠。此操作将记录到操作日志中。',
+    content:
+      '导入 SQL 文件将执行其中的所有 SQL 语句，请确认文件来源可靠。此操作将记录到操作日志中。',
     positiveText: '选择文件',
     negativeText: '取消',
     onPositiveClick: () => {
@@ -369,7 +375,7 @@ async function handleFileSelect(event) {
   }
 
   await executeImportWithLoading(file)
-  
+
   // 清空文件选择，允许重复选择同一文件
   event.target.value = ''
 }
@@ -404,20 +410,12 @@ function handleGenerateSQL(sql) {
 </script>
 
 <style scoped>
-/* 最外层容器撑满视口 */
-.database-management-container {
-  display: flex;
-  height: calc(100vh - 60px); /* 减去顶部导航高度 */
-  overflow: hidden; /* 禁止页面级滚动 */
-}
-
 /* 左侧表名列表 */
 :deep(.n-layout-sider) {
   width: 180px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   border-right: 1px solid #e8e8e8;
 }
 
@@ -426,7 +424,6 @@ function handleGenerateSQL(sql) {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* 禁止右侧整体滚动 */
 }
 
 .toolbar {
@@ -452,8 +449,7 @@ function handleGenerateSQL(sql) {
 /* SQL编辑器固定高度 */
 .editor-area {
   flex-shrink: 0;
-  height: 165px;
-  overflow: hidden; /* 禁止编辑器区域滚动 */
+  height: 190px;
   border-bottom: 1px solid #f0f0f0;
   padding-bottom: 10px;
 }
@@ -463,7 +459,6 @@ function handleGenerateSQL(sql) {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* 禁止结果区域整体滚动 */
   min-height: 0; /* 重要：flex子元素需要设置min-height:0才能收缩 */
 }
 
@@ -495,7 +490,7 @@ function handleGenerateSQL(sql) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f7f8fa;
+  background: #fff;
   flex-shrink: 0;
 }
 
@@ -510,7 +505,7 @@ function handleGenerateSQL(sql) {
 /* 搜索框容器 */
 .search-wrapper {
   padding: 8px 12px;
-  background: #f7f8fa;
+  background: #fff;
   flex-shrink: 0;
 }
 
@@ -521,7 +516,7 @@ function handleGenerateSQL(sql) {
 
 /* 表名列表 */
 .table-list {
-  background: #f7f8fa;
+  background: #fff;
 }
 
 .table-list :deep(.n-list-item) {

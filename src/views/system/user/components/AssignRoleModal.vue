@@ -38,28 +38,26 @@ const submitting = ref(false)
 
 // 表单数据
 const formData = reactive({
-  userName: '',
-  roleIds: [],
+  user_name: '',
+  role_ids: [],
 })
 
 // 表单字段配置
 const formFields = computed(() => [
   {
-    key: 'userName',
+    key: 'user_name',
     label: '用户',
     type: 'input',
     disabled: true,
-    // ✅ 移除 defaultValue，由 watch 统一管理
   },
   {
-    key: 'roleIds',
+    key: 'role_ids',
     label: '角色',
     type: 'select',
-    // ✅ 移除 required，避免初始化时触发校验错误
     multiple: true,
     filterable: true,
     placeholder: '请选择角色',
-    // ✅ 使用计算属性确保 options 响应式
+    // ✅ 确保 options 的 value 统一为数字类型
     options: props.roleOptions || [],
   },
 ])
@@ -69,54 +67,65 @@ const visible = computed({
   set: (val) => emit('update:show', val),
 })
 
-// 重置表单 - 必须在 watch 之前定义
+// 重置表单
 const resetForm = () => {
-  formData.userName = ''
-  formData.roleIds = []
+  formData.user_name = ''
+  formData.role_ids = []
   formRef.value?.restoreValidation()
 }
 
-// 监听弹窗打开，回填数据
+// ✅ 同时监听 show 和 roleOptions 的变化
 watch(
-  () => props.show,
-  async (newVal) => {
+  () => [props.show, props.roleOptions],
+  async ([newVal, options]) => {
     if (newVal && props.user) {
-      // ✅ 弹窗打开且有用户数据时回填
       await nextTick()
-      
-      formData.userName = props.user.user_name || ''
-      
-      // ✅ 从 roles 数组中提取 role_id
+
+      formData.user_name = props.user.user_name || ''
+
+      // ✅ 从 roles 数组中提取 role_id，并确保类型一致（数字）
       try {
-        if (Array.isArray(props.user.roles) && props.user.roles.length > 0) {
-          formData.roleIds = props.user.roles
-            .map((role) => role?.role_id)
-            .filter((id) => id != null && id !== '')
+        if (props.user.roles && Array.isArray(props.user.roles) && props.user.roles.length > 0) {
+          formData.role_ids = props.user.roles
+            .map((role) => {
+              const role_id = role?.role_id || role?.role_id || role?.id
+              return role_id != null ? Number(role_id) : null
+            })
+            .filter((id) => id != null && !isNaN(id))
+          // ✅ 检查 options 的 value 类型
+          if (options && options.length > 0) {
+            console.log(
+              ' [AssignRoleModal] options 第一个元素的 value:',
+              options[0].value,
+              '类型:',
+              typeof options[0].value,
+            )
+          }
         } else {
-          formData.roleIds = []
+          console.log('⚠️ [AssignRoleModal] 用户没有角色或roles为空数组')
+          formData.role_ids = []
         }
       } catch (error) {
-        console.error('❌ 提取角色ID失败:', error)
-        formData.roleIds = []
+        console.error(' [AssignRoleModal] 提取角色ID失败:', error)
+        formData.role_ids = []
       }
     } else if (!newVal) {
-      // ✅ 弹窗关闭时重置表单
       resetForm()
     }
   },
+  { immediate: false },
 )
 
 // 提交表单
 const handleSubmit = async () => {
-  // ✅ 手动校验：角色必须选择至少一个
-  if (!formData.roleIds || formData.roleIds.length === 0) {
+  if (!formData.role_ids || formData.role_ids.length === 0) {
     message.warning('请至少选择一个角色')
     return
   }
 
   submitting.value = true
   try {
-    emit('submit', formData.roleIds)
+    emit('submit', formData.role_ids)
   } finally {
     submitting.value = false
   }
