@@ -11,7 +11,7 @@ class InterfaceModel {
    * @returns {Promise<{list: Array, total: number}>}
    */
   async list(params = {}) {
-    const { api_name, api_url, api_method, status, page = 1, page_size = 10 } = params
+    const { interface_name, interface_url, interface_method, status, page = 1, page_size = 10 } = params
 
     // 强制类型转换，防止注入
     const pageNum = parseInt(page) || 1
@@ -23,21 +23,21 @@ class InterfaceModel {
     let idx = 1
 
     // ✅ 接口名称模糊匹配
-    if (api_name) {
-      conditions.push(`api_name ILIKE $${idx++}`)
-      values.push(`%${api_name}%`)
+    if (interface_name) {
+      conditions.push(`interface_name ILIKE $${idx++}`)
+      values.push(`%${interface_name}%`)
     }
 
     // ✅ 接口路径模糊匹配
-    if (api_url) {
-      conditions.push(`api_url ILIKE $${idx++}`)
-      values.push(`%${api_url}%`)
+    if (interface_url) {
+      conditions.push(`interface_url ILIKE $${idx++}`)
+      values.push(`%${interface_url}%`)
     }
 
     // ✅ 请求方式精确匹配
-    if (api_method) {
-      conditions.push(`api_method = $${idx++}`)
-      values.push(api_method)
+    if (interface_method) {
+      conditions.push(`interface_method = $${idx++}`)
+      values.push(interface_method)
     }
 
     // ✅ 状态过滤（精确匹配）
@@ -57,18 +57,20 @@ class InterfaceModel {
     const offset = (pageNum - 1) * page_sizeNum
     const query = `
       SELECT 
-        api_id,
-        api_name,
-        api_url,
-        api_method,
-        api_category,
+        interface_id,
+        interface_name,
+        interface_url,
+        interface_method,
+        interface_category,
         status,
         remark,
+        create_by,
         create_time,
+        update_by,
         update_time
       FROM sys_interface
       ${whereClause}
-      ORDER BY api_id DESC
+      ORDER BY interface_id DESC
       LIMIT $${idx++} OFFSET $${idx++}
     `
     values.push(page_sizeNum, offset)
@@ -90,7 +92,7 @@ class InterfaceModel {
    */
   async getById(interface_id) {
     const query = `
-      SELECT * FROM sys_interface WHERE api_id = $1
+      SELECT * FROM sys_interface WHERE interface_id = $1
     `
     const result = await pool.query(query, [interface_id])
     return result.rows[0] || null
@@ -99,53 +101,56 @@ class InterfaceModel {
   /**
    * 创建接口
    * @param {Object} interfaceData - 接口数据
+   * @param {string} createBy - 创建者
    * @returns {Promise<Object>}
    */
-  async create(interfaceData) {
+  async create(interfaceData, createBy = 'admin') {
     const query = `
       INSERT INTO sys_interface (
-        api_name, api_url, api_method, api_category, status, remark
+        interface_name, interface_url, interface_method, interface_category, status, remark, create_by
       ) VALUES (
-        $1, $2, $3, $4, $5, $6
+        $1, $2, $3, $4, $5, $6, $7
       ) RETURNING *
     `
     const result = await pool.query(query, [
-      interfaceData.api_name,
-      interfaceData.api_url,
-      interfaceData.api_method || 'GET',
-      interfaceData.api_category,
+      interfaceData.interface_name,
+      interfaceData.interface_url,
+      interfaceData.interface_method || 'GET',
+      interfaceData.interface_category,
       interfaceData.status || '0',
       interfaceData.remark || '',
+      createBy,
     ])
     return result.rows[0]
   }
 
   /**
    * 更新接口
-   * @param {number} interface_id - 接口ID
+   * @param {number} interfaceId - 接口ID
    * @param {Object} updates - 更新数据
+   * @param {string} updateBy - 更新者
    * @returns {Promise<Object|null>}
    */
-  async update(interface_id, updates) {
+  async update(interfaceId, updates, updateBy = 'admin') {
     const fields = []
     const values = []
     let idx = 1
 
-    if (updates.api_name !== undefined) {
-      fields.push(`api_name = $${idx++}`)
-      values.push(updates.api_name)
+    if (updates.interface_name !== undefined) {
+      fields.push(`interface_name = $${idx++}`)
+      values.push(updates.interface_name)
     }
-    if (updates.api_url !== undefined) {
-      fields.push(`api_url = $${idx++}`)
-      values.push(updates.api_url)
+    if (updates.interface_url !== undefined) {
+      fields.push(`interface_url = $${idx++}`)
+      values.push(updates.interface_url)
     }
-    if (updates.api_method !== undefined) {
-      fields.push(`api_method = $${idx++}`)
-      values.push(updates.api_method)
+    if (updates.interface_method !== undefined) {
+      fields.push(`interface_method = $${idx++}`)
+      values.push(updates.interface_method)
     }
-    if (updates.api_category !== undefined) {
-      fields.push(`api_category = $${idx++}`)
-      values.push(updates.api_category)
+    if (updates.interface_category !== undefined) {
+      fields.push(`interface_category = $${idx++}`)
+      values.push(updates.interface_category)
     }
     if (updates.status !== undefined) {
       fields.push(`status = $${idx++}`)
@@ -157,16 +162,19 @@ class InterfaceModel {
     }
 
     if (fields.length === 0) {
-      return await this.getById(interface_id)
+      return await this.getById(interfaceId)
     }
 
+    // 添加更新者和更新时间
+    fields.push(`update_by = $${idx++}`)
+    values.push(updateBy)
     fields.push(`update_time = NOW()`)
-    values.push(interface_id)
+    values.push(interfaceId)
 
     const query = `
       UPDATE sys_interface
       SET ${fields.join(', ')}
-      WHERE api_id = $${idx}
+      WHERE interface_id = $${idx}
       RETURNING *
     `
 
@@ -181,7 +189,7 @@ class InterfaceModel {
    */
   async delete(interface_id) {
     const query = `
-      DELETE FROM sys_interface WHERE api_id = $1 RETURNING api_id
+      DELETE FROM sys_interface WHERE interface_id = $1 RETURNING interface_id
     `
     const result = await pool.query(query, [interface_id])
     return result.rows.length > 0
@@ -193,10 +201,10 @@ class InterfaceModel {
    */
   async all() {
     const query = `
-      SELECT api_id, api_name, api_url, api_method, api_category
+      SELECT interface_id, interface_name, interface_url, interface_method, interface_category
       FROM sys_interface
       WHERE status = '0'
-      ORDER BY api_category ASC, api_url ASC
+      ORDER BY interface_category ASC, interface_url ASC
     `
     const result = await pool.query(query)
     return result.rows

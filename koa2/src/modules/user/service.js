@@ -65,18 +65,6 @@ class UserService {
       // ✅ 使用 sys_user_role 表进行角色分配
       await this.assignRoleToUser(user.user_id, targetRole.role_id) // ✅ 下划线
       console.log(`✅ 新用户 ${user.user_name} 已自动分配角色: ${targetRole.role_name}`)
-
-      // ✅ 确保该角色有默认菜单权限
-      const isSuperAdmin = targetRole.role_key?.toLowerCase().includes('admin') // ✅ 下划线
-
-      // 先检查角色是否已有菜单权限，如果没有则分配
-      await ensureRoleHasDefaultMenus(targetRole.role_id, isSuperAdmin) // ✅ 下划线
-
-      // 如果是 admin 角色，强制重新分配所有菜单（包括按钮）
-      if (isSuperAdmin) {
-        console.log(` [菜单分配] Admin 角色，强制更新所有菜单权限...`)
-        await forceAssignAllMenus(targetRole.role_id) // ✅ 下划线
-      }
     } else {
       console.warn(`️  未找到角色，新用户 ${user.user_name} 将没有角色`) // ✅ 下划线
     }
@@ -146,20 +134,35 @@ class UserService {
       throw new ForbiddenError('账号已被禁用')
     }
 
-    // 更新最后登录时间
-    await userModel.updateUser(user.user_id, { login_date: new Date() }) // ✅ 下划线
+    // 获取客户端 IP
+    const loginIp = ctx?.ip || ctx?.request?.ip || ''
+
+    // 更新最后登录 IP 和时间
+    await userModel.updateUser(user.user_id, {
+      login_ip: loginIp,
+      login_date: new Date(),
+    })
 
     // 获取用户角色
     const roles = await userModel.getUserRoles(user.user_id) // ✅ 下划线
 
-    // 获取用户权限（从 sys_menu.perms）
+    // ✅ 类型强转：确保所有 role_id 都是数字
+    const rolesWithNumericIds = roles.map((role) => ({
+      ...role,
+      role_id: parseInt(role.role_id, 10),
+    }))
+
+    // ✅ 角色 ID 数组（数字类型）
+    const role_ids = rolesWithNumericIds.map((r) => r.role_id)
+
+    // ✅ 权限聚合：从 sys_menu 和 sys_button 聚合所有 perms
     const permissions = await this.getUserPermissions(user.user_id)
 
     // 生成 JWT Token（使用下划线命名以保持一致）
     const token = generateToken({
       user_id: user.user_id,
       user_name: user.user_name,
-      roles: roles.map((r) => r.role_key),
+      roles: rolesWithNumericIds.map((r) => r.role_key),
     })
 
     // 记录成功的登录日志
@@ -171,26 +174,31 @@ class UserService {
     const os = parseOS(userAgent)
 
     await loginLogService.logLogin({
-      user_id: user.user_id, // ✅ 下划线
-      user_name: userName, // ✅ 下划线
-      ipAddress: ctx?.ip || ctx?.request?.ip || '',
+      user_id: user.user_id, //  下划线
+      user_name: userName, //  下划线
+      ipAddress: loginIp,
       browser,
       os,
       status: '0',
       message: '登录成功',
     })
 
+    // ✅ 类型强转：确保 user_id 是数字
     return {
       success: true,
       data: {
         token,
-        user_id: user.user_id,
+        user_id: parseInt(user.user_id, 10),
         user_name: user.user_name,
         nick_name: user.nick_name,
         avatar: user.avatar,
         email: user.email,
         phonenumber: user.phonenumber,
-        roles: roles.map((r) => r.role_key),
+        status: user.status, // ✅ 新增：返回用户状态（'0'=停用, '1'=正常）
+        // ✅ 角色信息补全
+        roles: rolesWithNumericIds,
+        role_ids, // ✅ 新增：数字数组
+        // ✅ 权限聚合
         permissions,
       },
       message: '登录成功',
@@ -208,11 +216,29 @@ class UserService {
 
     const roles = await userModel.getUserRoles(user_id)
 
+    // ✅ 类型强转：确保所有 role_id 都是数字
+    const rolesWithNumericIds = roles.map((role) => ({
+      ...role,
+      role_id: parseInt(role.role_id, 10),
+    }))
+
+    // ✅ 角色 ID 数组（数字类型）
+    const role_ids = rolesWithNumericIds.map((r) => r.role_id)
+
+    // ✅ 权限聚合：从 sys_menu 和 sys_button 聚合所有 perms
+    const permissions = await this.getUserPermissions(user_id)
+
     return {
       success: true,
       data: {
         ...user,
-        roles,
+        // ✅ 类型强转：确保 user_id 是数字
+        user_id: parseInt(user.user_id, 10),
+        // ✅ 角色信息补全
+        roles: rolesWithNumericIds,
+        role_ids, // ✅ 新增：数字数组
+        // ✅ 权限聚合
+        permissions,
       },
     }
   }
@@ -257,7 +283,7 @@ class UserService {
     const total = await userModel.count(params)
 
     // ✅ 解析 json_agg 返回的 roles 字段（兼容 pg 驱动可能返回字符串的情况）
-    users.forEach(user => {
+    users.forEach((user) => {
       if (typeof user.roles === 'string') {
         try {
           user.roles = JSON.parse(user.roles)
@@ -300,19 +326,20 @@ class UserService {
   }
 
   /**
-   * 检查用户是否拥有管理员角色
+   * 检查用户是否拥有管理员角色（禁止删除）
+   * ✅ 仅保护 admin 角色
    * @param {number} user_id - 用户ID
    * @returns {Promise<boolean>} 是否拥有管理员角色
    */
   async hasAdminRole(user_id) {
     const { pool } = require('../../config/db')
     const query = `
-      SELECT r.role_name
+      SELECT r.role_id, r.role_name, r.role_key
       FROM sys_role r
       INNER JOIN sys_user_role ur ON r.role_id = ur.role_id
       WHERE ur.user_id = $1
         AND r.del_flag = '0'
-        AND r.role_name ILIKE '%管理员%'
+        AND r.role_key = 'admin'
     `
     const result = await pool.query(query, [user_id])
     return result.rows.length > 0
@@ -345,14 +372,32 @@ class UserService {
       throw new Error('该用户拥有管理员角色，不允许删除')
     }
 
-    const deleted = await userModel.deleteUserById(user_id, updateBy)
-    if (!deleted) {
-      throw new Error('删除失败')
-    }
+    // ✅ 使用事务：软删除用户 + 清除角色关联
+    const client = await require('../../config/db').pool.connect()
+    try {
+      await client.query('BEGIN')
 
-    return {
-      success: true,
-      message: '用户删除成功',
+      // 1. 软删除用户
+      await client.query(
+        `UPDATE sys_user SET del_flag = '2', update_time = NOW(), update_by = $2 WHERE user_id = $1::int AND del_flag = '0'`,
+        [user_id, updateBy],
+      )
+
+      // 2. ✅ 清除用户的角色关联
+      await client.query(`DELETE FROM sys_user_role WHERE user_id = $1::int`, [user_id])
+
+      await client.query('COMMIT')
+
+      return {
+        success: true,
+        message: '用户删除成功',
+      }
+    } catch (error) {
+      await client.query('ROLLBACK')
+      console.error('删除用户失败:', error)
+      throw error
+    } finally {
+      client.release()
     }
   }
 
@@ -488,28 +533,60 @@ class UserService {
   }
 
   /**
-   * 获取用户的所有权限标识（从 sys_menu.perms）
+   * 获取用户的所有权限标识（仅按钮权限，从 sys_button 获取）
    * @param {number} user_id - 用户 ID
-   * @returns {Promise<string[]>} 权限标识数组
+   * @returns {Promise<string[]>} 按钮权限标识数组（去重）
    */
   async getUserPermissions(user_id) {
     const { pool } = require('../../config/db')
 
+    // ✅ 管理员权限判断：如果是 admin 角色，直接返回通配符
+    const isAdmin = await this.checkIsAdmin(user_id)
+    if (isAdmin) {
+      console.log('👑 [UserService] 管理员用户，返回通配符权限 ["*:*"]')
+      return ['*:*:*']
+    }
+
+    // 普通用户：仅从 sys_button 获取按钮权限（不再包含菜单权限）
     const query = `
-      SELECT DISTINCT m.perms
-      FROM sys_menu m
-      INNER JOIN sys_role_menu srm ON m.menu_id = srm.menu_id
-      INNER JOIN sys_user_role ur ON srm.role_id = ur.role_id
+      SELECT DISTINCT b.perms
+      FROM sys_button b
+      INNER JOIN sys_role_button srb ON b.button_id = srb.button_id
+      INNER JOIN sys_user_role ur ON srb.role_id = ur.role_id
       INNER JOIN sys_role r ON ur.role_id = r.role_id
-      WHERE ur.user_id = $1
-        AND m.status = '0'
+      WHERE ur.user_id = $1::int
+        AND b.status = '0'
         AND r.status = '0'
-        AND m.perms IS NOT NULL
-        AND m.perms != ''
+        AND b.perms IS NOT NULL
+        AND b.perms != ''
     `
 
     const result = await pool.query(query, [user_id])
     return result.rows.map((row) => row.perms)
+  }
+
+  /**
+   * 检查用户是否为超级管理员
+   * @param {number} user_id - 用户ID
+   * @returns {Promise<boolean>}
+   */
+  async checkIsAdmin(user_id) {
+    try {
+      const { pool } = require('../../config/db')
+      const query = `
+        SELECT COUNT(*) as count
+        FROM sys_user_role ur
+        INNER JOIN sys_role r ON ur.role_id = r.role_id
+        WHERE ur.user_id = $1::int
+          AND r.status = '0'
+          AND (r.role_key = 'admin' OR r.role_key LIKE '%admin%')
+      `
+      const result = await pool.query(query, [user_id])
+      return parseInt(result.rows[0].count) > 0
+    } catch (error) {
+      console.error('❌ [UserService] 检查管理员权限失败:', error.message)
+      return false
+    }
   }
 
   /**
@@ -531,6 +608,21 @@ class UserService {
       success: true,
       message: '角色移除成功',
     }
+  }
+
+  /**
+   * 导出用户数据为 Excel
+   * @param {Object} params - 查询参数
+   * @returns {Promise<Array>} 转换后的导出数据
+   */
+  async exportUsers(params = {}) {
+    const { transformUserExport } = require('../../utils/export-dto')
+
+    // 获取所有用户数据（不分页）
+    const users = await userModel.listAll(params)
+
+    // 转换为导出格式
+    return users.map((user) => transformUserExport(user))
   }
 
   /**
@@ -714,6 +806,9 @@ async function ensureRoleHasDefaultMenus(role_id, includeButtons = false) {
       console.log('   执行根节点菜单插入...')
       await pool.query(insertQuery, [role_id])
 
+      // ✅ 标准化：确保每个角色都拥有个人中心和个人资料菜单（无论其层级关系）
+      await ensureUserProfileMenus(role_id)
+
       // 验证分配结果
       const verifyQuery = `
         SELECT COUNT(DISTINCT srm.menu_id) as count
@@ -771,7 +866,7 @@ async function ensureRoleHasDefaultMenus(role_id, includeButtons = false) {
  * @param {number} role_id - 角色 ID（整型）
  */
 async function forceAssignAllMenus(role_id) {
-  console.log('\n🔄 [强制菜单分配] 开始为角色分配所有菜单权限')
+  console.log('\n [强制菜单分配] 开始为角色分配所有菜单权限')
   console.log('   角色ID:', role_id, '类型:', typeof role_id)
 
   try {
@@ -803,6 +898,40 @@ async function forceAssignAllMenus(role_id) {
     console.error(`❌ [强制菜单分配] 为角色分配所有菜单失败:`, error.message)
     console.error(error)
     // 不抛出错误，避免影响用户注册流程
+  }
+}
+
+/**
+ * 确保角色包含个人中心菜单权限
+ * @param {number} role_id - 角色 ID
+ */
+async function ensureUserProfileMenus(role_id) {
+  const { pool } = require('../../config/db')
+  try {
+    // 1. 动态获取个人中心的 ID（通过路由路径获取）
+    // ✅  path 查询
+    const getMenuQuery = `SELECT menu_id FROM sys_menu WHERE path = $1 LIMIT 1`
+    const menuResult = await pool.query(getMenuQuery, ['/system/user/profile'])
+
+    if (menuResult.rows.length === 0) {
+      console.warn(`⚠️ [权限分配] 未在数据库中找到路径为 /system/user/profile 的菜单`)
+      return
+    }
+
+    const menuId = menuResult.rows[0].menu_id
+
+    // 2. 使用参数化查询执行插入
+    const insertQuery = `
+      INSERT INTO sys_role_menu (role_id, menu_id)
+      VALUES ($1, $2)
+      ON CONFLICT (role_id, menu_id) DO NOTHING
+    `
+
+    await pool.query(insertQuery, [role_id, menuId])
+    console.log(`✅ [个人中心分配] 已为角色 ID ${role_id} 分配菜单 ID ${menuId}`)
+  } catch (error) {
+    console.error(`❌ [个人中心分配] 角色 ${role_id} 分配失败:`, error.message)
+    throw error // 抛出异常供上层捕获
   }
 }
 

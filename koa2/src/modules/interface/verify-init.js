@@ -1,5 +1,5 @@
 /**
- * 验证 sys_api 表数据是否正确初始化
+ * 验证 sys_interface 表数据是否正确初始化
  * 
  * 使用方法：
  * node src/modules/api/verify-init.js
@@ -15,19 +15,19 @@ async function verifyInit() {
     const tableExists = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
-        WHERE table_name = 'sys_api'
+        WHERE table_name = 'sys_interface'
       )
     `)
     
     if (!tableExists.rows[0].exists) {
-      console.error('❌ sys_api 表不存在，请检查 SQL 是否执行成功')
+      console.error('❌ sys_interface 表不存在，请检查 SQL 是否执行成功')
       return
     }
     
-    console.log('✅ sys_api 表已创建')
+    console.log('✅ sys_interface 表已创建')
     
     // 2. 验证数据条数
-    const countResult = await pool.query('SELECT COUNT(*) as total FROM sys_api')
+    const countResult = await pool.query('SELECT COUNT(*) as total FROM sys_interface')
     const total = parseInt(countResult.rows[0].total)
     
     console.log(`✅ 接口数据已初始化：${total} 条`)
@@ -35,7 +35,7 @@ async function verifyInit() {
     // 3. 按模块统计
     const categoryResult = await pool.query(`
       SELECT api_category, COUNT(*) as count 
-      FROM sys_api 
+      FROM sys_interface 
       GROUP BY api_category 
       ORDER BY count DESC
     `)
@@ -60,7 +60,7 @@ async function verifyInit() {
       console.log(`   父级ID: ${menu.parent_id} (系统管理)`)
       console.log(`   路径: ${menu.path}`)
     } else {
-      console.log('\n️  菜单未创建，可能需要手动执行 sys_api.sql 中的菜单插入语句')
+      console.log('\n️  菜单未创建，可能需要手动执行 sys_interface.sql 中的菜单插入语句')
     }
     
     // 5. 验证按钮权限
@@ -78,7 +78,7 @@ async function verifyInit() {
     // 6. 显示部分接口示例
     const sampleResult = await pool.query(`
       SELECT api_name, api_url, api_method 
-      FROM sys_api 
+      FROM sys_interface 
       LIMIT 5
     `)
     

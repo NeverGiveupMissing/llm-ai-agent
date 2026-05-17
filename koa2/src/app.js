@@ -11,6 +11,8 @@ const { requestLoggerMiddleware } = require('./middlewares/request-logger.middle
 const { checkRbacInitialized } = require('./middlewares/rbac-initializer')
 const operationLogger = require('./middlewares/operation-logger')
 const responseMiddleware = require('./middlewares/response.middleware')
+const { authMiddleware } = require('./middlewares/auth.middleware')
+const { globalApiPermissionInterceptor } = require('./middlewares/global-api-permission')
 const config = require('./config')
 const swaggerConfig = require('./config/swagger')
 const { uploadDir } = require('./middlewares/upload.middleware')
@@ -35,18 +37,17 @@ async function startServer() {
       process.exit(1)
     }
 
-    // 配置中间件
+    // ✅ 全局中间件链（按照执行顺序注册）
+    
+    // 1. 基础中间件（错误处理、日志、跨域、响应格式化）
     app.use(errorMiddleware)
     app.use(requestLoggerMiddleware)
     app.use(corsMiddleware)
-    app.use(responseMiddleware) // 挂载响应方法到 ctx
-
-    // 静态文件服务（上传的文件）
-    // 关键点：koa-static 会将请求路径拼接到根目录后查找文件
-    // 请求 /uploads/xxx.png -> 查找 root/uploads/xxx.png
-    // 所以 root 应该设置为 koa2 目录，而不是 uploads 目录
+    app.use(responseMiddleware)
+    
+    // 2. 静态文件服务（上传的文件）
     const staticRootPath = path.resolve(process.cwd())
-    console.log(' 静态文件服务根目录 (koa2):', staticRootPath)
+    console.log('📁 静态文件服务根目录 (koa2):', staticRootPath)
 
     const uploadsPath = path.join(staticRootPath, 'uploads')
     if (!require('fs').existsSync(uploadsPath)) {
@@ -57,8 +58,6 @@ async function startServer() {
       console.log('📄 uploads 目录中的文件:', files)
     }
 
-    // 挂载静态文件服务
-    // 设置 root 为 koa2 目录，这样 /uploads/文件名 就能正确映射到 koa2/uploads/文件名
     app.use(
       serve(staticRootPath, {
         maxage: 3600000,
@@ -68,7 +67,7 @@ async function startServer() {
     )
     console.log('✅ 静态文件服务已启动，可通过 /uploads/ 访问文件')
 
-    // 请求体解析（不会处理 multipart/form-data）
+    // 3. 请求体解析
     app.use(
       bodyParser({
         enableTypes: ['json', 'form', 'text'],
@@ -77,9 +76,21 @@ async function startServer() {
       }),
     )
 
-    app.use(operationLogger) // 操作日志记录中间件
+    // 4. ✅ 全局 Token 解析中间件（必须在权限拦截器之前）
+    // 内部包含白名单逻辑，登录/注册/健康检查等路由会自动跳过认证
+    app.use(authMiddleware())
+    console.log('✅ 全局认证中间件已启用')
 
-    // 配置路由
+    // 5. ✅ 全局接口权限拦截器（必须在 authMiddleware 之后，router 之前）
+    // 此时 ctx.state.user_id 已挂载，可以安全进行权限校验
+    // 内部包含：白名单放行 -> 账号停用校验 -> Admin绿通 -> 普通用户撞表
+    app.use(globalApiPermissionInterceptor())
+    console.log('✅ 全局接口权限拦截器已启用')
+
+    // 6. 操作日志记录中间件
+    app.use(operationLogger)
+
+    // 7. 配置路由（业务路由内部干干净净，只管业务逻辑）
     app.use(router.routes())
     app.use(router.allowedMethods())
 

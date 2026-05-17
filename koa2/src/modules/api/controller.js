@@ -11,16 +11,16 @@ class InterfaceController {
    * 获取接口列表（分页）
    */
   list = asyncHandler(async (ctx) => {
-    // 兼容驼峰和下划线
-    const apiName = ctx.query.apiName || ctx.query.api_name
-    const apiUrl = ctx.query.apiUrl || ctx.query.api_url
+    // ✅ 统一使用下划线命名
+    const interface_name = ctx.query.interface_name
+    const interface_url = ctx.query.interface_url
     const status = ctx.query.status
-    const page = ctx.query.page || ctx.query.pageNo || 1
-    const page_size = ctx.query.page_size || ctx.query.page_size || 10
+    const page = ctx.query.page || 1
+    const page_size = ctx.query.page_size || 10
 
     const params = {
-      api_name: apiName,
-      api_url: apiUrl,
+      interface_name,
+      interface_url,
       status,
       page: parseInt(page),
       page_size: parseInt(page_size),

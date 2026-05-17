@@ -11,6 +11,11 @@ class MemoryService {
       similarityThreshold = DEFAULT_MEMORY_CONFIG.MIN_SIMILARITY_FOR_DEDUP,
     } = options
 
+    // ✅ 确保 user_id 为整数
+    if (data.user_id) {
+      data.user_id = parseInt(data.user_id)
+    }
+
     const memory = new MemoryModel(data)
 
     const validation = memory.validate()
@@ -78,6 +83,9 @@ class MemoryService {
   }
 
   async retrieveMemories(user_id, query, limit = DEFAULT_MEMORY_CONFIG.MAX_RETRIEVE_COUNT) {
+    // ✅ 确保 user_id 为整数
+    const userIdInt = user_id ? parseInt(user_id) : null
+    
     const queryEmbedding = await embeddingService.getEmbedding(query)
     const embeddingArray = `[${queryEmbedding.join(',')}]`
 
@@ -86,14 +94,14 @@ class MemoryService {
         id, user_id, content, summary, memory_type, tags, importance, source, metadata, created_at,
         1 - (embedding <-> $1::vector) AS similarity
       FROM memories
-      WHERE user_id = $2
+      WHERE user_id = $2::int
         AND is_active = true
         AND embedding IS NOT NULL
       ORDER BY embedding <-> $1::vector
       LIMIT $3
     `
 
-    const result = await pool.query(sql, [embeddingArray, user_id, limit])
+    const result = await pool.query(sql, [embeddingArray, userIdInt, limit])
 
     return result.rows.map((row) => ({
       ...row,
@@ -102,17 +110,20 @@ class MemoryService {
   }
 
   async searchByTags(user_id, tags, limit = 10) {
+    // ✅ 确保 user_id 为整数
+    const userIdInt = user_id ? parseInt(user_id) : null
+    
     const query = `
       SELECT id, user_id, content, summary, memory_type, tags, importance, source, metadata, created_at
       FROM memories
-      WHERE user_id = $1
+      WHERE user_id = $1::int
         AND is_active = true
         AND tags && $2::text[]
       ORDER BY importance DESC, created_at DESC
       LIMIT $3
     `
 
-    const result = await pool.query(query, [user_id, tags, limit])
+    const result = await pool.query(query, [userIdInt, tags, limit])
     return result.rows
   }
 
@@ -128,13 +139,16 @@ class MemoryService {
   }
 
   async getUserMemories(user_id = null, limit = 20, offset = 0, type = null, keyword = null) {
+    // ✅ 确保 user_id 为整数
+    const userIdInt = user_id ? parseInt(user_id) : null
+    
     const conditions = ['is_active = true']
     const values = []
     let paramIndex = 1
 
-    if (user_id) {
-      conditions.push(`user_id = $${paramIndex}`)
-      values.push(user_id)
+    if (userIdInt) {
+      conditions.push(`user_id = $${paramIndex}::int`)
+      values.push(userIdInt)
       paramIndex++
     }
 
@@ -256,6 +270,9 @@ class MemoryService {
   }
 
   async getMemoryStats(user_id) {
+    // ✅ 确保 user_id 为整数
+    const userIdInt = user_id ? parseInt(user_id) : null
+    
     const query = `
       SELECT
         COUNT(*) AS total,
@@ -269,7 +286,7 @@ class MemoryService {
     `
 
     const result = await pool.query(query, [
-      user_id,
+      userIdInt,
       MEMORY_TYPES.FACT,
       MEMORY_TYPES.PREFERENCE,
       MEMORY_TYPES.GOAL,
@@ -280,12 +297,15 @@ class MemoryService {
   }
 
   async clearUserMemories(user_id) {
+    // ✅ 确保 user_id 为整数
+    const userIdInt = user_id ? parseInt(user_id) : null
+    
     const query = `
-      DELETE FROM memories WHERE user_id = $1
+      DELETE FROM memories WHERE user_id = $1::int
       RETURNING id
     `
 
-    const result = await pool.query(query, [user_id])
+    const result = await pool.query(query, [userIdInt])
     return result.rows.length
   }
 }

@@ -1,123 +1,263 @@
 /**
  * 数据库管理路由
  * 路径：koa2/src/modules/database/routes.js
+ * ✅ 已移除所有手动权限验证，统一由全局接口权限拦截器处理
  */
 
 const Router = require('@koa/router')
 const router = new Router({ prefix: '/database' })
 const { authMiddleware } = require('../../middlewares/auth.middleware')
-const { requirePermission } = require('../../middlewares/checkPermission')
 const { exportPermissionChecker } = require('../../middlewares/permission-checker')
 const { upload } = require('../../middlewares/upload.middleware')
 const databaseController = require('./controller')
 
 /**
- * POST /api/database/execute
- * 执行 SQL 语句
- * 需要权限：database:execute
+ * @swagger
+ * tags:
+ *   name: 数据库管理
+ *   description: 数据库管理相关接口
+ */
+
+/**
+ * @swagger
+ * /database/execute:
+ *   post:
+ *     tags: [数据库管理]
+ *     summary: 执行 SQL 语句
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [sql]
+ *             properties:
+ *               sql:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: 执行成功
  */
 router.post(
   '/execute',
   authMiddleware(),
-  requirePermission('database:execute'),
   databaseController.executeSQL
 )
 
 /**
- * GET /api/database/export
- * 导出数据库
- * ✅ 双重权限检查：requirePermission + exportPermissionChecker
+ * @swagger
+ * /database/export:
+ *   get:
+ *     tags: [数据库管理]
+ *     summary: 导出数据库
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 导出成功
+ *         content:
+ *           application/sql:
+ *             schema:
+ *               type: string
+ *               format: binary
  */
 router.get(
   '/export',
   authMiddleware(),
-  requirePermission('database:export'), // 第一层：菜单权限检查
-  exportPermissionChecker(), // 第二层：通用导出权限检查（admin 豁免）
+  exportPermissionChecker(),
   databaseController.exportDatabase
 )
 
 /**
- * POST /api/database/import
- * 导入数据库（执行 SQL 文件）
- * 需要权限：database:import
+ * @swagger
+ * /database/import:
+ *   post:
+ *     tags: [数据库管理]
+ *     summary: 导入数据库（执行 SQL 文件）
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               file:
+ *                 type: string
+ *                 format: binary
+ *     responses:
+ *       200:
+ *         description: 导入成功
  */
 router.post(
   '/import',
   authMiddleware(),
-  requirePermission('database:import'),
-  upload.single('file'), // multer 中间件
+  upload.single('file'),
   databaseController.importDatabase
 )
 
 /**
- * GET /api/database/tables
- * 获取所有表名列表
- * 需要权限：database:table
+ * @swagger
+ * /database/tables:
+ *   get:
+ *     tags: [数据库管理]
+ *     summary: 获取所有表名列表
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 获取成功
  */
 router.get(
   '/tables',
   authMiddleware(),
-  requirePermission('database:table'),
   databaseController.getTableList
 )
 
 /**
- * GET /api/database/tables/:name/detail
- * 获取表详细信息（字段 + 注释 + 索引）
- * 需要权限：database:table
+ * @swagger
+ * /database/tables/{name}/detail:
+ *   get:
+ *     tags: [数据库管理]
+ *     summary: 获取表详细信息（字段 + 注释 + 索引）
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 获取成功
  */
 router.get(
   '/tables/:name/detail',
   authMiddleware(),
-  requirePermission('database:table'),
   databaseController.getTableDetail
 )
 
 /**
- * GET /api/database/tables/:name
- * 获取指定表的结构（旧接口，保留兼容）
- * 需要权限：database:table
+ * @swagger
+ * /database/tables/{name}:
+ *   get:
+ *     tags: [数据库管理]
+ *     summary: 获取指定表的结构（旧接口，保留兼容）
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 获取成功
  */
 router.get(
   '/tables/:name',
   authMiddleware(),
-  requirePermission('database:table'),
   databaseController.getTableStructure
 )
 
 /**
- * GET /api/database/tables/:name/data
- * 获取表数据（分页）
- * 需要权限：database:table
+ * @swagger
+ * /database/tables/{name}/data:
+ *   get:
+ *     tags: [数据库管理]
+ *     summary: 获取表数据（分页）
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: 获取成功
  */
 router.get(
   '/tables/:name/data',
   authMiddleware(),
-  requirePermission('database:table'),
   databaseController.getTableData
 )
 
 /**
- * PUT /api/database/tables/:name/row
- * 更新单行数据
- * 需要权限：database:execute
+ * @swagger
+ * /database/tables/{name}/row:
+ *   put:
+ *     tags: [数据库管理]
+ *     summary: 更新单行数据
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               primary_key:
+ *                 type: string
+ *               data:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: 更新成功
  */
 router.put(
   '/tables/:name/row',
   authMiddleware(),
-  requirePermission('database:execute'),
   databaseController.updateTableRow
 )
 
 /**
- * DELETE /api/database/tables/:name/row
- * 删除单行数据
- * 需要权限：database:execute
+ * @swagger
+ * /database/tables/{name}/row:
+ *   delete:
+ *     tags: [数据库管理]
+ *     summary: 删除单行数据
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: primary_key
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 删除成功
  */
 router.delete(
   '/tables/:name/row',
   authMiddleware(),
-  requirePermission('database:execute'),
   databaseController.deleteTableRow
 )
 

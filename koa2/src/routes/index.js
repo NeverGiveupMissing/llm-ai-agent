@@ -11,6 +11,7 @@ const operationLogRoutes = require('../modules/operation-log/routes')
 const userRoutes = require('../modules/user/routes')
 const roleRoutes = require('../modules/role/routes')
 const menuRoutes = require('../modules/menu/routes')
+const buttonRoutes = require('../modules/button/routes')
 const interfaceRoutes = require('../modules/interface/routes')
 
 // 数据库管理路由
@@ -49,6 +50,7 @@ router.use(operationLogRoutes.routes(), operationLogRoutes.allowedMethods())
 router.use(userRoutes.routes(), userRoutes.allowedMethods())
 router.use(roleRoutes.routes(), roleRoutes.allowedMethods())
 router.use(menuRoutes.routes(), menuRoutes.allowedMethods())
+router.use(buttonRoutes.routes(), buttonRoutes.allowedMethods())
 router.use(interfaceRoutes.routes(), interfaceRoutes.allowedMethods())
 
 // 数据库管理路由

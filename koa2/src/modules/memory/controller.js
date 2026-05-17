@@ -86,7 +86,10 @@ class MemoryController {
   getMemories = asyncHandler(async (ctx) => {
     const { user_id, limit, offset, type, keyword } = ctx.query
 
-    console.log('[MemoryController] Query params:', { user_id, limit, offset, type, keyword })
+    // ✅ 将 user_id 转换为整数（与数据库 INT 类型一致）
+    const userIdInt = user_id ? parseInt(user_id) : null
+
+    console.log('[MemoryController] Query params:', { user_id: userIdInt, limit, offset, type, keyword })
 
     let finalLimit = 20
     if (limit !== undefined && limit !== null) {
@@ -99,7 +102,7 @@ class MemoryController {
     }
 
     const result = await memoryService.getUserMemories(
-      user_id || null,
+      userIdInt,
       finalLimit,
       parseInt(offset) || 0,
       type || null,
@@ -110,7 +113,7 @@ class MemoryController {
 
     // 使用统一的分页响应方法
     ctx.pageSuccess(
-      result.data,
+      result.list,
       result.total,
       result.page,
       result.limit
@@ -120,7 +123,10 @@ class MemoryController {
   getMemoryStats = asyncHandler(async (ctx) => {
     const { user_id } = ctx.query
 
-    const stats = await memoryService.getMemoryStats(user_id || null)
+    // ✅ 将 user_id 转换为整数
+    const userIdInt = user_id ? parseInt(user_id) : null
+
+    const stats = await memoryService.getMemoryStats(userIdInt)
 
     ctx.success(stats, '获取成功')
   })
@@ -157,7 +163,10 @@ class MemoryController {
       throw new BadRequestError('参数错误：user_id 不能为空')
     }
 
-    const count = await memoryService.clearUserMemories(user_id)
+    // ✅ 将 user_id 转换为整数
+    const userIdInt = parseInt(user_id)
+
+    const count = await memoryService.clearUserMemories(userIdInt)
 
     ctx.success({ count }, `已清除 ${count} 条记忆`)
   })

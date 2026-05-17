@@ -139,7 +139,15 @@ class UserModel {
    * @returns {Array} 用户列表（下划线格式，包含 roles 数组）
    */
   async list(params = {}) {
-    const { page_num = 1, page_size = 20, status, user_name, phonenumber, start_time, end_time } = params
+    const {
+      page_num = 1,
+      page_size = 20,
+      status,
+      user_name,
+      phonenumber,
+      start_time,
+      end_time,
+    } = params
     const offset = (page_num - 1) * page_size
 
     let query = `
@@ -193,13 +201,83 @@ class UserModel {
       values.push(endDate)
     }
 
-    query += ` GROUP BY u.user_id ORDER BY u.create_time DESC LIMIT $${idx++} OFFSET $${idx}`
+    query += ` GROUP BY u.user_id ORDER BY u.update_time DESC LIMIT $${idx++} OFFSET $${idx}`
     values.push(page_size, offset)
 
     const result = await pool.query(query, values)
-    
-    // ✅ 直接返回数据库原始字段（下划线格式）
-    return result.rows
+
+    // ✅ 返回数据库原始字段（下划线格式）
+    return result.rows.map((row) => ({
+      ...row,
+      dept_name: '-',
+      role_names:
+        row.roles && row.roles.length > 0 ? row.roles.map((r) => r.role_name).join(',') : '-',
+    }))
+  }
+
+  /**
+   * 获取所有用户（用于导出，不分页）
+   * @param {Object} params - 查询参数（与 list 相同）
+   * @returns {Array} 用户列表
+   */
+  async listAll(params = {}) {
+    const { status, user_name, phonenumber, start_time, end_time } = params
+
+    let query = `
+      SELECT 
+        u.user_id, u.user_name, u.nick_name, u.user_type, u.email, u.phonenumber,
+        u.sex, u.avatar, u.status, u.del_flag, u.login_ip, u.login_date,
+        u.create_time, u.update_time, u.remark,
+        json_agg(json_build_object(
+          'role_id', r.role_id, 
+          'role_name', r.role_name, 
+          'role_key', r.role_key
+        )) FILTER (WHERE r.role_id IS NOT NULL) as roles
+      FROM sys_user u
+      LEFT JOIN sys_user_role ur ON u.user_id = ur.user_id
+      LEFT JOIN sys_role r ON ur.role_id = r.role_id
+      WHERE u.del_flag = '0'
+    `
+    const values = []
+    let idx = 1
+
+    if (status) {
+      query += ` AND u.status = $${idx++}`
+      values.push(status)
+    }
+
+    if (user_name) {
+      query += ` AND u.user_name ILIKE $${idx++}`
+      values.push(`%${user_name}%`)
+    }
+
+    if (phonenumber) {
+      query += ` AND u.phonenumber ILIKE $${idx++}`
+      values.push(`%${phonenumber}%`)
+    }
+
+    if (start_time) {
+      query += ` AND u.create_time >= $${idx++}`
+      const beginDate = typeof start_time === 'number' ? new Date(start_time) : start_time
+      values.push(beginDate)
+    }
+
+    if (end_time) {
+      query += ` AND u.create_time <= $${idx++}`
+      const endDate = typeof end_time === 'number' ? new Date(end_time) : end_time
+      values.push(endDate)
+    }
+
+    query += ` GROUP BY u.user_id ORDER BY u.create_time DESC`
+
+    const result = await pool.query(query, values)
+
+    return result.rows.map((row) => ({
+      ...row,
+      dept_name: '-',
+      role_names:
+        row.roles && row.roles.length > 0 ? row.roles.map((r) => r.role_name).join(',') : '-',
+    }))
   }
 
   /**
@@ -263,6 +341,7 @@ class UserModel {
       remark: 'remark',
       status: 'status',
       password: 'password',
+      login_ip: 'login_ip',
       login_date: 'login_date',
       update_by: 'update_by',
     }

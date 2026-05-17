@@ -5,7 +5,7 @@
 // 相关关联表：
 // - sys_user_role（用户和角色关联表）：user_id (bigint) + role_id (bigint)
 // - sys_role_menu（角色和菜单关联表）：role_id (bigint) + menu_id (bigint)
-// - sys_role_api（角色和接口权限关联表）：role_id (bigint) + api_path (varchar(255)) + api_method (varchar(10))
+// - sys_role_interface（角色和接口权限关联表）：role_id (bigint) + interface_id (bigint)
 
 const { pool } = require('../../config/db')
 
@@ -148,7 +148,7 @@ class RoleModel {
       values.push(status)
     }
 
-    query += ` ORDER BY role_sort ASC, role_id ASC LIMIT $${idx++} OFFSET $${idx}`
+    query += ` ORDER BY update_time DESC, role_id DESC LIMIT $${idx++} OFFSET $${idx}`
     values.push(page_size, offset)
 
     const result = await pool.query(query, values)
@@ -307,20 +307,70 @@ class RoleModel {
 
   /**
    * 为角色分配菜单权限
+   * ✅ 修复：自动包含所有父菜单ID，确保菜单树正确显示
    */
   async assignMenus(role_id, menu_ids) {
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
 
-      // 删除角色现有的所有菜单权限
-      await client.query('DELETE FROM sys_role_menu WHERE role_id = $1', [role_id])
+      // ✅ 修复：自动收集所有选中菜单的父菜单ID
+      let allMenuIds = [...new Set(menu_ids)] // 先去重
+      const parentIds = []
+      
+      // 递归获取所有父菜单ID
+      const collectParentIds = async (ids) => {
+        if (ids.length === 0) return
+        
+        const placeholders = ids.map((_, idx) => `$${idx + 1}`).join(',')
+        const query = `
+          SELECT menu_id, parent_id
+          FROM sys_menu
+          WHERE menu_id IN (${placeholders})
+            AND parent_id != 0
+            AND parent_id IS NOT NULL
+        `
+        const result = await client.query(query, ids)
+        
+        for (const row of result.rows) {
+          if (!allMenuIds.includes(row.parent_id)) {
+            parentIds.push(row.parent_id)
+            allMenuIds.push(row.parent_id)
+          }
+        }
+        
+        // 继续递归获取更上层的父菜单
+        const newParentIds = result.rows.map(r => r.parent_id)
+        await collectParentIds(newParentIds)
+      }
+      
+      await collectParentIds([...menu_ids])
+      
+      console.log(`🔧 [菜单分配] 角色 ${role_id}：选中 ${menu_ids.length} 个菜单，包含父菜单后共 ${allMenuIds.length} 个`)
+      if (parentIds.length > 0) {
+        console.log(`   自动添加父菜单ID: ${parentIds.join(', ')}`)
+      }
 
-      // 插入新的菜单权限关联
-      if (menu_ids && menu_ids.length > 0) {
-        const values = menu_ids.map((menu_id, idx) => `($1, $${idx + 2})`).join(',')
-        const params = [role_id, ...menu_ids]
-        await client.query(`INSERT INTO sys_role_menu (role_id, menu_id) VALUES ${values}`, params)
+      // 删除角色现有的所有菜单权限
+      console.log(`🗑️ [菜单分配] 正在删除角色 ${role_id} 的旧菜单权限...`)
+      const deleteResult = await client.query('DELETE FROM sys_role_menu WHERE role_id = $1', [role_id])
+      console.log(`   已删除 ${deleteResult.rowCount} 条旧权限记录`)
+
+      // 插入新的菜单权限关联（包含所有父菜单）
+      // ✅ 修复：使用 ON CONFLICT 避免联合主键冲突
+      if (allMenuIds && allMenuIds.length > 0) {
+        console.log(`💾 [菜单分配] 开始插入 ${allMenuIds.length} 条新权限记录...`)
+        const values = allMenuIds
+          .map((menu_id, idx) => `($1, $${idx + 2})`)
+          .join(',')
+        const params = [role_id, ...allMenuIds]
+        
+        // ✅ 明确指定冲突约束名，防止误伤其他约束
+        await client.query(
+          `INSERT INTO sys_role_menu (role_id, menu_id) VALUES ${values} ON CONFLICT ON CONSTRAINT sys_role_menu_pkey DO NOTHING`,
+          params,
+        )
+        console.log(`✅ [菜单分配] 插入完成`)
       }
 
       await client.query('COMMIT')
@@ -334,10 +384,12 @@ class RoleModel {
   }
 
   /**
-   * 获取角色的所有菜单ID
+   * 获取角色的所有菜单ID（用于编辑回显）
    * @param {number} role_id - 角色ID
    * @returns {Array} 菜单ID数组
-   * @description 从 sys_role_menu 表查询
+   * @description 只返回用户直接勾选的叶子节点，不返回父菜单
+   *              Naive UI Tree 会根据子节点自动显示父节点为“半选”状态
+   *              注意：只过滤目录节点（'M'），不过滤菜单节点（'C'）和按钮节点（'F'）
    */
   async getRolemenu_ids(role_id) {
     const query = `
@@ -347,7 +399,36 @@ class RoleModel {
       ORDER BY menu_id ASC
     `
     const result = await pool.query(query, [role_id])
-    return result.rows.map((row) => row.menu_id)
+    let allMenuIds = result.rows.map((row) => row.menu_id)
+    
+    // ✅ 只过滤目录节点（menu_type = 'M'），不过滤菜单节点（'C'）和按钮节点（'F'）
+    // 原理：目录节点（'M'）是纯粹的容器，菜单节点（'C'）是用户实际勾选的菜单项
+    // 如果某个目录ID是其他菜单的 parent_id，说明它是目录，应该过滤掉
+    const parentIdsQuery = `
+      SELECT DISTINCT m.menu_id
+      FROM sys_menu m
+      WHERE m.menu_id IN (${allMenuIds.map((_, idx) => `$${idx + 1}`).join(',')})
+        AND m.menu_type = 'M'
+        AND EXISTS (
+          SELECT 1 FROM sys_menu child 
+          WHERE child.parent_id = m.menu_id
+        )
+    `
+    
+    if (allMenuIds.length > 0) {
+      const parentIdsResult = await pool.query(parentIdsQuery, allMenuIds)
+      const directoryIds = parentIdsResult.rows.map(row => row.menu_id)
+      
+      // 只过滤目录节点ID，保留菜单节点和按钮节点
+      allMenuIds = allMenuIds.filter(id => !directoryIds.includes(id))
+      
+      console.log(` [菜单回显] 角色 ${role_id}：数据库中有 ${result.rows.length} 个菜单，过滤目录节点后返回 ${allMenuIds.length} 个叶子节点（菜单+按钮）`)
+      if (directoryIds.length > 0) {
+        console.log(`   过滤掉的目录节点ID: ${directoryIds.join(', ')}`)
+      }
+    }
+    
+    return allMenuIds
   }
 
   /**
@@ -392,34 +473,28 @@ class RoleModel {
   /**
    * 为角色分配接口权限（覆盖更新）
    * @param {number} role_id - 角色ID
-   * @param {Array} apiPaths - 接口路径数组
+   * @param {Array} interface_ids - 接口ID数组
    * @returns {boolean} 是否成功
-   * @description 通过 sys_role_api 表关联角色和接口权限
+   * @description 通过 sys_role_interface 表关联角色和接口权限
    */
-  async assignApis(role_id, apiPaths) {
+  async assignApis(role_id, interface_ids) {
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
 
       // 删除角色现有的所有接口权限
-      await client.query('DELETE FROM sys_role_api WHERE role_id = $1', [role_id])
+      await client.query('DELETE FROM sys_role_interface WHERE role_id = $1', [role_id])
 
       // 插入新的接口权限关联
-      if (apiPaths && apiPaths.length > 0) {
-        // apiPaths 格式: [{ path: '/api/xxx' }, ...]
-        const values = []
-        const placeholders = []
-        let idx = 1
-
-        apiPaths.forEach((api) => {
-          placeholders.push(`($${idx}, $${idx + 1})`)
-          values.push(role_id, api.path)
-          idx += 2
-        })
-
+      if (interface_ids && interface_ids.length > 0) {
+        const values = interface_ids
+          .map((_, idx) => `($1, $${idx + 2})`)
+          .join(',')
+        const params = [role_id, ...interface_ids]
+        
         await client.query(
-          `INSERT INTO sys_role_api (role_id, api_path) VALUES ${placeholders.join(',')}`,
-          values,
+          `INSERT INTO sys_role_interface (role_id, interface_id) VALUES ${values} ON CONFLICT ON CONSTRAINT sys_role_interface_pkey DO NOTHING`,
+          params,
         )
       }
 
@@ -434,24 +509,131 @@ class RoleModel {
   }
 
   /**
-   * 获取角色的所有接口权限路径列表
+   * 获取角色的所有接口ID列表
    * @param {number} role_id - 角色ID
-   * @returns {Array} 返回接口路径数组
-   * @description 从 sys_role_api 表查询
+   * @returns {Array} 返回接口ID数组
+   * @description 从 sys_role_interface 表查询
    */
   async getRoleApiPaths(role_id) {
     const query = `
-      SELECT api_path
-      FROM sys_role_api
-      WHERE role_id = $1
-      ORDER BY api_path ASC
+      SELECT ri.interface_id, i.interface_url, i.interface_name, i.interface_method
+      FROM sys_role_interface ri
+      INNER JOIN sys_interface i ON ri.interface_id = i.interface_id
+      WHERE ri.role_id = $1 AND i.status = '0'
+      ORDER BY i.interface_url ASC
     `
     const result = await pool.query(query, [role_id])
     return result.rows.map((row) => ({
-      api_path: row.api_path,
-      api_name: '', // ✅ 默认值（数据库表无 api_name 字段）
-      method: 'GET', // ✅ 默认值（数据库表无 method 字段）
+      interface_id: row.interface_id,
+      interface_url: row.interface_url,
+      interface_name: row.interface_name,
+      interface_method: row.interface_method,
     }))
+  }
+
+  /**
+   * 为角色分配按钮权限（覆盖更新）
+   * @param {number} role_id - 角色ID
+   * @param {Array} button_ids - 按钮ID数组
+   * @returns {boolean} 是否成功
+   * @description 通过 sys_role_button 表关联角色和按钮权限
+   */
+  async assignButtons(role_id, button_ids) {
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      // 删除角色现有的所有按钮权限
+      console.log(`️ [按钮分配] 正在删除角色 ${role_id} 的旧按钮权限...`)
+      const deleteResult = await client.query('DELETE FROM sys_role_button WHERE role_id = $1', [role_id])
+      console.log(`   已删除 ${deleteResult.rowCount} 条旧权限记录`)
+
+      // 插入新的按钮权限关联
+      if (button_ids && button_ids.length > 0) {
+        console.log(`💾 [按钮分配] 开始插入 ${button_ids.length} 条新权限记录...`)
+        const values = button_ids
+          .map((button_id, idx) => `($1, $${idx + 2})`)
+          .join(',')
+        const params = [role_id, ...button_ids]
+        
+        await client.query(
+          `INSERT INTO sys_role_button (role_id, button_id) VALUES ${values} ON CONFLICT ON CONSTRAINT sys_role_button_pkey DO NOTHING`,
+          params,
+        )
+        console.log(`✅ [按钮分配] 插入完成`)
+      }
+
+      await client.query('COMMIT')
+      return true
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  }
+
+  /**
+   * 获取角色的所有按钮ID（用于编辑回显）
+   * @param {number} role_id - 角色ID
+   * @returns {Array} 按钮ID数组
+   */
+  async getRoleButtonIds(role_id) {
+    const query = `
+      SELECT button_id
+      FROM sys_role_button
+      WHERE role_id = $1
+      ORDER BY button_id ASC
+    `
+    const result = await pool.query(query, [role_id])
+    const buttonIds = result.rows.map((row) => row.button_id)
+    console.log(`[按钮回显] 角色 ${role_id}：数据库中有 ${buttonIds.length} 个按钮权限`)
+    return buttonIds
+  }
+
+  /**
+   * 获取角色的所有权限（聚合查询）
+   * @param {number} role_id - 角色ID
+   * @returns {Object} 包含 menus、buttons、apis 的聚合对象
+   */
+  async getRoleAllPermissions(role_id) {
+    // 1. 查询菜单权限
+    const menuQuery = `
+      SELECT menu_id
+      FROM sys_role_menu
+      WHERE role_id = $1
+      ORDER BY menu_id ASC
+    `
+    const menuResult = await pool.query(menuQuery, [role_id])
+    const menus = menuResult.rows.map((row) => row.menu_id)
+
+    // 2. 查询按钮权限
+    const buttonQuery = `
+      SELECT button_id
+      FROM sys_role_button
+      WHERE role_id = $1
+      ORDER BY button_id ASC
+    `
+    const buttonResult = await pool.query(buttonQuery, [role_id])
+    const buttons = buttonResult.rows.map((row) => row.button_id)
+
+    // 3. 查询接口权限
+    const apiQuery = `
+      SELECT interface_id
+      FROM sys_role_interface
+      WHERE role_id = $1
+      ORDER BY interface_id ASC
+    `
+    const apiResult = await pool.query(apiQuery, [role_id])
+    const apis = apiResult.rows.map((row) => row.interface_id)
+
+    console.log(`[权限聚合] 角色 ${role_id}：菜单 ${menus.length} 个，按钮 ${buttons.length} 个，接口 ${apis.length} 个`)
+
+    return {
+      menus,
+      buttons,
+      apis,
+    }
   }
 }
 

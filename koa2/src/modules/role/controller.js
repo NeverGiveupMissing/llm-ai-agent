@@ -6,6 +6,7 @@
 const roleService = require('./service')
 const { asyncHandler } = require('../../utils/async-handler')
 const { BadRequestError } = require('../../utils/app-error')
+const { exportToExcel } = require('../../utils/excel-exporter')
 
 class RoleController {
   /**
@@ -30,10 +31,10 @@ class RoleController {
    * 获取角色详情
    */
   getRoleDetail = asyncHandler(async (ctx) => {
-    const { role_id } = ctx.params
+    const role_id = parseInt(ctx.params.role_id, 10)
 
-    if (!role_id) {
-      throw new BadRequestError('缺少 role_id 参数')
+    if (isNaN(role_id)) {
+      throw new BadRequestError('role_id 必须是有效的数字')
     }
 
     const result = await roleService.getRoleDetail(role_id)
@@ -67,11 +68,11 @@ class RoleController {
    * 更新角色
    */
   updateRole = asyncHandler(async (ctx) => {
-    const { role_id } = ctx.params
+    const role_id = parseInt(ctx.params.role_id, 10)
     const { role_name, role_key, role_sort, data_scope, status, remark } = ctx.request.body
 
-    if (!role_id) {
-      throw new BadRequestError('缺少 role_id 参数')
+    if (isNaN(role_id)) {
+      throw new BadRequestError('role_id 必须是有效的数字')
     }
 
     // 构建更新对象，只包含传入的字段
@@ -92,10 +93,10 @@ class RoleController {
    * 更新角色状态
    */
   updateRoleStatus = asyncHandler(async (ctx) => {
-    const { role_id } = ctx.params
+    const role_id = parseInt(ctx.params.role_id, 10)
     const { status } = ctx.request.body
 
-    if (!role_id || !status) {
+    if (isNaN(role_id) || !status) {
       throw new BadRequestError('缺少 role_id 或 status 参数')
     }
 
@@ -107,10 +108,10 @@ class RoleController {
    * 删除角色
    */
   deleteRole = asyncHandler(async (ctx) => {
-    const { role_id } = ctx.params
+    const role_id = parseInt(ctx.params.role_id, 10)
 
-    if (!role_id) {
-      throw new BadRequestError('缺少 role_id 参数')
+    if (isNaN(role_id)) {
+      throw new BadRequestError('role_id 必须是有效的数字')
     }
 
     const result = await roleService.deleteRole(role_id)
@@ -135,10 +136,10 @@ class RoleController {
    * 为角色分配单个权限
    */
   assignPermission = asyncHandler(async (ctx) => {
-    const { role_id } = ctx.params
+    const role_id = parseInt(ctx.params.role_id, 10)
     const { permissionId } = ctx.request.body
 
-    if (!role_id || !permissionId) {
+    if (isNaN(role_id) || !permissionId) {
       throw new BadRequestError('缺少 role_id 或 permissionId 参数')
     }
 
@@ -150,10 +151,10 @@ class RoleController {
    * 批量为角色分配权限
    */
   assignPermissions = asyncHandler(async (ctx) => {
-    const { role_id } = ctx.params
+    const role_id = parseInt(ctx.params.role_id, 10)
     const { permissionIds } = ctx.request.body
 
-    if (!role_id || !permissionIds) {
+    if (isNaN(role_id) || !permissionIds) {
       throw new BadRequestError('缺少 role_id 或 permissionIds 参数')
     }
 
@@ -165,9 +166,10 @@ class RoleController {
    * 移除角色权限
    */
   removePermission = asyncHandler(async (ctx) => {
-    const { role_id, permissionId } = ctx.params
+    const role_id = parseInt(ctx.params.role_id, 10)
+    const { permissionId } = ctx.params
 
-    if (!role_id || !permissionId) {
+    if (isNaN(role_id) || !permissionId) {
       throw new BadRequestError('缺少 role_id 或 permissionId 参数')
     }
 
@@ -193,14 +195,14 @@ class RoleController {
    * 获取角色的所有用户
    */
   getRoleUsers = asyncHandler(async (ctx) => {
-    const { role_id } = ctx.params
+    const role_id = parseInt(ctx.params.role_id, 10)
     const params = {
       page_num: parseInt(ctx.query.page_num) || 1,
       page_size: parseInt(ctx.query.page_size) || 10,
     }
 
-    if (!role_id) {
-      throw new BadRequestError('缺少 role_id 参数')
+    if (isNaN(role_id)) {
+      throw new BadRequestError('role_id 必须是有效的数字')
     }
 
     const result = await roleService.getRoleUsers(role_id, params)
@@ -213,10 +215,10 @@ class RoleController {
    * 获取角色的菜单权限 ID 列表
    */
   getRolemenu_ids = asyncHandler(async (ctx) => {
-    const { role_id } = ctx.params
+    const role_id = parseInt(ctx.params.role_id, 10)
 
-    if (!role_id) {
-      throw new BadRequestError('缺少 role_id 参数')
+    if (isNaN(role_id)) {
+      throw new BadRequestError('role_id 必须是有效的数字')
     }
 
     const result = await roleService.getRolemenu_ids(role_id)
@@ -227,11 +229,11 @@ class RoleController {
    * 保存角色的菜单权限（覆盖更新）
    */
   saveRoleMenus = asyncHandler(async (ctx) => {
-    const { role_id } = ctx.params
+    const role_id = parseInt(ctx.params.role_id, 10)
     const { menu_ids } = ctx.request.body
 
-    if (!role_id) {
-      throw new BadRequestError('缺少 role_id 参数')
+    if (isNaN(role_id)) {
+      throw new BadRequestError('role_id 必须是有效的数字')
     }
 
     if (!Array.isArray(menu_ids)) {
@@ -243,13 +245,13 @@ class RoleController {
   })
 
   /**
-   * 获取角色的接口权限路径列表
+   * 获取角色的接口权限 ID 列表
    */
   getRoleApiPaths = asyncHandler(async (ctx) => {
-    const { role_id } = ctx.params
+    const role_id = parseInt(ctx.params.role_id, 10)
 
-    if (!role_id) {
-      throw new BadRequestError('缺少 role_id 参数')
+    if (isNaN(role_id)) {
+      throw new BadRequestError('role_id 必须是有效的数字')
     }
 
     const result = await roleService.getRoleApiPaths(role_id)
@@ -260,20 +262,127 @@ class RoleController {
    * 保存角色的接口权限（覆盖更新）
    */
   saveRoleApis = asyncHandler(async (ctx) => {
-    const { role_id } = ctx.params
-    const { api_paths } = ctx.request.body
+    const role_id = parseInt(ctx.params.role_id, 10)
+    const { interface_ids } = ctx.request.body
 
-    if (!role_id) {
-      throw new BadRequestError('缺少 role_id 参数')
+    if (isNaN(role_id)) {
+      throw new BadRequestError('role_id 必须是有效的数字')
     }
 
-    if (!Array.isArray(api_paths)) {
-      throw new BadRequestError('api_paths 必须为数组')
+    if (!Array.isArray(interface_ids)) {
+      throw new BadRequestError('interface_ids 必须为数组')
     }
 
-    const result = await roleService.saveRoleApis(role_id, api_paths)
+    const result = await roleService.saveRoleApis(role_id, interface_ids)
     ctx.success(null, result.message)
   })
+
+  /**
+   * 获取角色的按钮权限 ID 列表
+   */
+  getRoleButtonIds = asyncHandler(async (ctx) => {
+    const role_id = parseInt(ctx.params.role_id, 10)
+
+    if (isNaN(role_id)) {
+      throw new BadRequestError('role_id 必须是有效的数字')
+    }
+
+    const result = await roleService.getRoleButtonIds(role_id)
+    ctx.success(result.data)
+  })
+
+  /**
+   * 保存角色的按钮权限（覆盖更新）
+   */
+  saveRoleButtons = asyncHandler(async (ctx) => {
+    const role_id = parseInt(ctx.params.role_id, 10)
+    const { button_ids } = ctx.request.body
+
+    if (isNaN(role_id)) {
+      throw new BadRequestError('role_id 必须是有效的数字')
+    }
+
+    if (!Array.isArray(button_ids)) {
+      throw new BadRequestError('button_ids 必须为数组')
+    }
+
+    const result = await roleService.saveRoleButtons(role_id, button_ids)
+    ctx.success(null, result.message)
+  })
+
+  /**
+   * 获取角色的所有权限（聚合查询）
+   */
+  getRoleAllPermissions = asyncHandler(async (ctx) => {
+    const role_id = parseInt(ctx.params.role_id, 10)
+
+    if (isNaN(role_id)) {
+      throw new BadRequestError('role_id 必须是有效的数字')
+    }
+
+    const result = await roleService.getRoleAllPermissions(role_id)
+    ctx.success(result.data)
+  })
+
+  /**
+   * 导出角色数据为 Excel
+   */
+  exportRoles = asyncHandler(async (ctx) => {
+    const params = {
+      page_num: 1,
+      page_size: 10000, // 导出所有数据
+      role_name: ctx.query.role_name,
+      role_key: ctx.query.role_key,
+      status: ctx.query.status,
+    }
+
+    const result = await roleService.listRoles(params)
+    const roles = result.data || []
+
+    // 定义表头
+    const headers = [
+      { header: '角色ID', key: 'role_id', width: 10 },
+      { header: '角色名称', key: 'role_name', width: 20 },
+      { header: '角色标识', key: 'role_key', width: 20 },
+      { header: '显示排序', key: 'role_sort', width: 12 },
+      { header: '数据权限', key: 'data_scope', width: 15 },
+      { header: '状态', key: 'status', width: 10 },
+      { header: '创建时间', key: 'create_time', width: 20 },
+      { header: '备注', key: 'remark', width: 30 },
+    ]
+
+    // 格式化数据
+    const data = roles.map((role) => ({
+      ...role,
+      status: role.status === '0' ? '正常' : '停用',
+      data_scope: this.getDataScopeText(role.data_scope),
+      create_time: role.create_time
+        ? new Date(role.create_time).toLocaleString('zh-CN')
+        : '',
+    }))
+
+    // 导出 Excel
+    await exportToExcel(ctx, {
+      filename: 'role',
+      sheetName: '角色列表',
+      headers,
+      data,
+    })
+  })
+
+  /**
+   * 获取数据权限范围文本
+   */
+  getDataScopeText(dataScope) {
+    const scopeMap = {
+      '1': '全部数据权限',
+      '2': '自定数据权限',
+      '3': '本部门数据权限',
+      '4': '本部门及以下数据权限',
+      '5': '仅本人数据权限',
+    }
+    return scopeMap[dataScope] || dataScope
+  }
 }
 
 module.exports = new RoleController()

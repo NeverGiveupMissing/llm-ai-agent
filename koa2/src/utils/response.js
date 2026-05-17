@@ -152,6 +152,10 @@ function mountToContext(ctx) {
   ctx.tooManyRequests = (message) => {
     ctx.body = ResponseUtil.tooManyRequests(message)
   }
+
+  ctx.serverError = (message) => {
+    ctx.body = ResponseUtil.serverError(message)
+  }
 }
 
 module.exports = {

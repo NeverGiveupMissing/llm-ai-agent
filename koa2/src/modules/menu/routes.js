@@ -1,11 +1,11 @@
 /**
  * 菜单路由 - 定义 RESTful API 接口
+ * ✅ 已移除所有手动权限验证，统一由全局接口权限拦截器处理
  */
 
 const Router = require('@koa/router')
 const menuController = require('./controller')
 const { authMiddleware } = require('../../middlewares/auth.middleware')
-const { requirePermission } = require('../../middlewares/checkPermission')
 
 const router = new Router({
   prefix: '/menus',
@@ -31,6 +31,42 @@ const router = new Router({
  *         description: 获取成功
  */
 router.get('/tree', authMiddleware(), menuController.getUserMenus)
+
+/**
+ * @swagger
+ * /menus/export:
+ *   get:
+ *     tags: [菜单管理]
+ *     summary: 导出菜单数据为 Excel
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: menu_name
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: menu_type
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 导出成功
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+router.get(
+  '/export',
+  authMiddleware(),
+  menuController.exportMenus.bind(menuController),
+)
 
 /**
  * @swagger
@@ -62,7 +98,7 @@ router.get('/tree', authMiddleware(), menuController.getUserMenus)
  *       200:
  *         description: 获取成功
  */
-router.get('/', authMiddleware(), requirePermission('system:menu:list'), menuController.listMenus)
+router.get('/', authMiddleware(), menuController.listMenus)
 
 /**
  * @swagger
@@ -131,7 +167,7 @@ router.get('/', authMiddleware(), requirePermission('system:menu:list'), menuCon
  *       201:
  *         description: 创建成功
  */
-router.post('/', authMiddleware(), requirePermission('system:menu:add'), menuController.createMenu)
+router.post('/', authMiddleware(), menuController.createMenu)
 
 /**
  * @swagger
@@ -154,7 +190,6 @@ router.post('/', authMiddleware(), requirePermission('system:menu:add'), menuCon
 router.get(
   '/:menu_id',
   authMiddleware(),
-  requirePermission('system:menu:query'),
   menuController.getMenuDetail.bind(menuController),
 )
 
@@ -214,7 +249,6 @@ router.get(
 router.put(
   '/:menu_id',
   authMiddleware(),
-  requirePermission('system:menu:edit'),
   menuController.updateMenu.bind(menuController),
 )
 
@@ -239,7 +273,6 @@ router.put(
 router.delete(
   '/:menu_id',
   authMiddleware(),
-  requirePermission('system:menu:remove'),
   menuController.deleteMenu.bind(menuController),
 )
 

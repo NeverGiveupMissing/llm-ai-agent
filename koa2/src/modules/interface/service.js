@@ -43,21 +43,22 @@ class InterfaceService {
   /**
    * 创建接口
    * @param {Object} interfaceData - 接口数据
+   * @param {string} createBy - 创建者
    * @returns {Promise<{success: boolean, data: Object, message: string}>}
    */
-  async createInterface(interfaceData) {
+  async createInterface(interfaceData, createBy = 'admin') {
     // 验证必填字段
-    if (!interfaceData.api_name || !interfaceData.api_url || !interfaceData.api_category) {
+    if (!interfaceData.interface_name || !interfaceData.interface_url || !interfaceData.interface_category) {
       throw new Error('接口名称、接口路径和所属模块为必填项')
     }
 
     // 验证请求方式
     const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
-    if (!validMethods.includes(interfaceData.api_method?.toUpperCase())) {
+    if (!validMethods.includes(interfaceData.interface_method?.toUpperCase())) {
       throw new Error('无效的请求方式')
     }
 
-    const interfaceItem = await interfaceModel.create(interfaceData)
+    const interfaceItem = await interfaceModel.create(interfaceData, createBy)
 
     return {
       success: true,
@@ -70,9 +71,10 @@ class InterfaceService {
    * 更新接口
    * @param {number} interface_id - 接口ID
    * @param {Object} updates - 更新数据
+   * @param {string} updateBy - 更新者
    * @returns {Promise<{success: boolean, data: Object, message: string}>}
    */
-  async updateInterface(interface_id, updates) {
+  async updateInterface(interface_id, updates, updateBy = 'admin') {
     const interfaceItem = await interfaceModel.getById(interface_id)
 
     if (!interfaceItem) {
@@ -80,14 +82,14 @@ class InterfaceService {
     }
 
     // 如果修改了请求方式，验证其有效性
-    if (updates.api_method) {
+    if (updates.interface_method) {
       const validMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
-      if (!validMethods.includes(updates.api_method.toUpperCase())) {
+      if (!validMethods.includes(updates.interface_method.toUpperCase())) {
         throw new Error('无效的请求方式')
       }
     }
 
-    const updatedInterface = await interfaceModel.update(interface_id, updates)
+    const updatedInterface = await interfaceModel.update(interface_id, updates, updateBy)
 
     return {
       success: true,

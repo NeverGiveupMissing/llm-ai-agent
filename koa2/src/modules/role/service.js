@@ -5,6 +5,23 @@ const permissionModel = require('../permission/model')
 
 class RoleService {
   /**
+   * 清除角色的所有关联数据（菜单、按钮、接口、用户）
+   * @param {Object} client - 数据库客户端
+   * @param {number} role_id - 角色ID
+   */
+  async clearRoleAssociations(client, role_id) {
+    // 清除用户角色关联
+    await client.query(`DELETE FROM sys_user_role WHERE role_id = $1`, [role_id])
+    // 清除角色菜单关联
+    await client.query(`DELETE FROM sys_role_menu WHERE role_id = $1`, [role_id])
+    // 清除角色按钮关联
+    await client.query(`DELETE FROM sys_role_button WHERE role_id = $1`, [role_id])
+    // 清除角色接口关联
+    await client.query(`DELETE FROM sys_role_interface WHERE role_id = $1`, [role_id])
+  }
+
+  /**
+  /**
    * 创建新角色
    * @param {Object} roleData - 角色数据（驼峰格式）
    * @param {string} roleData.roleName - 角色名称
@@ -103,14 +120,32 @@ class RoleService {
    * 删除角色（软删除）
    */
   async deleteRole(role_id) {
+    const { pool } = require('../../config/db')
+    const client = await pool.connect()
     try {
-      await roleModel.delete(role_id)
+      await client.query('BEGIN')
+
+      // 1. 软删除角色
+      await client.query(
+        `UPDATE sys_role SET del_flag = '2', update_time = NOW() WHERE role_id = $1 AND del_flag = '0'`,
+        [role_id],
+      )
+
+      // 2. 清除所有关联数据
+      await this.clearRoleAssociations(client, role_id)
+
+      await client.query('COMMIT')
+
       return {
         success: true,
         message: '角色删除成功',
       }
     } catch (error) {
+      await client.query('ROLLBACK')
+      console.error('删除角色失败:', error)
       throw error
+    } finally {
+      client.release()
     }
   }
 
@@ -118,20 +153,34 @@ class RoleService {
    * 批量删除角色（软删除）
    */
   async batchDeleteRoles(role_ids) {
+    const { pool } = require('../../config/db')
+    const client = await pool.connect()
     try {
+      await client.query('BEGIN')
+
       let successCount = 0
       let failCount = 0
       const errors = []
 
       for (const role_id of role_ids) {
         try {
-          await roleModel.delete(role_id)
+          // 1. 软删除角色
+          await client.query(
+            `UPDATE sys_role SET del_flag = '2', update_time = NOW() WHERE role_id = $1 AND del_flag = '0'`,
+            [role_id],
+          )
+
+          // 2. 清除所有关联数据
+          await this.clearRoleAssociations(client, role_id)
+
           successCount++
         } catch (error) {
           failCount++
           errors.push({ role_id, error: error.message })
         }
       }
+
+      await client.query('COMMIT')
 
       if (failCount > 0) {
         return {
@@ -146,7 +195,11 @@ class RoleService {
         message: `批量删除成功，共删除 ${successCount} 个角色`,
       }
     } catch (error) {
+      await client.query('ROLLBACK')
+      console.error('批量删除角色失败:', error)
       throw error
+    } finally {
+      client.release()
     }
   }
 
@@ -287,7 +340,7 @@ class RoleService {
   }
 
   /**
-   * 获取角色的接口权限路径列表
+   * 获取角色的接口权限ID列表
    */
   async getRoleApiPaths(role_id) {
     const apiPaths = await roleModel.getRoleApiPaths(role_id)
@@ -300,7 +353,7 @@ class RoleService {
   /**
    * 保存角色的接口权限（覆盖更新，使用事务）
    */
-  async saveRoleApis(role_id, api_paths) {
+  async saveRoleApis(role_id, interface_ids) {
     // 验证角色是否存在
     const role = await roleModel.getById(role_id)
     if (!role) {
@@ -308,11 +361,58 @@ class RoleService {
     }
 
     // 使用 model 层的事务方法
-    await roleModel.assignApis(role_id, api_paths)
+    await roleModel.assignApis(role_id, interface_ids)
 
     return {
       success: true,
       message: '接口权限分配成功',
+    }
+  }
+
+  /**
+   * 获取角色的按钮权限 ID 列表
+   */
+  async getRoleButtonIds(role_id) {
+    const button_ids = await roleModel.getRoleButtonIds(role_id)
+    return {
+      success: true,
+      data: button_ids,
+    }
+  }
+
+  /**
+   * 保存角色的按钮权限（覆盖更新，使用事务）
+   */
+  async saveRoleButtons(role_id, button_ids) {
+    // 验证角色是否存在
+    const role = await roleModel.getById(role_id)
+    if (!role) {
+      throw new Error('角色不存在')
+    }
+
+    // 使用 model 层的事务方法
+    await roleModel.assignButtons(role_id, button_ids)
+
+    return {
+      success: true,
+      message: '按钮权限分配成功',
+    }
+  }
+
+  /**
+   * 获取角色的所有权限（聚合查询）
+   */
+  async getRoleAllPermissions(role_id) {
+    const role = await roleModel.getById(role_id)
+    if (!role) {
+      throw new Error('角色不存在')
+    }
+
+    const permissions = await roleModel.getRoleAllPermissions(role_id)
+
+    return {
+      success: true,
+      data: permissions,
     }
   }
 }

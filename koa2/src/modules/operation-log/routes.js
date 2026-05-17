@@ -1,48 +1,148 @@
 const Router = require('@koa/router')
 const operationLogController = require('./controller')
 const { authMiddleware } = require('../../middlewares/auth.middleware')
-const { requirePermission } = require('../../middlewares/checkPermission')
 
 const router = new Router({
   prefix: '/operation-logs',
 })
+
+/**
+ * @swagger
+ * tags:
+ *   name: 操作日志
+ *   description: 操作日志管理接口
+ */
 
 // ============================================
 // 静态路由优先
 // ============================================
 
 /**
- * 获取操作日志列表（需要权限）
+ * @swagger
+ * /operation-logs:
+ *   get:
+ *     tags: [操作日志]
+ *     summary: 获取操作日志列表
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page_num
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: page_size
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: title
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: oper_name
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 获取成功
  */
-router.get('/', authMiddleware(), requirePermission('log:read'), operationLogController.getLogs)
+router.get('/', authMiddleware(), operationLogController.getLogs)
 
 /**
- * 获取统计数据（需要权限）
+ * @swagger
+ * /operation-logs/stats:
+ *   get:
+ *     tags: [操作日志]
+ *     summary: 获取统计数据
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 获取成功
  */
-router.get('/stats', authMiddleware(), requirePermission('log:read'), operationLogController.getStats)
+router.get('/stats', authMiddleware(), operationLogController.getStats)
 
 /**
- * 批量删除操作日志（需要权限）
+ * @swagger
+ * /operation-logs/batch-delete:
+ *   post:
+ *     tags: [操作日志]
+ *     summary: 批量删除操作日志
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               log_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       200:
+ *         description: 删除成功
  */
-router.post('/batch-delete', authMiddleware(), requirePermission('log:delete'), operationLogController.batchDeleteLogs)
+router.post('/batch-delete', authMiddleware(), operationLogController.batchDeleteLogs)
 
 /**
- * 清空所有操作日志（需要管理员权限）
+ * @swagger
+ * /operation-logs/clear-all:
+ *   post:
+ *     tags: [操作日志]
+ *     summary: 清空所有操作日志
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: 清空成功
  */
-router.post('/clear-all', authMiddleware(), requirePermission('log:delete'), operationLogController.clearAllLogs)
+router.post('/clear-all', authMiddleware(), operationLogController.clearAllLogs)
 
 // ============================================
 // 动态路由（作为兜底，放在最后）
 // ============================================
 
 /**
- * 获取操作日志详情（需要权限）
+ * @swagger
+ * /operation-logs/{id}:
+ *   get:
+ *     tags: [操作日志]
+ *     summary: 获取操作日志详情
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: 获取成功
  */
-router.get('/:id', authMiddleware(), requirePermission('log:read'), operationLogController.getLogById)
+router.get('/:id', authMiddleware(), operationLogController.getLogById)
 
 /**
- * 删除操作日志（需要权限）
+ * @swagger
+ * /operation-logs/{id}:
+ *   delete:
+ *     tags: [操作日志]
+ *     summary: 删除操作日志
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: 删除成功
  */
-router.delete('/:id', authMiddleware(), requirePermission('log:delete'), operationLogController.deleteLog)
+router.delete('/:id', authMiddleware(), operationLogController.deleteLog)
 
 module.exports = router

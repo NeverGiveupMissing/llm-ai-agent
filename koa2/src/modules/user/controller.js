@@ -6,6 +6,8 @@ const ResponseUtil = require('../../utils/response')
 const { asyncHandler } = require('../../utils/async-handler')
 const { BadRequestError, UnauthorizedError } = require('../../utils/app-error')
 const { authMiddleware } = require('../../middlewares/auth.middleware')
+const { exportToExcel } = require('../../utils/excel-exporter')
+const { ExportDTO } = require('../../utils/export-dto')
 
 class UserController {
   /**
@@ -425,6 +427,26 @@ class UserController {
     const result = await userService.assignRoles(user_id, role_ids)
 
     ctx.success(null, result.message)
+  })
+
+  /**
+   * 导出用户数据为 Excel
+   * GET /system/user/export
+   * 支持过滤条件：status, user_name, phonenumber, start_time, end_time
+   */
+  exportUsers = asyncHandler(async (ctx) => {
+    const params = ctx.query
+    
+    // 调用 service 获取导出数据
+    const data = await userService.exportUsers(params)
+    
+    // 使用通用导出函数
+    await exportToExcel(ctx, {
+      filename: ExportDTO.user.filename,
+      sheetName: ExportDTO.user.sheetName,
+      headers: ExportDTO.user.headers,
+      data,
+    })
   })
 }
 

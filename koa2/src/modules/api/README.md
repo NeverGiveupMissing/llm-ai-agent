@@ -6,15 +6,15 @@
 
 ## 数据库设计
 
-### sys_api 表结构
+### sys_interface 表结构
 
 | 字段名 | 类型 | 说明 | 默认值 |
 |--------|------|------|--------|
-| api_id | BIGSERIAL | 接口ID (自增主键) | 自动生成 |
-| api_name | VARCHAR(100) | 接口名称 | 必填 |
-| api_url | VARCHAR(200) | 接口路径 | 必填 |
-| api_method | VARCHAR(10) | 请求方式 (GET/POST/PUT/DELETE) | 'GET' |
-| api_category | VARCHAR(50) | 所属模块 | 必填 |
+| interface_id | BIGSERIAL | 接口ID (自增主键) | 自动生成 |
+| interface_name | VARCHAR(100) | 接口名称 | 必填 |
+| interface_url | VARCHAR(200) | 接口路径 | 必填 |
+| interface_method | VARCHAR(10) | 请求方式 (GET/POST/PUT/DELETE) | 'GET' |
+| interface_category | VARCHAR(50) | 所属模块 | 必填 |
 | status | CHAR(1) | 状态 (0正常 1停用) | '0' |
 | remark | VARCHAR(500) | 备注 | '' |
 | create_time | TIMESTAMP | 创建时间 | CURRENT_TIMESTAMP |
@@ -23,25 +23,25 @@
 
 ### 索引
 
-- `idx_sys_api_url`: 接口路径索引
-- `idx_sys_api_category`: 所属模块索引
+- `idx_sys_interface_url`: 接口路径索引
+- `idx_sys_interface_category`: 所属模块索引
 
 ## 后端 API
 
 ### 基础路径
 
-`/api/apis`
+`/api/interfaces`
 
 ### 接口列表
 
-**GET** `/api/apis`
+**GET** `/api/interfaces`
 
 **请求参数：**
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| api_name | string | 否 | 接口名称（模糊查询） |
-| api_url | string | 否 | 接口路径（模糊查询） |
+| interface_name | string | 否 | 接口名称（模糊查询） |
+| interface_url | string | 否 | 接口路径（模糊查询） |
 | status | string | 否 | 状态 (0正常 1停用) |
 | page | number | 否 | 页码，默认 1 |
 | page_size | number | 否 | 每页数量，默认 10 |

@@ -11,7 +11,7 @@ class InterfaceModel {
    * @returns {Promise<{list: Array, total: number}>}
    */
   async list(params = {}) {
-    const { api_name, api_url, status, page = 1, page_size = 10 } = params
+    const { interface_name, interface_url, status, page = 1, page_size = 10 } = params
 
     // 强制类型转换，防止注入
     const pageNum = parseInt(page) || 1
@@ -22,14 +22,14 @@ class InterfaceModel {
     const values = []
     let idx = 1
 
-    if (api_name) {
-      conditions.push(`api_name ILIKE $${idx++}`)
-      values.push(`%${api_name}%`)
+    if (interface_name) {
+      conditions.push(`interface_name ILIKE $${idx++}`)
+      values.push(`%${interface_name}%`)
     }
 
-    if (api_url) {
-      conditions.push(`api_url ILIKE $${idx++}`)
-      values.push(`%${api_url}%`)
+    if (interface_url) {
+      conditions.push(`interface_url ILIKE $${idx++}`)
+      values.push(`%${interface_url}%`)
     }
 
     if (status !== undefined && status !== '') {
@@ -48,18 +48,18 @@ class InterfaceModel {
     const offset = (pageNum - 1) * page_sizeNum
     const query = `
       SELECT 
-        api_id,
-        api_name,
-        api_url,
-        api_method,
-        api_category,
+        interface_id,
+        interface_name,
+        interface_url,
+        interface_method,
+        interface_category,
         status,
         remark,
         create_time,
         update_time
       FROM sys_interface
       ${whereClause}
-      ORDER BY api_id DESC
+      ORDER BY interface_id DESC
       LIMIT $${idx++} OFFSET $${idx++}
     `
     values.push(page_sizeNum, offset)
@@ -81,7 +81,7 @@ class InterfaceModel {
    */
   async getById(interface_id) {
     const query = `
-      SELECT * FROM sys_interface WHERE api_id = $1
+      SELECT * FROM sys_interface WHERE interface_id = $1
     `
     const result = await pool.query(query, [interface_id])
     return result.rows[0] || null
@@ -95,16 +95,16 @@ class InterfaceModel {
   async create(interfaceData) {
     const query = `
       INSERT INTO sys_interface (
-        api_name, api_url, api_method, api_category, status, remark
+        interface_name, interface_url, interface_method, interface_category, status, remark
       ) VALUES (
         $1, $2, $3, $4, $5, $6
       ) RETURNING *
     `
     const result = await pool.query(query, [
-      interfaceData.api_name,
-      interfaceData.api_url,
-      interfaceData.api_method || 'GET',
-      interfaceData.api_category,
+      interfaceData.interface_name,
+      interfaceData.interface_url,
+      interfaceData.interface_method || 'GET',
+      interfaceData.interface_category,
       interfaceData.status || '0',
       interfaceData.remark || '',
     ])
@@ -122,21 +122,21 @@ class InterfaceModel {
     const values = []
     let idx = 1
 
-    if (updates.api_name !== undefined) {
-      fields.push(`api_name = $${idx++}`)
-      values.push(updates.api_name)
+    if (updates.interface_name !== undefined) {
+      fields.push(`interface_name = $${idx++}`)
+      values.push(updates.interface_name)
     }
-    if (updates.api_url !== undefined) {
-      fields.push(`api_url = $${idx++}`)
-      values.push(updates.api_url)
+    if (updates.interface_url !== undefined) {
+      fields.push(`interface_url = $${idx++}`)
+      values.push(updates.interface_url)
     }
-    if (updates.api_method !== undefined) {
-      fields.push(`api_method = $${idx++}`)
-      values.push(updates.api_method)
+    if (updates.interface_method !== undefined) {
+      fields.push(`interface_method = $${idx++}`)
+      values.push(updates.interface_method)
     }
-    if (updates.api_category !== undefined) {
-      fields.push(`api_category = $${idx++}`)
-      values.push(updates.api_category)
+    if (updates.interface_category !== undefined) {
+      fields.push(`interface_category = $${idx++}`)
+      values.push(updates.interface_category)
     }
     if (updates.status !== undefined) {
       fields.push(`status = $${idx++}`)
@@ -157,7 +157,7 @@ class InterfaceModel {
     const query = `
       UPDATE sys_interface
       SET ${fields.join(', ')}
-      WHERE api_id = $${idx}
+      WHERE interface_id = $${idx}
       RETURNING *
     `
 
@@ -172,7 +172,7 @@ class InterfaceModel {
    */
   async delete(interface_id) {
     const query = `
-      DELETE FROM sys_interface WHERE api_id = $1 RETURNING api_id
+      DELETE FROM sys_interface WHERE interface_id = $1 RETURNING interface_id
     `
     const result = await pool.query(query, [interface_id])
     return result.rows.length > 0
@@ -184,10 +184,10 @@ class InterfaceModel {
    */
   async all() {
     const query = `
-      SELECT api_id, api_name, api_url, api_method, api_category
+      SELECT interface_id, interface_name, interface_url, interface_method, interface_category
       FROM sys_interface
       WHERE status = '0'
-      ORDER BY api_category ASC, api_url ASC
+      ORDER BY interface_category ASC, interface_url ASC
     `
     const result = await pool.query(query)
     return result.rows

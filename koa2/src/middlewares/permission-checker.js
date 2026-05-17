@@ -74,7 +74,6 @@ function permissionChecker(options = {}) {
 
 /**
  * 检查用户是否有指定权限
- * 通过查询用户的角色关联的菜单权限来判断
  *
  * @param {Number} user_id - 用户 ID
  * @param {String} permission - 权限标识
@@ -90,18 +89,19 @@ async function checkUserPermission(user_id, permission) {
 
     const role_ids = userRoles.map((role) => role.role_id)
 
-    // 2. 查询这些角色关联的菜单权限
-    const menuModel = require('../modules/menu/model')
-    const menus = await menuModel.getMenusByrole_ids(role_ids)
+    // 2. 查询这些角色关联的按钮权限
+    // ✅ 使用 sys_button 表
+    const buttonModel = require('../modules/button/model')
+    const buttons = await buttonModel.getButtonsByRoleIds(role_ids)
 
-    if (!menus || menus.length === 0) {
+    if (!buttons || buttons.length === 0) {
       return false
     }
 
-    // 3. 检查菜单中是否包含指定的权限标识
+    // 3. 检查按钮中是否包含指定的权限标识
     // 兼容 snake_case 和 camelCase
-    const hasPermission = menus.some((menu) => {
-      const perms = menu.perms || menu.perms
+    const hasPermission = buttons.some((button) => {
+      const perms = button.perms || button.perms
       if (!perms) return false
 
       // 支持多个权限用逗号分隔

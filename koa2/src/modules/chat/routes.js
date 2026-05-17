@@ -7,6 +7,13 @@ const router = new Router({ prefix: '/chat' })
 
 /**
  * @swagger
+ * tags:
+ *   name: 聊天管理
+ *   description: AI 聊天对话管理接口
+ */
+
+/**
+ * @swagger
  * /api/chat:
  *   post:
  *     tags:
@@ -48,6 +55,29 @@ router.post('/', chatController.simpleChat.bind(chatController))
 // ============================================
 
 /**
+ * @swagger
+ * /chat/messages/{sessionId}/latest:
+ *   get:
+ *     tags: [聊天管理]
+ *     summary: 获取会话的最新消息
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: 获取成功
+ */
+/**
  * 获取会话的最新消息
  */
 router.get('/messages/:sessionId/latest', async (ctx) => {
@@ -65,6 +95,24 @@ router.get('/messages/:sessionId/latest', async (ctx) => {
 })
 
 /**
+ * @swagger
+ * /chat/messages/{messageId}:
+ *   delete:
+ *     tags: [聊天管理]
+ *     summary: 删除单条消息
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: messageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 删除成功
+ */
+/**
  * 删除单条消息
  */
 router.delete('/messages/:messageId', async (ctx) => {
@@ -80,6 +128,34 @@ router.delete('/messages/:messageId', async (ctx) => {
 // 动态路由（作为兜底，放在最后）
 // ============================================
 
+/**
+ * @swagger
+ * /chat/messages/{sessionId}:
+ *   get:
+ *     tags: [聊天管理]
+ *     summary: 获取会话的消息历史
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: 获取成功
+ */
 /**
  * 获取会话的消息历史
  */

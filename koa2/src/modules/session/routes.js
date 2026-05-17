@@ -6,6 +6,13 @@ const { authMiddleware } = require('../../middlewares/auth.middleware')
 
 const router = new Router({ prefix: '/sessions' })
 
+/**
+ * @swagger
+ * tags:
+ *   name: 会话管理
+ *   description: AI 对话会话管理接口
+ */
+
 // 所有会话接口都需要认证
 router.use(authMiddleware())
 
@@ -13,14 +20,24 @@ router.use(authMiddleware())
  * @swagger
  * /sessions:
  *   get:
+ *     tags: [会话管理]
  *     summary: 获取会话列表
- *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: user_id
  *         required: true
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: page_num
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: page_size
+ *         schema:
+ *           type: integer
  *     responses:
  *       200:
  *         description: 获取成功
@@ -31,8 +48,10 @@ router.get('/', sessionController.listSessions)
  * @swagger
  * /sessions:
  *   post:
+ *     tags: [会话管理]
  *     summary: 创建新会话
- *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -45,6 +64,8 @@ router.get('/', sessionController.listSessions)
  *                 type: string
  *               title:
  *                 type: string
+ *               group_id:
+ *                 type: string
  *     responses:
  *       200:
  *         description: 创建成功
@@ -55,8 +76,10 @@ router.post('/', sessionController.createSession)
  * @swagger
  * /sessions/{sessionId}/pin:
  *   post:
+ *     tags: [会话管理]
  *     summary: 置顶/取消置顶会话
- *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: sessionId
@@ -73,8 +96,10 @@ router.post('/:sessionId/pin', sessionController.pinSession)
  * @swagger
  * /sessions/{sessionId}/share:
  *   get:
+ *     tags: [会话管理]
  *     summary: 获取会话分享信息
- *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: sessionId
@@ -91,8 +116,10 @@ router.get('/:sessionId/share', sessionController.getShareInfo)
  * @swagger
  * /sessions/{sessionId}/detail:
  *   get:
+ *     tags: [会话管理]
  *     summary: 获取会话详情（包含消息列表）
- *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: sessionId
@@ -109,8 +136,10 @@ router.get('/:sessionId/detail', sessionController.getSessionDetail)
  * @swagger
  * /sessions/{sessionId}:
  *   put:
+ *     tags: [会话管理]
  *     summary: 更新会话
- *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: sessionId
@@ -128,6 +157,8 @@ router.get('/:sessionId/detail', sessionController.getSessionDetail)
  *                 type: string
  *               message_count:
  *                 type: integer
+ *               group_id:
+ *                 type: string
  *     responses:
  *       200:
  *         description: 更新成功
@@ -138,8 +169,10 @@ router.put('/:sessionId', sessionController.updateSession)
  * @swagger
  * /sessions/{sessionId}:
  *   delete:
+ *     tags: [会话管理]
  *     summary: 删除会话
- *     tags: [Sessions]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: sessionId

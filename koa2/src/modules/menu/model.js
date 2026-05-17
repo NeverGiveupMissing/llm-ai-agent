@@ -37,7 +37,7 @@ class MenuModel {
    * @returns {Promise<SysMenu[]>}
    */
   async list(params = {}) {
-    const { menu_id, menu_name, menu_type, perms, visible, status } = params
+    const { menu_id, menu_name, menu_type, visible, status } = params
 
     let query = `
       SELECT 
@@ -54,7 +54,6 @@ class MenuModel {
         menu_type,
         visible,
         status,
-        perms,
         icon,
         create_time,
         update_time,
@@ -83,12 +82,6 @@ class MenuModel {
       values.push(menu_type)
     }
 
-    // ✅ 权限标识（模糊匹配）
-    if (perms) {
-      query += ` AND perms ILIKE $${idx++}`
-      values.push(`%${perms}%`)
-    }
-
     if (visible !== undefined && visible !== '') {
       query += ` AND visible = $${idx++}`
       values.push(visible)
@@ -113,7 +106,25 @@ class MenuModel {
    */
   async getById(menu_id) {
     const query = `
-      SELECT * FROM sys_menu WHERE menu_id = $1
+      SELECT 
+        menu_id,
+        menu_name,
+        parent_id,
+        order_num,
+        path,
+        component,
+        query,
+        route_name,
+        is_frame,
+        is_cache,
+        menu_type,
+        visible,
+        status,
+        icon,
+        create_time,
+        update_time,
+        remark
+      FROM sys_menu WHERE menu_id = $1
     `
     const result = await pool.query(query, [menu_id])
     // ✅ 返回数据库原始字段（下划线格式）
@@ -135,7 +146,6 @@ class MenuModel {
    * @param {string} menuData.menu_type - 菜单类型
    * @param {string} menuData.visible - 显示状态
    * @param {string} menuData.status - 菜单状态
-   * @param {string} menuData.perms - 权限标识
    * @param {string} menuData.icon - 菜单图标
    * @param {string} menuData.remark - 备注
    * @returns {Promise<SysMenu>} 创建的菜单对象（下划线格式）
@@ -144,9 +154,9 @@ class MenuModel {
     const query = `
       INSERT INTO sys_menu (
         menu_name, parent_id, order_num, path, component, query, route_name,
-        is_frame, is_cache, menu_type, visible, status, perms, icon, remark
+        is_frame, is_cache, menu_type, visible, status, icon, remark
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
       ) RETURNING *
     `
     const result = await pool.query(query, [
@@ -162,7 +172,6 @@ class MenuModel {
       menuData.menu_type || 'C',
       menuData.visible || '0',
       menuData.status || '0',
-      menuData.perms || null,
       menuData.icon || '#',
       menuData.remark || '',
     ])
@@ -185,7 +194,6 @@ class MenuModel {
    * @param {string} updates.menu_type - 菜单类型
    * @param {string} updates.visible - 显示状态
    * @param {string} updates.status - 菜单状态
-   * @param {string} updates.perms - 权限标识
    * @param {string} updates.icon - 菜单图标
    * @param {string} updates.remark - 备注
    * @returns {Promise<SysMenu|null>} 更新后的菜单对象（下划线格式）
@@ -209,7 +217,6 @@ class MenuModel {
       'menu_type',
       'visible',
       'status',
-      'perms',
       'icon',
       'remark',
     ]
@@ -274,11 +281,18 @@ class MenuModel {
     const tree = []
 
     for (const menu of menus) {
-      // ✅ 使用下划线字段名 parent_id（数据库原始字段）
-      if (menu.parent_id == parent_id) {
-        const children = this.buildTree(menus, menu.menu_id)
+      // ✅ 类型安全比较：确保 parent_id 是数字类型
+      const menuParentId = Number(menu.parent_id)
+      const targetParentId = Number(parent_id)
+
+      if (menuParentId === targetParentId) {
+        // ✅ 递归查找子节点，确保 menu_id 转换为数字
+        const children = this.buildTree(menus, Number(menu.menu_id))
         const node = {
           ...menu,
+          // ✅ 确保 menu_id 和 parent_id 是 Number 类型（防止 PostgreSQL BigInt 返回字符串）
+          menu_id: Number(menu.menu_id),
+          parent_id: Number(menu.parent_id),
           children: children.length > 0 ? children : undefined,
         }
         tree.push(node)
@@ -292,12 +306,15 @@ class MenuModel {
    * 获取用户菜单树(根据权限过滤)
    * 从 sys_menu 表查询,通过若依风格的 sys_user_role 和 sys_role 表桥接
    * 注意: 所有表使用 BIGINT/BIGSERIAL 整型主键，废弃 UUID
-   * ✅ 包含按钮权限（menu_type='F'），用于前端权限校验
+   * ✅ 职责单一化：只查询 'M'(目录) 和 'C'(菜单) 类型，剔除按钮('F')
+   * ✅ 结构标准化：返回路由必须字段 (path, component, meta)
    */
   async getUserMenuTree(user_id) {
     console.log('\n🔍 [菜单查询] 开始查询用户菜单树')
     console.log('   用户ID:', user_id, '类型:', typeof user_id)
 
+    // ✅ 修改 SQL：只查询 'M'(目录) 和 'C'(菜单)，剔除 'F'(按钮)
+    // 按钮权限已由 sys_button 表管理，不应参与侧边栏路由构建
     const query = `
       SELECT DISTINCT 
         m.menu_id,
@@ -313,17 +330,16 @@ class MenuModel {
         m.menu_type,
         m.visible,
         m.status,
-        m.perms,
         m.icon,
         m.remark
       FROM sys_menu m
       INNER JOIN sys_role_menu srm ON m.menu_id = srm.menu_id
       INNER JOIN sys_user_role ur ON srm.role_id = ur.role_id
       INNER JOIN sys_role r ON ur.role_id = r.role_id
-      WHERE ur.user_id = $1
+      WHERE ur.user_id = $1::int
         AND m.status = '0'
         AND r.status = '0'
-        AND m.menu_type IN ('M', 'C', 'F')
+        AND m.menu_type IN ('M', 'C')
       ORDER BY m.parent_id ASC, m.order_num ASC
     `
 
@@ -332,7 +348,7 @@ class MenuModel {
     // ✅ 返回数据库原始字段（下划线格式）
     const menus = result.rows
 
-    console.log('   查询结果:', menus.length, '个菜单')
+    console.log('   查询结果:', menus.length, '个菜单(不含按钮)')
 
     if (menus.length === 0) {
       console.warn('   ⚠️  警告: 未找到任何菜单！')
@@ -341,20 +357,21 @@ class MenuModel {
       console.warn('     2. 用户的角色在 sys_role_menu 中没有菜单')
       console.warn('     3. 菜单状态不是 "0" (正常)')
       console.warn('     4. 菜单类型不是 "M" (目录) 或 "C" (菜单)')
+      console.warn('     5. 角色状态不是 "0" (正常)')
 
       // 诊断：检查用户的角色
       const userRolesQuery = `
-        SELECT r.role_id, r.role_name, r.role_key
+        SELECT r.role_id, r.role_name, r.role_key, r.status
         FROM sys_role r
         INNER JOIN sys_user_role ur ON r.role_id = ur.role_id
-        WHERE ur.user_id = $1
+        WHERE ur.user_id = $1::int
           AND r.del_flag = '0'
       `
       const userRoles = await pool.query(userRolesQuery, [user_id])
       console.log(
         '   用户角色:',
         userRoles.rows.length > 0
-          ? userRoles.rows.map((r) => `${r.role_name}(${r.role_key}) [${r.role_id}]`).join(', ')
+          ? userRoles.rows.map((r) => `${r.role_name}(${r.role_key}) [id:${r.role_id}, status:${r.status}]`).join(', ')
           : '无角色',
       )
 
@@ -363,7 +380,7 @@ class MenuModel {
         const roleMenuQuery = `
           SELECT COUNT(*) as count
           FROM sys_role_menu
-          WHERE role_id = $1
+          WHERE role_id = $1::int
         `
         const roleMenuResult = await pool.query(roleMenuQuery, [role.role_id])
         const menuCount = parseInt(roleMenuResult.rows[0].count)
@@ -373,7 +390,7 @@ class MenuModel {
         if (menuCount > 0) {
           const sampleMenusQuery = `
             SELECT menu_id FROM sys_role_menu
-            WHERE role_id = $1
+            WHERE role_id = $1::int
             LIMIT 5
           `
           const sampleMenus = await pool.query(sampleMenusQuery, [role.role_id])
@@ -384,14 +401,14 @@ class MenuModel {
         }
       }
 
-      // 诊断：检查系统中的菜单总数
+      // 诊断：检查系统中的菜单总数(不含按钮)
       const totalMenusQuery = `
         SELECT COUNT(*) as count
         FROM sys_menu
         WHERE status = '0' AND menu_type IN ('M', 'C')
       `
       const totalMenusResult = await pool.query(totalMenusQuery)
-      console.log('   系统中可用的菜单总数:', totalMenusResult.rows[0].count)
+      console.log('   系统中可用的菜单总数(不含按钮):', totalMenusResult.rows[0].count)
     } else {
       console.log(
         '   前3个菜单:',
@@ -416,6 +433,114 @@ class MenuModel {
   async getMenuTree(params = {}) {
     const menus = await this.list(params)
     return this.buildTree(menus)
+  }
+
+  /**
+   * 获取所有状态正常的菜单（用于管理员权限）
+   * @returns {Promise<SysMenu[]>}
+   */
+  async getAllMenus() {
+    const query = `
+      SELECT 
+        menu_id,
+        menu_name,
+        parent_id,
+        order_num,
+        path,
+        component,
+        query,
+        route_name,
+        is_frame,
+        is_cache,
+        menu_type,
+        visible,
+        status,
+        icon,
+        create_time,
+        update_time,
+        remark
+      FROM sys_menu
+      WHERE status = '0'
+      ORDER BY parent_id ASC, order_num ASC
+    `
+    const result = await pool.query(query)
+    return result.rows
+  }
+
+  /**
+   * 为菜单树挂载按钮列表（多表聚合）
+   * @param {Array} tree - 菜单树
+   * @param {number} user_id - 用户ID
+   * @param {boolean} isAdmin - 是否为管理员
+   * @returns {Promise<Array>} 挂载按钮后的菜单树
+   */
+  async attachButtonsToTree(tree, user_id, isAdmin) {
+    const { pool } = require('../../config/db')
+
+    // 1. 收集所有菜单 ID
+    const menuIds = new Set()
+    const collectIds = (nodes) => {
+      if (!nodes) return
+      for (const node of nodes) {
+        menuIds.add(node.menu_id)
+        if (node.children) collectIds(node.children)
+      }
+    }
+    collectIds(tree)
+
+    if (menuIds.size === 0) return tree
+
+    // 2. 查询按钮权限
+    let buttonsQuery, buttonsParams
+    if (isAdmin) {
+      // 管理员：获取所有状态正常的按钮（特权处理）
+      buttonsQuery = `
+        SELECT * FROM sys_button
+        WHERE status = '0'
+        ORDER BY order_num ASC
+      `
+      buttonsParams = []
+    } else {
+      // 普通用户：根据角色权限获取按钮
+      buttonsQuery = `
+        SELECT DISTINCT b.*
+        FROM sys_button b
+        INNER JOIN sys_role_button srb ON b.button_id = srb.button_id
+        INNER JOIN sys_user_role ur ON srb.role_id = ur.role_id
+        INNER JOIN sys_role r ON ur.role_id = r.role_id
+        WHERE ur.user_id = $1::int
+          AND b.status = '0'
+          AND r.status = '0'
+        ORDER BY b.order_num ASC
+      `
+      buttonsParams = [user_id]
+    }
+
+    const result = await pool.query(buttonsQuery, buttonsParams)
+    const buttons = result.rows
+
+    // 3. 按 parent_id 分组
+    const buttonMap = {}
+    buttons.forEach((btn) => {
+      const pid = String(btn.parent_id)
+      if (!buttonMap[pid]) buttonMap[pid] = []
+      buttonMap[pid].push(btn)
+    })
+
+    // 4. 挂载到树节点
+    const attach = (nodes) => {
+      if (!nodes) return
+      for (const node of nodes) {
+        const nid = String(node.menu_id)
+        if (buttonMap[nid]) {
+          node.buttons = buttonMap[nid]
+        }
+        if (node.children) attach(node.children)
+      }
+    }
+    attach(tree)
+
+    return tree
   }
 }
 
