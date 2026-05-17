@@ -1,31 +1,13 @@
 <template>
   <div class="interface-management-container">
-    <!-- 搜索区域 -->
-    <n-card :bordered="false" class="search-card" v-show="showSearch">
-      <BaseForm
-        ref="searchFormRef"
-        v-model="searchForm"
-        :fields="searchFields"
-        inline
-        :show-feedback="false"
-        label-width="auto"
-      >
-        <template #actions>
-          <CommonButton type="query" @click="handleSearchClick">搜索</CommonButton>
-          <CommonButton type="reset" @click="handleResetClick">重置</CommonButton>
-        </template>
-      </BaseForm>
-    </n-card>
-
-    <!-- 表格区域 -->
+    <!-- ✅ 完全由 BaseTable 控制搜索区域和工具栏按钮 -->
     <BaseTable
       :columns="columns"
       :data="tableData"
-      :loading="loading"
       :pagination="pagination"
       :checkable="true"
       toolbar-title="接口列表"
-      row-key="api_id"
+      row-key="interface_id"
       show-search-toggle
       v-model:show-search="showSearch"
       @page-change="handlePageChange"
@@ -33,31 +15,21 @@
       @selection-change="handleSelectionChange"
       @refresh="fetchData"
       @action-click="handleActionClick"
+      @search="handleSearchClick"
+      @reset="handleResetClick"
     >
-      <!-- 工具栏左侧按钮 -->
-      <template #toolbar-left>
-        <!-- 新增按钮 -->
-        <CommonButton type="add" perms="interface:create" @click="handleAdd" />
-
-        <!-- 编辑按钮 -->
-        <CommonButton
-          type="edit"
-          :disabled="selectedKeys.length !== 1"
-          perms="interface:update"
-          @click="handleEdit(selectedRows[0])"
+      <!-- ✅ 搜索表单（由 BaseTable 内部的 BaseForm 渲染） -->
+      <template #search>
+        <BaseForm
+          ref="searchFormRef"
+          v-model="searchForm"
+          :fields="searchFields"
+          inline
+          :show-feedback="false"
+          label-width="auto"
+          @search="handleSearchClick"
+          @reset="handleResetClick"
         />
-
-        <!-- 删除按钮（批量） -->
-        <CommonButton
-          type="delete"
-          :disabled="selectedKeys.length === 0"
-          perms="interface:delete"
-          :confirm-message="`确定要删除选中的 ${selectedKeys.length} 个接口吗？`"
-          @confirm="handleBatchDelete"
-        />
-
-        <!-- 导出按钮 -->
-        <CommonButton type="export" perms="interface:export" text="导出" />
       </template>
     </BaseTable>
 
@@ -80,6 +52,7 @@ import {
   createInterface,
   updateInterface,
   deleteInterface,
+  exportInterfaces,
 } from '@/api/interface'
 import InterfaceFormModal from './components/InterfaceFormModal.vue'
 
@@ -94,9 +67,9 @@ const showSearch = ref(true)
 
 // 搜索表单
 const searchForm = reactive({
-  api_name: '',
-  api_url: '',
-  api_method: '',
+  interface_name: '',
+  interface_url: '',
+  interface_method: null,
   status: null,
 })
 
@@ -115,21 +88,21 @@ const methodOptions = [
 // 搜索字段配置
 const searchFields = [
   {
-    key: 'api_name',
+    key: 'interface_name',
     label: '接口名称',
     type: 'input',
     placeholder: '请输入接口名称',
     width: '180px',
   },
   {
-    key: 'api_url',
+    key: 'interface_url',
     label: '接口路径',
     type: 'input',
     placeholder: '请输入接口路径',
     width: '200px',
   },
   {
-    key: 'api_method',
+    key: 'interface_method',
     label: '请求方式',
     type: 'select',
     placeholder: '请求方式',
@@ -164,7 +137,7 @@ const {
 // 表单字段配置
 const formFields = computed(() => [
   {
-    key: 'api_name',
+    key: 'interface_name',
     label: '接口名称',
     type: 'input',
     required: true,
@@ -172,7 +145,7 @@ const formFields = computed(() => [
     span: 2,
   },
   {
-    key: 'api_url',
+    key: 'interface_url',
     label: '接口路径',
     type: 'input',
     required: true,
@@ -180,7 +153,7 @@ const formFields = computed(() => [
     span: 2,
   },
   {
-    key: 'api_method',
+    key: 'interface_method',
     label: '请求方式',
     type: 'select',
     required: true,
@@ -188,7 +161,7 @@ const formFields = computed(() => [
     options: methodOptions,
   },
   {
-    key: 'api_category',
+    key: 'interface_category',
     label: '所属模块',
     type: 'input',
     required: true,
@@ -215,9 +188,9 @@ const formFields = computed(() => [
 const handleSearchClick = () => {
   // 统一使用下划线命名（与数据库字段保持一致）
   const searchParams = {
-    api_name: searchForm.api_name || '',
-    api_url: searchForm.api_url || '',
-    api_method: searchForm.api_method || '',
+    interface_name: searchForm.interface_name || '',
+    interface_url: searchForm.interface_url || '',
+    interface_method: searchForm.interface_method || '',
     status: searchForm.status || '',
   }
   // 保留所有字段，空值由后端统一处理
@@ -226,9 +199,9 @@ const handleSearchClick = () => {
 
 // 重置点击
 const handleResetClick = () => {
-  searchForm.api_name = ''
-  searchForm.api_url = ''
-  searchForm.api_method = ''
+  searchForm.interface_name = ''
+  searchForm.interface_url = ''
+  searchForm.interface_method = null // ✅ 重置为 null，确保 placeholder 正常显示
   searchForm.status = null
   handleReset()
 }
@@ -266,9 +239,9 @@ const handleBatchDelete = async () => {
 const handleFormSuccess = async ({ isEdit, data }) => {
   try {
     if (isEdit) {
-      // ✅ 使用下划线字段名的 api_id
-      const apiId = currentRow.value?.api_id || currentRow.value?.apiId
-      await updateInterface(apiId, data)
+      // ✅ 使用下划线字段名的 interface_id
+      const interfaceId = currentRow.value?.interface_id || currentRow.value?.interfaceId
+      await updateInterface(interfaceId, data)
       message.success('修改成功')
     } else {
       await createInterface(data)
@@ -284,27 +257,27 @@ const handleFormSuccess = async ({ isEdit, data }) => {
 // 列配置
 const columns = [
   {
-    key: 'api_name',
+    key: 'interface_name',
     title: '接口名称',
     minWidth: 180,
     ellipsis: { tooltip: true },
-    render: (row) => row.api_name || '-',
+    render: (row) => row.interface_name || '-',
   },
   {
-    key: 'api_category',
+    key: 'interface_category',
     title: '所属分类',
     width: 120,
-    render: (row) => row.api_category || '-',
+    render: (row) => row.interface_category || '-',
   },
   {
-    key: 'api_url',
+    key: 'interface_url',
     title: '接口路径',
     minWidth: 220,
     ellipsis: { tooltip: true },
-    render: (row) => row.api_url || '-',
+    render: (row) => row.interface_url || '-',
   },
   {
-    key: 'api_method',
+    key: 'interface_method',
     title: '请求方式',
     width: 100,
     align: 'center',
@@ -337,8 +310,27 @@ const columns = [
     render: (row) => row.remark || '-',
   },
   {
+    key: 'create_by',
+    title: '创建人',
+    width: 100,
+    render: (row) => row.create_by || '-',
+  },
+  {
     key: 'create_time',
     title: '创建时间',
+    type: 'datetime',
+    width: 180,
+    format: 'YYYY-MM-DD HH:mm:ss',
+  },
+  {
+    key: 'update_by',
+    title: '更新人',
+    width: 100,
+    render: (row) => row.update_by || '-',
+  },
+  {
+    key: 'update_time',
+    title: '更新时间',
     type: 'datetime',
     width: 180,
     format: 'YYYY-MM-DD HH:mm:ss',
@@ -357,17 +349,21 @@ const columns = [
 // ✅ 统一处理动态按钮点击
 const handleActionClick = ({ perms, row }) => {
   // ✅ 兼容多种权限后缀命名
-  if (perms.endsWith(':edit') || perms.endsWith(':update')) {
+  if (perms.endsWith(':add') || perms.endsWith(':create')) {
+    handleAdd()
+  } else if (perms.endsWith(':edit') || perms.endsWith(':update')) {
     handleEdit(row)
+  } else if (perms.endsWith(':export')) {
+    handleExport()
   } else if (perms.endsWith(':remove') || perms.endsWith(':delete')) {
     dialog.warning({
       title: '确认删除',
-      content: `确定要删除接口"${row.api_name}"吗？`,
+      content: `确定要删除接口“${row.interface_name}”吗？`,
       positiveText: '确定',
       negativeText: '取消',
       onPositiveClick: async () => {
         try {
-          await deleteInterface(row.api_id)
+          await deleteInterface(row.interface_id)
           message.success('删除成功')
           fetchData()
         } catch (error) {
@@ -379,6 +375,19 @@ const handleActionClick = ({ perms, row }) => {
 }
 
 // 不需要手动调用 fetchData()，useTable 的 onMounted 会自动调用
+
+// 导出功能
+const handleExport = async () => {
+  try {
+    // 构建导出参数（与搜索条件相同）
+    const params = { ...searchForm }
+    await exportInterfaces(params)
+    // 成功提示已在 download.js 中处理
+  } catch (error) {
+    console.error('导出失败:', error)
+    // 错误提示已在 download.js 中处理
+  }
+}
 </script>
 
 <style scoped>

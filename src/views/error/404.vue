@@ -15,10 +15,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const goHome = () => {
-  // ✅ 直接跳转到 dashboard，避免经过 Layout 的 redirect
-  // 如果用户已登录且权限已加载，会直接进入首页
-  // 如果用户未登录或权限未加载，权限守卫会自动处理
-  router.push('/dashboard')
+  router.push('/home')
 }
 </script>
 

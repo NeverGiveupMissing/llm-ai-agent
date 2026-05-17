@@ -47,8 +47,15 @@ const routes = [
     path: '/',
     name: 'Layout',
     component: Layout,
-    redirect: '/dashboard',
+    redirect: '/home',
     children: [
+      // ✅ 默认首页白名单：所有用户均可访问
+      {
+        path: 'home',
+        name: 'Home',
+        component: () => import('@/views/home/index.vue'),
+        meta: { title: '首页', hidden: false },
+      },
       // ✅ 所有动态路由都往这里加
       // ✅ 通配路由也作为子路由（不拦截一级页面）
     ],

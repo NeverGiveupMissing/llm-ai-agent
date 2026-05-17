@@ -38,7 +38,7 @@ export const constantRoutes = [
     path: '/',
     name: 'Layout', // ✅ 与 index.js 保持一致
     component: Layout,
-    redirect: '/dashboard', // 默认重定向，实际跳转由守卫控制
+    redirect: '/home', // 默认重定向，实际跳转由守卫控制
     children: [],
   },
   // ✅ 注意：通配路由 /:pathMatch(.*)* 不在这里注册
@@ -86,7 +86,7 @@ export function generateRoutesFromMenu(menuList) {
   const rootRoute = {
     path: '/',
     component: Layout,
-    redirect: '/dashboard', // 默认重定向到工作台
+    redirect: '/home', // 默认重定向到首页
     children: [],
   }
 

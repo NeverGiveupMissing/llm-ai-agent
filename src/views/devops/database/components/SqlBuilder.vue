@@ -74,7 +74,7 @@
 import { ref, onMounted } from 'vue'
 import { useMessage, useDialog } from 'naive-ui'
 import { PlayCircleOutline, CodeSlashOutline } from '@vicons/ionicons5'
-import { getTableList } from '@/api/database'
+import { getTableList, getTableStructure } from '@/api/database'
 import SelectBuilder from './sql-builders/SelectBuilder.vue'
 import InsertBuilder from './sql-builders/InsertBuilder.vue'
 import UpdateBuilder from './sql-builders/UpdateBuilder.vue'
@@ -113,7 +113,6 @@ async function loadTables() {
 
 // 获取表结构
 async function handleGetStructure(tableName) {
-  const { getTableStructure } = await import('@/api/database')
   try {
     const res = await getTableStructure(tableName)
     if (res.code === 200) {

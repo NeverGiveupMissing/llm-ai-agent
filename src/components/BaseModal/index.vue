@@ -1,3 +1,16 @@
+<!-- 
+/**
+ * BaseModal 公共弹窗组件
+ * @description 基于 Naive UI NModal 封装的通用弹窗组件，提供统一的确认/取消操作、表单校验集成等功能
+ * @author System
+ * @date 2026-05-13
+ * 
+ * ✅ Loading 状态管理规范：
+ * - 项目已配置全局 Loading（路由守卫/请求拦截器），默认无需手动处理 loading
+ * - 本组件的 loading 属性仅在特殊场景下使用（如：弹窗内表单提交需防止重复点击、局部操作需阻塞交互）
+ * - 调用方通过 :loading="xxx" 传入局部 loading 状态，组件会自动显示在确认按钮上并禁用操作
+ */
+-->
 <template>
   <n-modal
     :show="show"

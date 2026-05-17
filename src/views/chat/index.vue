@@ -54,13 +54,15 @@
         </ol>
       </n-alert>
 
-      <ChatMessageList
-        :messages="messages"
-        :session-id="currentSessionId"
-        @regenerate="handleRegenerate"
-        @edit="handleEditMessage"
-        @delete="handleDeleteMessage"
-      />
+      <div class="messages-area">
+        <ChatMessageList
+          :messages="messages"
+          :session-id="currentSessionId"
+          @regenerate="handleRegenerate"
+          @edit="handleEditMessage"
+          @delete="handleDeleteMessage"
+        />
+      </div>
       <ChatInput
         :loading="loading"
         :show-memory-panel="showMemoryPanel"
@@ -483,5 +485,22 @@ onMounted(() => initSession())
   flex-direction: column;
   min-width: 0;
   position: relative;
+  overflow: hidden;
+}
+
+.messages-area {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 100px; /* 为底部输入框留出空间 */
+}
+
+/* 滚动条美化 */
+.messages-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messages-area::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 4px;
 }
 </style>

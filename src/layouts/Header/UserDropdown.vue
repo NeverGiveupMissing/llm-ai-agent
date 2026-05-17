@@ -38,7 +38,7 @@ const getUserInitial = () => {
 }
 
 const userOptions = ref([
-  { label: '个人中心', key: 'profile' },
+  { label: '个人资料', key: 'profile' },
   { label: '系统设置', key: 'settings' },
   { type: 'divider', key: 'divider' },
   { label: '退出登录', key: 'logout' },
@@ -47,21 +47,16 @@ const userOptions = ref([
 const handleSelect = (key) => {
   switch (key) {
     case 'profile':
-      // ✅ 优化：先检查路由是否存在，避免直接跳转导致死循环
-      const profileRoute = router.getRoutes().find(r => r.path === '/profile')
-      if (profileRoute) {
-        router.push('/profile')
-      } else {
-        message.warning('个人中心功能暂未开放')
-      }
+      // ✅ 直接跳转，不检查路由（路由应该始终存在）
+      router.push('/profile')
       break
     case 'settings':
-      // 检查用户是否有 system-access:view 权限
-      if (permissionStore.hasPermission('system-access:view')) {
-        router.push('/settings')
+      // ✅ 检查路由是否存在，而不是硬编码的权限标识
+      const settingsRoute = router.getRoutes().find(r => r.path === '/system/settings')
+      if (settingsRoute) {
+        router.push('/system/settings')
       } else {
         message.warning('您没有权限访问系统设置')
-        router.push('/403')
       }
       break
     case 'logout':

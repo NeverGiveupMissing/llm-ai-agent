@@ -1,3 +1,16 @@
+<!-- 
+/**
+ * BaseForm 公共表单组件
+ * @description 基于 Naive UI NForm 封装的通用表单组件，支持动态字段配置、多种表单类型、内联/网格布局等
+ * @author System
+ * @date 2026-05-13
+ * 
+ * ✅ Loading 状态管理规范：
+ * - 项目已配置全局 Loading（路由守卫/请求拦截器），默认无需手动处理 loading
+ * - 本组件为纯 UI 表单渲染组件，不包含 loading 状态逻辑
+ * - 表单提交时的 loading 控制应由调用方（如弹窗/页面）通过全局 loading 或按钮级 loading 实现
+ */
+-->
 <template>
   <n-form
     ref="formRef"
@@ -10,84 +23,106 @@
     :inline="inline"
     :show-feedback="showFeedback"
   >
-    <!-- inline 模式：使用 n-flex -->
+    <!-- inline 模式：使用 Grid 布局（非 Flex）实现一行排列自然换行 -->
     <template v-if="inline">
-      <n-flex :wrap="true" :size="8">
-        <n-form-item
-          v-for="field in visibleFields"
-          :key="field.key"
-          :path="field.key"
-          :style="{ width: field.width || 'auto', minWidth: '180px' }"
-        >
-          <template #label>
-            <span v-if="!field.helpContent">{{ field.label }}</span>
-            <div v-else style="display: inline-flex; align-items: center; white-space: nowrap">
-              <FieldHelp
-                :content="field.helpContent"
-                :size="field.helpSize || 14"
-                style="margin-right: 4px"
-              />
-              <span>{{ field.label }}</span>
-            </div>
-          </template>
-          <!-- radio -->
-          <n-radio-group
-            v-if="field.type === 'radio'"
-            v-model:value="modelValue[field.key]"
-            :disabled="getDisabled(field)"
+      <div class="form-grid-layout">
+        <!-- ✅ 方式1：如果传入了 fields，使用 fields 渲染 -->
+        <template v-if="fields && fields.length > 0">
+          <n-form-item
+            v-for="field in visibleFields"
+            :key="field.key"
+            :path="field.key"
+            :style="{ width: field.width || 'auto', minWidth: '180px' }"
           >
-            <n-space>
-              <n-radio v-for="option in field.options" :key="option.value" :value="option.value">
-                {{ option.label }}
-              </n-radio>
-            </n-space>
-          </n-radio-group>
+            <template #label>
+              <span v-if="!field.helpContent">{{ field.label }}</span>
+              <div v-else style="display: inline-flex; align-items: center; white-space: nowrap">
+                <FieldHelp
+                  :content="field.helpContent"
+                  :size="field.helpSize || 14"
+                  style="margin-right: 4px"
+                />
+                <span>{{ field.label }}</span>
+              </div>
+            </template>
+            <!-- radio -->
+            <n-radio-group
+              v-if="field.type === 'radio'"
+              v-model:value="modelValue[field.key]"
+              :disabled="getDisabled(field)"
+            >
+              <n-space>
+                <n-radio v-for="option in field.options" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </n-radio>
+              </n-space>
+            </n-radio-group>
 
-          <!-- checkbox -->
-          <n-checkbox-group
-            v-else-if="field.type === 'checkbox'"
-            v-model:value="modelValue[field.key]"
-            :disabled="getDisabled(field)"
-          >
-            <n-space>
-              <n-checkbox v-for="option in field.options" :key="option.value" :value="option.value">
-                {{ option.label }}
-              </n-checkbox>
-            </n-space>
-          </n-checkbox-group>
+            <!-- checkbox -->
+            <n-checkbox-group
+              v-else-if="field.type === 'checkbox'"
+              v-model:value="modelValue[field.key]"
+              :disabled="getDisabled(field)"
+            >
+              <n-space>
+                <n-checkbox
+                  v-for="option in field.options"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </n-checkbox>
+              </n-space>
+            </n-checkbox-group>
 
-          <!-- switch with slots -->
-          <n-switch
-            v-else-if="field.type === 'switch'"
-            v-model:value="modelValue[field.key]"
-            :checked-value="field.checkedValue"
-            :unchecked-value="field.uncheckedValue"
-            :disabled="getDisabled(field)"
-          >
-            <template #checked>{{ field.checkedText }}</template>
-            <template #unchecked>{{ field.uncheckedText }}</template>
-          </n-switch>
+            <!-- switch with slots -->
+            <n-switch
+              v-else-if="field.type === 'switch'"
+              v-model:value="modelValue[field.key]"
+              :checked-value="field.checkedValue"
+              :unchecked-value="field.uncheckedValue"
+              :disabled="getDisabled(field)"
+            >
+              <template #checked>{{ field.checkedText }}</template>
+              <template #unchecked>{{ field.uncheckedText }}</template>
+            </n-switch>
 
-          <!-- custom slot -->
-          <slot
-            v-else-if="field.type === 'custom'"
-            :name="`field-${field.key}`"
-            :field="field"
-            :form-data="modelValue"
-          />
+            <!-- custom slot -->
+            <slot
+              v-else-if="field.type === 'custom'"
+              :name="`field-${field.key}`"
+              :field="field"
+              :form-data="modelValue"
+            />
 
-          <!-- 其他类型使用动态组件 -->
-          <component
-            v-else
-            :is="getComponent(field.type)"
-            v-model:value="modelValue[field.key]"
-            v-bind="getFieldProps(field)"
+            <!-- 其他类型使用动态组件 -->
+            <component
+              v-else
+              :is="getComponent(field.type)"
+              v-model:value="modelValue[field.key]"
+              v-bind="getFieldProps(field)"
+            />
+          </n-form-item>
+        </template>
+
+        <!-- ✅ 方式2：如果有插槽，使用插槽内容（如 BaseTable 传递的搜索表单） -->
+        <slot v-else name="search" />
+
+        <!-- ✅ 按钮区域：查询/重置始终显示，数据库动态按钮可选 -->
+        <n-form-item label="" class="action-buttons">
+          <CommonButton type="query" @click="emit('search')">查询</CommonButton>
+          <CommonButton type="reset" @click="emit('reset')">重置</CommonButton>
+          <!-- 数据库动态搜索区按钮（可选） -->
+          <CommonButton
+            v-for="action in searchActions"
+            :key="action.permission"
+            :type="action.type"
+            :text="action.label"
+            perms="action.permission"
+            @click="action.onClick(null)"
           />
         </n-form-item>
-
-        <!-- 按钮区域插槽 -->
-        <slot name="actions" />
-      </n-flex>
+      </div>
     </template>
 
     <!-- 网格模式：使用 n-grid -->
@@ -175,7 +210,7 @@
 </template>
 
 <script setup>
-import { ref, computed, h } from 'vue'
+import { ref, computed } from 'vue'
 import {
   NInput,
   NInputNumber,
@@ -188,6 +223,7 @@ import {
   NSwitch,
   NDatePicker,
   NTreeSelect,
+  NFormItem,
 } from 'naive-ui'
 import FieldHelp from '@/components/FieldHelp/index.vue'
 import IconPicker from '@/components/IconPicker/index.vue'
@@ -203,7 +239,11 @@ const props = defineProps({
   size: { type: String, default: 'medium' },
   inline: { type: Boolean, default: false },
   showFeedback: { type: Boolean, default: true },
+  // ✅ 数据库动态搜索区按钮（show_location === '2'）
+  searchActions: { type: Array, default: () => [] },
 })
+
+const emit = defineEmits(['search', 'reset'])
 
 // 过滤隐藏字段
 const visibleFields = computed(() => {
@@ -224,21 +264,6 @@ const visibleFields = computed(() => {
     return !field.hidden
   })
 })
-
-// 渲染 label（带 help 图标 - 参考若依：图标在左侧）
-const renderLabel = (field) => {
-  if (!field.helpContent) {
-    return field.label
-  }
-  return h('div', { style: 'display: inline-flex; align-items: center; white-space: nowrap;' }, [
-    h(FieldHelp, {
-      content: field.helpContent,
-      size: field.helpSize || 14,
-      style: 'margin-right: 4px;',
-    }),
-    h('span', field.label),
-  ])
-}
 
 // 获取禁用状态
 const getDisabled = (field) => {
@@ -343,6 +368,10 @@ const getFieldProps = (field) => {
         // ✅ 透传多选、可搜索等属性
         multiple: field.multiple,
         filterable: field.filterable,
+        // ✅ 透传 tree-select 专用属性
+        labelField: field.labelField,
+        keyField: field.keyField,
+        childrenField: field.childrenField,
       }
     case 'radio':
       return {
@@ -392,3 +421,47 @@ const getFieldProps = (field) => {
   }
 }
 </script>
+
+<style scoped>
+/* ✅ 覆盖 Naive UI 默认 inline 模式的 flex 布局 */
+.n-form.n-form--inline {
+  display: block !important;
+}
+
+.form-grid-layout {
+  overflow: hidden; /* 清除浮动 */
+}
+
+.form-grid-layout > .n-form-item {
+  float: left;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  display: inline-grid !important;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 8px;
+  width: auto !important;
+  min-width: auto !important;
+  min-width: 70px !important;
+}
+
+/* ✅ 调整 label 样式 */
+.form-grid-layout > .n-form-item .n-form-item-label {
+  white-space: nowrap;
+  min-width: fit-content;
+}
+
+/* ✅ 输入框根据内容自适应 */
+.form-grid-layout > .n-form-item :deep(.n-input),
+.form-grid-layout > .n-form-item :deep(.n-select),
+.form-grid-layout > .n-form-item :deep(.n-date-picker) {
+  width: auto !important;
+  min-width: 120px; /* 最小宽度 120px */
+}
+
+/* ✅ 特殊处理：下拉框的下拉框需要更宽 */
+.form-grid-layout > .n-form-item :deep(.n-base-selection),
+.form-grid-layout > .n-form-item :deep(.n-select) {
+  min-width: 150px;
+}
+</style>

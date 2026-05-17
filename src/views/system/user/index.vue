@@ -1,55 +1,36 @@
 <template>
   <div class="user-management-container">
-    <!-- 搜索区域 -->
-    <n-card :bordered="false" class="search-card" v-show="showSearch">
-      <BaseForm
-        ref="searchFormRef"
-        v-model="searchForm"
-        :fields="searchFields"
-        inline
-        :show-feedback="false"
-        label-width="auto"
-      >
-        <template #actions>
-          <CommonButton type="query" @click="handleSearchClick">搜索</CommonButton>
-          <CommonButton type="reset" @click="handleResetClick">重置</CommonButton>
-        </template>
-      </BaseForm>
-    </n-card>
-
+    <!-- ✅ BaseTable 内部直接使用 BaseForm 渲染搜索区域 -->
     <BaseTable
       :columns="columns"
       :data="tableData"
-      :loading="loading"
       :pagination="pagination"
       :checkable="true"
       toolbar-title="用户列表"
       row-key="user_id"
       show-search-toggle
       v-model:show-search="showSearch"
+      :get-action-disabled="getActionDisabled"
       @page-change="handlePageChange"
       @page-size-change="handlePageSizeChange"
       @selection-change="handleSelectionChange"
       @refresh="fetchData"
       @action-click="handleActionClick"
+      @search="handleSearchClick"
+      @reset="handleResetClick"
     >
-      <!-- 工具栏左侧按钮 -->
-      <template #toolbar-left>
-        <CommonButton type="add" perms="user:create" @click="handleAdd" />
-        <CommonButton
-          type="edit"
-          :disabled="selectedKeys.length !== 1"
-          perms="user:update"
-          @click="handleEdit(selectedRows[0])"
+      <!-- ✅ 搜索表单（由 BaseTable 内部的 BaseForm 渲染） -->
+      <template #search>
+        <BaseForm
+          ref="searchFormRef"
+          v-model="searchForm"
+          :fields="searchFields"
+          inline
+          :show-feedback="false"
+          label-width="auto"
+          @search="handleSearchClick"
+          @reset="handleResetClick"
         />
-        <CommonButton
-          type="delete"
-          :disabled="selectedKeys.length === 0"
-          perms="user:delete"
-          :confirm-message="`确定要删除选中的 ${selectedKeys.length} 个用户吗？`"
-          @confirm="handleBatchDelete"
-        />
-        <CommonButton type="export" perms="user:export" text="导出" />
       </template>
     </BaseTable>
 
@@ -86,17 +67,31 @@ import {
   deleteUser,
   batchDeleteUser,
   assignRole,
+  assignRoles,
   resetPassword,
   updateUserStatus,
+  exportUsers,
 } from '@/api/user'
 import { getRoleList } from '@/api/role'
 import UserFormModal from './components/UserFormModal.vue'
 import AssignRoleModal from './components/AssignRoleModal.vue'
 import ResetPasswordModal from './components/ResetPasswordModal.vue'
+import { useUserStore } from '@/stores/modules/user'
+import { checkIsAdmin } from '@/utils/permission'
 
 const message = useMessage()
 const dialog = useDialog()
 const loadingBar = useLoadingBar()
+const userStore = useUserStore()
+
+// 当前登录用户 ID
+const currentUserId = computed(() => userStore.userInfo?.user_id)
+
+// ✅ 判断当前用户是否为管理员
+const isCurrentUserAdmin = computed(() => {
+  const roles = userStore.userInfo?.roles || []
+  return checkIsAdmin(roles)
+})
 
 // 搜索表单 ref
 const searchFormRef = ref(null)
@@ -108,7 +103,7 @@ const showSearch = ref(true)
 const searchForm = reactive({
   user_name: '',
   phonenumber: '',
-  status: '', // ✅ 空字符串而不是 null，确保字段始终传递
+  status: null, // ✅ 下拉框初始值为 null，确保显示 placeholder
   dateRange: null, // ✅ 使用时间段选择器
 })
 
@@ -165,8 +160,58 @@ const {
   handleSelectionChange,
 } = useTable(getUserList)
 
+// ✅ 自定义按钮禁用逻辑（根据行数据判断）
+const getActionDisabled = (actionType, row) => {
+  if (!row) return false
+  const isTargetDisabled = row.status === '0' // ✅ 目标用户 status '0' = 停用
+
+  // ✅ 1. 停用账号禁用以下操作
+  if (isTargetDisabled) {
+    if (actionType === 'assign_role') return true // 分配权限
+    if (actionType === 'reset') return true // 重置密码
+  }
+
+  // ✅ 2. 分配角色：只有管理员才能操作
+  if (actionType === 'assign_role' && !isCurrentUserAdmin.value) {
+    return true
+  }
+
+  return false
+}
+
 // 开关 loading 状态映射
 const switchLoadingMap = ref({})
+
+// 判断删除按钮是否禁用（自己和管理员不能删除）
+const isDeleteDisabled = computed(() => {
+  if (selectedKeys.value.length === 0) return true
+
+  // ✅ 确保类型一致（都转为数字比较）
+  const myId = Number(currentUserId.value)
+
+  // 🔍 调试日志
+  console.log('🔍 删除按钮禁用检查:', {
+    currentUserId: currentUserId.value,
+    myId: myId,
+    selectedKeys: selectedKeys.value,
+    selectedRows: selectedRows.value.map((row) => ({
+      user_id: row.user_id,
+      type: typeof row.user_id,
+    })),
+  })
+
+  // 检查是否包含自己或管理员（user_id = 1）
+  const disabled = selectedRows.value.some((row) => {
+    const rowId = Number(row.user_id)
+    const isSelf = rowId === myId
+    const isAdmin = rowId === 1
+    console.log(`  - 用户 ${row.user_id} (${rowId}): isSelf=${isSelf}, isAdmin=${isAdmin}`)
+    return isSelf || isAdmin
+  })
+
+  console.log('  => 最终结果: disabled =', disabled)
+  return disabled
+})
 
 // 表单字段配置
 const formFields = computed(() => [
@@ -255,18 +300,20 @@ const handleStatusChange = async (row) => {
 // 搜索点击
 const handleSearchClick = () => {
   // ✅ 保留所有搜索字段（包括空值），后端统一处理
-  const searchParams = { ...searchForm }
-  
+  // ✅ 注意：searchForm 的字段名使用下划线命名（与数据库保持一致）
+  const searchParams = {
+    user_name: searchForm.user_name || '',
+    phonenumber: searchForm.phonenumber || '',
+    status: searchForm.status || '',
+    start_time: '',
+    end_time: '',
+  }
+
   // 处理 dateRange 转换为 start_time/end_time
-  if (searchParams.dateRange && Array.isArray(searchParams.dateRange)) {
-    const [start, end] = searchParams.dateRange
+  if (searchForm.dateRange && Array.isArray(searchForm.dateRange)) {
+    const [start, end] = searchForm.dateRange
     searchParams.start_time = start ? formatDate(start) : ''
     searchParams.end_time = end ? formatDate(end) : ''
-    delete searchParams.dateRange
-  } else {
-    // 如果没有选择日期范围，也添加空字段
-    searchParams.start_time = ''
-    searchParams.end_time = ''
   }
 
   handleSearch(searchParams)
@@ -276,7 +323,7 @@ const handleSearchClick = () => {
 const handleResetClick = () => {
   searchForm.user_name = ''
   searchForm.phonenumber = ''
-  searchForm.status = '' // ✅ 重置为空字符串而不是 null
+  searchForm.status = null // ✅ 重置为 null，确保 placeholder 正常显示
   searchForm.dateRange = null
   handleReset()
 }
@@ -376,36 +423,17 @@ const fetchRoleList = async () => {
   }
 }
 
-// 更多操作菜单
-const getMoreActions = (row) => {
-  const actions = []
-  if (row.user_id !== 1) {
-    actions.push({
-      label: '重置密码',
-      key: 'reset_pwd',
-      type: 'reset', // ✅ 设置 type 用于 BaseTable 过滤
-      permission: 'user:reset_pwd',
-      props: { onClick: () => handleShowResetPassword(row) },
-    })
-  }
-  // 只有拥有用户管理菜单权限的用户才能分配角色
-  actions.push({
-    label: '分配角色',
-    key: 'assign_role',
-    type: 'assign_role', // ✅ 设置 type 用于 BaseTable 过滤
-    permission: 'user:assign_role', // ✅ 使用下划线命名（与后端数据库保持一致）
-    props: { onClick: () => handleAssignRole(row) },
-  })
-  return actions
-}
-
 // ✅ 统一处理动态按钮点击
 const handleActionClick = ({ perms, row }) => {
   // ✅ 兼容多种权限后缀命名（下划线风格）
-  if (perms.endsWith(':edit') || perms.endsWith(':update')) {
+  if (perms.endsWith(':add') || perms.endsWith(':create')) {
+    handleAdd()
+  } else if (perms.endsWith(':edit') || perms.endsWith(':update')) {
     handleEdit(row)
   } else if (perms.endsWith(':remove') || perms.endsWith(':delete')) {
     handleDelete(row)
+  } else if (perms.endsWith(':export')) {
+    handleExport()
   } else if (perms.endsWith(':reset_pwd') || perms.endsWith(':reset')) {
     handleShowResetPassword(row)
   } else if (perms.endsWith(':assign_role') || perms.endsWith(':assign')) {
@@ -479,7 +507,8 @@ const handleFormSuccess = () => {
 const handleAssignRoles = async (role_ids) => {
   try {
     if (role_ids && role_ids.length > 0) {
-      const res = await assignRole(currentRow.value.user_id, { role_ids: role_ids })
+      // 使用批量分配角色接口
+      const res = await assignRoles(currentRow.value.user_id, role_ids)
       message.success(res.message || '角色分配成功')
       showRoleModal.value = false
       fetchData()
@@ -491,6 +520,32 @@ const handleAssignRoles = async (role_ids) => {
 
 // 初始化
 fetchRoleList()
+
+// 导出功能
+const handleExport = async () => {
+  try {
+    // 构建导出参数（与搜索条件相同）
+    const params = { ...searchForm }
+
+    // 处理时间范围
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.start_time = searchForm.dateRange[0]
+      params.end_time = searchForm.dateRange[1]
+    } else {
+      params.start_time = ''
+      params.end_time = ''
+    }
+
+    // 删除 dateRange 字段，后端不需要
+    delete params.dateRange
+
+    await exportUsers(params)
+    // 成功提示已在 download.js 中处理
+  } catch (error) {
+    console.error('导出失败:', error)
+    // 错误提示已在 download.js 中处理
+  }
+}
 </script>
 
 <style scoped>

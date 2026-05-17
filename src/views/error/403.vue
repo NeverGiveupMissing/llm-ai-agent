@@ -36,7 +36,7 @@ const goBack = () => {
 }
 
 const goHome = () => {
-  router.push('/dashboard')
+  router.push('/home')
 }
 </script>
 

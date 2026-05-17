@@ -7,6 +7,10 @@ import { getUserMenus } from '@/api/menu'
 import { useMenuStore } from './menu'
 import router from '@/router'
 import { buildMenuTreeWithFullPath, extractRoutesFromMenuTree } from '@/utils/route-helper'
+import { getRoleAllPermissions, getRoleButtonIds } from '@/api/role'
+import { useUserStore } from './user'
+// ✅ 使用离散 API 替代 naive-ui 的直接导入
+import { message } from '@/utils/http/message'
 
 // ✅ Promise 缓存，防止并发请求
 let loadingPromise = null
@@ -42,44 +46,14 @@ function loadComponent(path) {
   return null
 }
 
-/**
- * 从菜单树中提取所有权限标识
- * @param {Array} menus - 菜单树
- * @returns {Array} 权限标识数组
- */
-function extractPermissionsFromMenu(menus) {
-  const permissions = []
-
-  const traverse = (items) => {
-    if (!items || items.length === 0) return
-
-    items.forEach((menu) => {
-      // 兼容驼峰和下划线
-      const perms = menu.perms
-
-      // 如果有权限标识，添加到数组
-      if (perms) {
-        permissions.push(perms)
-      }
-
-      // 递归处理子菜单
-      if (menu.children && menu.children.length > 0) {
-        traverse(menu.children)
-      }
-    })
-  }
-
-  traverse(menus)
-
-  console.log('🔍 提取到的权限标识:', permissions)
-  return permissions
-}
-
 export const usePermissionStore = defineStore('permission', () => {
-  // 用户权限列表（从后端获取）
+  // 路由控制通过 menuTree
   const permissions = ref([])
 
-  // 用户角色列表
+  // 用户按钮权限列表（从 sys_button 获取，perms 字符串数组，用于按钮级权限控制）
+  const buttonPermissions = ref([])
+
+  // ✅ 角色 ID 数组（数字类型，直接来自后端 login/getUserInfo 接口）
   const roles = ref([])
 
   // 用户菜单树（从后端获取）
@@ -114,19 +88,23 @@ export const usePermissionStore = defineStore('permission', () => {
     isPermissionLoaded.value = false
   }
 
-  // 计算属性：检查是否拥有某个权限
+  // 计算属性：检查是否拥有某个按钮权限
   const hasPermission = computed(() => {
     return (permissionCode) => {
       if (!permissionCode) return true
-      return permissions.value.includes(permissionCode)
+      // ✅ 通配符支持：如果权限列表包含 *:*:* 或包含具体权限，则放行
+      if (buttonPermissions.value.includes('*:*:*')) return true
+      return buttonPermissions.value.includes(permissionCode)
     }
   })
 
-  // 计算属性：检查是否拥有任一权限
+  // 计算属性：检查是否拥有任一按钮权限
   const hasAnyPermission = computed(() => {
     return (permissionCodes) => {
       if (!permissionCodes || permissionCodes.length === 0) return true
-      return permissionCodes.some((code) => permissions.value.includes(code))
+      // ✅ 通配符支持：如果权限列表包含 *:*:*，直接放行
+      if (buttonPermissions.value.includes('*:*:*')) return true
+      return permissionCodes.some((code) => buttonPermissions.value.includes(code))
     }
   })
 
@@ -134,18 +112,41 @@ export const usePermissionStore = defineStore('permission', () => {
   const hasAllPermissions = computed(() => {
     return (permissionCodes) => {
       if (!permissionCodes || permissionCodes.length === 0) return true
+      // ✅ 通配符支持：如果权限列表包含 *:*:*，直接放行
+      if (permissions.value.includes('*:*:*')) return true
       return permissionCodes.every((code) => permissions.value.includes(code))
     }
   })
 
-  // 设置权限列表
+  // 设置权限列表（菜单权限，用于路由控制）
   function setPermissions(permissionList) {
     permissions.value = permissionList || []
   }
 
+  // 设置按钮权限列表（用于按钮级权限控制）
+  function setButtonPermissions(permissionList) {
+    buttonPermissions.value = permissionList || []
+    // ✅ 持久化到 localStorage，防止刷新页面丢失
+    try {
+      localStorage.setItem('buttonPermissions', JSON.stringify(buttonPermissions.value))
+    } catch (error) {
+      console.warn('⚠️ [PermissionStore] 保存按钮权限到 localStorage 失败:', error)
+    }
+  }
+
   // 设置角色列表
   function setRoles(roleList) {
-    roles.value = roleList || []
+    // ✅ 确保角色 ID 为数字类型
+    if (roleList && Array.isArray(roleList)) {
+      roles.value = roleList.map((role) => {
+        if (role && typeof role === 'object' && role.role_id !== undefined) {
+          return { ...role, role_id: parseInt(role.role_id, 10) }
+        }
+        return role
+      })
+    } else {
+      roles.value = roleList || []
+    }
   }
 
   // 设置菜单树
@@ -154,16 +155,58 @@ export const usePermissionStore = defineStore('permission', () => {
   }
 
   /**
+   * 检查用户是否为超级管理员
+   * @returns {Boolean}
+   */
+  function checkIsAdmin() {
+    const userStore = useUserStore()
+    const userRoles = userStore.userInfo?.roles || userStore.roles || []
+
+    if (!userRoles || !Array.isArray(userRoles) || userRoles.length === 0) {
+      return false
+    }
+
+    return userRoles.some((role) => {
+      // 支持字符串格式：['admin', 'common']
+      if (typeof role === 'string') {
+        return role.toLowerCase().includes('admin')
+      }
+      // 支持对象格式：[{ roleKey: 'admin' }, { role_key: 'superAdmin' }]
+      else if (role && typeof role === 'object') {
+        const roleKey = role.roleKey || role.role_key || ''
+        return roleKey.toLowerCase().includes('admin')
+      }
+      return false
+    })
+  }
+
+  /**
    * 从后端获取用户权限和菜单数据
-   * 登录后调用此方法（若依标准流程）
+   *
+   * - permissions: 空数组（菜单不再存储 perms，路由控制通过 menuTree）
+   * - buttonPermissions: 从登录接口获取（sys_button.perms）
+   * - roles: 数字数组（role_ids），来自 userStore
+   *
+   * ✅ 异步解耦：菜单加载与按钮权限加载分开，确保即使按钮权限请求失败，菜单和基础路由也能正常注册
    */
   async function fetchUserPermissions() {
-    console.log('🔵 [PermissionStore] fetchUserPermissions 被调用')
-    console.log('🔵 [PermissionStore] 当前 isPermissionLoaded:', isPermissionLoaded.value)
-
     // ✅ 防止重复加载：如果已加载，直接返回
     if (isPermissionLoaded.value === true) {
       console.log('✅ [PermissionStore] 权限已加载，跳过')
+      // ✅ 从 localStorage 恢复按钮权限（如果 API 获取失败）
+      try {
+        const cached = localStorage.getItem('buttonPermissions')
+        if (cached && buttonPermissions.value.length === 0) {
+          buttonPermissions.value = JSON.parse(cached)
+          console.log(
+            '✅ [PermissionStore] 从缓存恢复按钮权限:',
+            buttonPermissions.value.length,
+            '个',
+          )
+        }
+      } catch (error) {
+        console.warn('⚠️ [PermissionStore] 恢复按钮权限缓存失败:', error)
+      }
       return true
     }
 
@@ -179,38 +222,201 @@ export const usePermissionStore = defineStore('permission', () => {
         // 设置加载中状态
         setLoading()
 
-        // 获取 menuStore 实例
+        // 获取 menuStore 和 userStore 实例
         const menuStore = useMenuStore()
+        const userStore = useUserStore()
 
-        // ✅ 调用后端接口获取菜单树
-        console.log('📡 [PermissionStore] 调用 getUserMenus 接口...')
-        const menuTreeRes = await getUserMenus()
+        // ✅ 步骤1：加载菜单树（关键路径，必须成功）
+        console.log('📡 [PermissionStore] 步骤1: 调用 getUserMenus 接口（仅 M/C 菜单）...')
+        let menuTreeData = []
 
-        // 设置菜单树
-        if (menuTreeRes?.data) {
-          setMenuTree(menuTreeRes.data)
-          menuStore.setMenuFromTree(menuTreeRes.data)
+        // ✅ 管理员权限判断：如果是 admin 角色，通过后端接口获取所有菜单
+        const isAdmin = checkIsAdmin()
+        if (isAdmin) {
+          console.log('👑 [PermissionStore] 管理员用户，通过后端接口获取所有菜单')
+          // 管理员也需要调用后端接口，但后端会返回所有菜单（跳过角色关联）
+          try {
+            const menuTreeRes = await getUserMenus()
 
-          // ✅ 从菜单树中提取所有权限标识
-          const permissionCodes = extractPermissionsFromMenu(menuTreeRes.data)
-          setPermissions(permissionCodes)
-          console.log('✅ [PermissionStore] 权限列表:', permissionCodes)
+            if (menuTreeRes?.data && Array.isArray(menuTreeRes.data)) {
+              menuTreeData = menuTreeRes.data
+              console.log('✅ [PermissionStore] 管理员获取到菜单数:', menuTreeData.length)
+            } else {
+              console.warn('⚠️ [PermissionStore] 管理员菜单数据为空')
+              menuTreeData = []
+            }
 
-          // ✅ 动态注册路由
-          await registerDynamicRoutes(menuTreeRes.data)
+            setMenuTree(menuTreeData)
+            menuStore.setMenuFromTree(menuTreeData)
+
+            // ✅ 设置通配符权限
+            setPermissions(['*:*:*'])
+            setButtonPermissions(['*:*:*'])
+            console.log('✅ [PermissionStore] 管理员权限设置完成')
+          } catch (error) {
+            console.error('❌ [PermissionStore] 管理员菜单加载失败:', error.message)
+            menuTreeData = []
+            setMenuTree([])
+            setPermissions([])
+            setButtonPermissions([])
+            message.warning('管理员菜单加载失败，将使用默认配置')
+          }
         } else {
-          console.warn('⚠️ [PermissionStore] 菜单树数据为空')
+          // 普通用户：通过后端接口获取菜单
+          try {
+            const menuTreeRes = await getUserMenus()
+
+            // ✅ 防御逻辑1：检查是否为字符串响应（后端报错时可能返回 HTML 或纯文本）
+            if (typeof menuTreeRes === 'string') {
+              console.error(
+                ' [PermissionStore] 后端返回了非法的字符串响应:',
+                menuTreeRes.substring(0, 200),
+              )
+              message.error('后端服务异常，请检查控制台日志')
+              menuTreeData = []
+            }
+            // ✅ 防御逻辑2：检查响应是否为 null 或 undefined
+            else if (menuTreeRes === null || menuTreeRes === undefined) {
+              console.error(' [PermissionStore] 后端返回了空响应')
+              message.error('后端响应为空，请刷新页面重试')
+              menuTreeData = []
+            } else {
+              // ✅ 详细调试：查看响应结构
+              console.log(
+                '🔍 [PermissionStore] getUserMenus 完整响应:',
+                JSON.stringify(menuTreeRes, null, 2),
+              )
+              console.log('🔍 [PermissionStore] response.data:', menuTreeRes?.data)
+              console.log('🔍 [PermissionStore] response.data 类型:', typeof menuTreeRes?.data)
+              console.log(
+                '🔍 [PermissionStore] response.data 是否为数组:',
+                Array.isArray(menuTreeRes?.data),
+              )
+
+              // ✅ 增强容错：确保 data 是数组
+              if (menuTreeRes?.data) {
+                if (Array.isArray(menuTreeRes.data)) {
+                  menuTreeData = menuTreeRes.data
+                } else {
+                  // ⚠️ data 不是数组，降级处理
+                  console.warn('⚠️ [PermissionStore] 菜单数据不是数组，已初始化为空数组')
+                  console.warn('⚠️ 原始数据类型:', typeof menuTreeRes.data)
+                  console.warn('⚠️ 原始数据值:', menuTreeRes.data)
+                  menuTreeData = []
+                }
+              } else {
+                console.warn('⚠️ [PermissionStore] 菜单树数据为空')
+                console.warn('⚠️ 可能原因:')
+                console.warn('  1. 后端返回空数组 []')
+                console.warn('  2. 后端返回 null 或 undefined')
+                console.warn('  3. 响应格式不正确（缺少 data 字段）')
+                console.warn('  4. 用户没有分配角色或菜单')
+                console.warn('  5. 304 缓存响应导致数据未更新')
+              }
+            }
+
+            // ✅ 即使 menuTreeData 为空数组，也要继续执行（降级策略）
+            setMenuTree(menuTreeData)
+            menuStore.setMenuFromTree(menuTreeData)
+
+            setPermissions([])
+
+            if (menuTreeData.length > 0) {
+              console.log(
+                '✅ [PermissionStore] 菜单树数据（前2个）:',
+                JSON.stringify(menuTreeData.slice(0, 2), null, 2),
+              )
+            }
+          } catch (error) {
+            console.error('❌ [PermissionStore] 菜单加载失败:', error.message)
+            console.error('❌ [PermissionStore] 错误堆栈:', error.stack)
+            console.error('❌ [PermissionStore] 错误详情:', error)
+            console.error(
+              '❌ [PermissionStore] 错误状态码:',
+              error.status || error.response?.status,
+            )
+            console.error('❌ [PermissionStore] 错误响应数据:', error.response?.data)
+
+            // ✅ 降级处理：使用空数组，不中断执行
+            menuTreeData = [] // 确保即使 catch 也有值
+            setMenuTree([])
+            setPermissions([])
+            message.warning('菜单加载失败，将使用默认配置')
+          }
         }
 
-        // 设置加载完成
+        // ✅ 步骤2：动态注册路由（基于已加载的菜单）
+        if (menuTreeData.length > 0) {
+          console.log('📡 [PermissionStore] 步骤2: 开始注册动态路由...')
+          try {
+            await registerDynamicRoutes(menuTreeData)
+            console.log('✅ [PermissionStore] 动态路由注册完成')
+          } catch (error) {
+            console.error('❌ [PermissionStore] 路由注册失败:', error.message)
+            message.error('路由注册失败，请刷新页面重试')
+          }
+        }
+
+        // ✅ 步骤3：加载按钮权限（非关键路径，失败不影响菜单和路由）
+        console.log('📡 [PermissionStore] 步骤3: 加载按钮权限...')
+        try {
+          // 从 userStore 获取按钮权限（后端已从 sys_button 聚合 perms）
+          const buttonPerms = userStore.userInfo?.permissions || userStore.permissions || []
+          if (buttonPerms && buttonPerms.length > 0) {
+            setButtonPermissions(buttonPerms)
+            console.log('✅ [PermissionStore] 从 userStore 获取按钮权限:', buttonPerms.length, '个')
+          } else {
+            // 降级方案：通过 role_ids 获取按钮权限 ID 列表
+            const roleIds = userStore.userInfo?.role_ids || userStore.role_ids || []
+            if (roleIds.length > 0) {
+              // ✅ 修正参数传递：确保传递 Integer ID 而不是字符串
+              const roleId = parseInt(roleIds[0], 10)
+              if (!isNaN(roleId)) {
+                const buttonRes = await getRoleButtonIds(roleId)
+                const buttonIds = buttonRes?.data || []
+
+                console.log('📌 [PermissionStore] 获取到按钮 ID 列表:', buttonIds)
+                // 由于无法从树中提取 perms，保持使用 userStore 的聚合权限
+              } else {
+                console.warn('⚠️ [PermissionStore] role_id 转换失败:', roleIds[0])
+              }
+            } else {
+              console.warn('⚠️ [PermissionStore] 用户没有 role_ids，按钮权限为空')
+              setButtonPermissions([])
+            }
+          }
+        } catch (error) {
+          console.error('❌ [PermissionStore] 获取按钮权限失败:', error.message)
+          // ✅ 离散 API 提示，不阻塞 Promise 链
+          if (!error._403Handled && !error._500Handled) {
+            message.warning('按钮权限加载失败，部分功能可能受限')
+          }
+          // ✅ 降级处理：使用空数组
+          setButtonPermissions([])
+        }
+
+        // ✅ 设置加载完成（无论按钮权限是否成功，菜单和路由已注册）
         isPermissionLoaded.value = true
         setLoaded()
+        console.log('✅ [PermissionStore] 权限加载完成，isLoaded:', isPermissionLoaded.value)
         return true
       } catch (error) {
-        console.error('❌ [PermissionStore] 获取用户权限失败:', error)
-        isPermissionLoaded.value = false
-        setFailed()
-        throw error
+        console.error('❌ [PermissionStore] 权限加载异常:', error)
+        // ✅ 异常处理：给一个默认的空数组，并完成路由注册
+        isPermissionLoaded.value = true // ✅ 标记为已加载，避免无限重试
+        setPermissions([])
+        setButtonPermissions([])
+        setMenuTree([])
+        setLoaded()
+
+        // ✅ 离散 API 提示，不阻塞 Promise 链
+        if (error.status === 403 || error.status === 500) {
+          message.warning('权限接口异常，已使用默认配置')
+        } else {
+          message.error('权限加载失败，请刷新页面重试')
+        }
+
+        return true // ✅ 返回 true，不中断执行流
       } finally {
         // ✅ 清除 Promise 缓存，允许下次重新加载
         loadingPromise = null
@@ -393,7 +599,6 @@ export const usePermissionStore = defineStore('permission', () => {
       const component = menu.component
       const routeName = menu.route_name
       const icon = menu.icon
-      const perms = menu.perms
       const children = menu.children
       // ✅ 高级属性字段
       const isFrame = menu.is_frame !== undefined ? menu.is_frame : 1 // 默认是内部路由（1表示内部路由）
@@ -406,9 +611,9 @@ export const usePermissionStore = defineStore('permission', () => {
       }
       if (menu_id) visited.add(menu_id)
 
-      // ✅ 过滤按钮类型、隐藏菜单、停用菜单
+      // ✅ 过滤按钮类型、停用菜单
+      // ✅ 注意：visible === '1' 的菜单不注册到侧边栏，但仍然需要注册为路由（如个人资料）
       if (menuType === 'F') return
-      if (visible === '1') return
       if (status === '1') return
 
       // 安全 path 处理
@@ -459,7 +664,8 @@ export const usePermissionStore = defineStore('permission', () => {
             icon: icon,
             menu_id: menu_id,
             menuType: menuType,
-            perms: perms ? (Array.isArray(perms) ? perms : [perms]) : [],
+            // ✅ 按钮权限来自 menu.buttons
+            perms: [],
             keepAlive: isCache === 1, // ✅ 缓存控制
             isFrame: isFrame === 0, // ✅ 外链标识（0=外链，1=内部路由）
           },
@@ -504,29 +710,37 @@ export const usePermissionStore = defineStore('permission', () => {
   // 重置权限状态
   function resetPermission() {
     permissions.value = []
+    buttonPermissions.value = []
     roles.value = []
     menuTree.value = []
     dynamicRoutes.value = []
     isRoutesGenerated.value = false
     isPermissionLoaded.value = false
 
-    // ✅ 不再使用缓存，所以不需要清除 localStorage
-    // localStorage.removeItem('menuTree')
-    // localStorage.removeItem('permissions')
+    // ✅ 清除按钮权限缓存
+    localStorage.removeItem('buttonPermissions')
     console.log('🗑️ 已重置权限状态')
 
     // ✅ 移除 Layout 下的所有动态子路由（包括通配路由）
-    // 通过重新创建 Layout 路由来清除所有子路由
+    // ✅ 关键修复：保留静态路由（home），只清除动态路由
     if (router.hasRoute('Layout')) {
       router.removeRoute('Layout')
       router.addRoute({
         path: '/',
         name: 'Layout',
         component: () => import('@/layouts/index.vue'),
-        redirect: '/dashboard', // ✅ 重置后重定向到 dashboard
-        children: [],
+        redirect: '/home', // ✅ 重置后重定向到首页
+        children: [
+          // ✅ 保留静态定义的 home 路由
+          {
+            path: 'home',
+            name: 'Home',
+            component: () => import('@/views/home/index.vue'),
+            meta: { title: '首页', hidden: false },
+          },
+        ],
       })
-      console.log('🗑️ 已重置 Layout 路由')
+      console.log('🗑️ 已重置 Layout 路由（保留静态 home 路由）')
     }
 
     // 同时重置 menuStore
@@ -537,6 +751,7 @@ export const usePermissionStore = defineStore('permission', () => {
   return {
     // State
     permissions,
+    buttonPermissions,
     roles,
     menuTree,
     dynamicRoutes,
@@ -552,6 +767,7 @@ export const usePermissionStore = defineStore('permission', () => {
     hasAllPermissions,
     // Actions
     setPermissions,
+    setButtonPermissions,
     setRoles,
     setMenuTree,
     setLoading,

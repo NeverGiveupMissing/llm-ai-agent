@@ -50,7 +50,7 @@ axiosInstance.interceptors.response.use(
 
     // 有响应但状态码错误，让 responseInterceptor 统一处理
     try {
-      await responseInterceptor({
+      const processedError = await responseInterceptor({
         ok: false,
         status: error.response.status,
         statusText: error.response.statusText,
@@ -58,11 +58,13 @@ axiosInstance.interceptors.response.use(
         data: error.response.data,
         config: error.config,
       })
+      // ✅ responseInterceptor 内部已经 reject 了带有 _403Handled 标记的错误
+      // 所以这里不会被执行到
+      return Promise.reject(processedError)
     } catch (e) {
+      // ✅ 返回 responseInterceptor 创建的错误对象（带有 _403Handled 标记）
       return Promise.reject(e)
     }
-
-    return Promise.reject(error)
   },
 )
 

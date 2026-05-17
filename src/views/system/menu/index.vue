@@ -1,27 +1,9 @@
 <template>
   <div class="menu-management-container">
-    <!-- 搜索区域 -->
-    <n-card :bordered="false" class="search-card" v-show="showSearch">
-      <BaseForm
-        ref="searchFormRef"
-        v-model="searchForm"
-        :fields="searchFields"
-        inline
-        :show-feedback="false"
-        label-width="auto"
-      >
-        <template #actions>
-          <CommonButton type="query" @click="handleSearchClick">搜索</CommonButton>
-          <CommonButton type="reset" @click="handleResetClick">重置</CommonButton>
-        </template>
-      </BaseForm>
-    </n-card>
-
-    <!-- 表格区域 -->
+    <!-- ✅ 完全由 BaseTable 控制搜索区域和工具栏按钮 -->
     <BaseTable
       :columns="columns"
       :data="tableData"
-      :loading="loading"
       :show-pagination="false"
       toolbar-title="菜单列表"
       row-key="menu_id"
@@ -32,10 +14,25 @@
       @refresh="fetchData"
       @update:expanded-row-keys="handleExpandChange"
       @action-click="handleActionClick"
+      @search="handleSearchClick"
+      @reset="handleResetClick"
     >
-      <!-- 工具栏左侧按钮 -->
-      <template #toolbar-left>
-        <CommonButton type="add" perms="system:menu:add" @click="handleAdd" />
+      <!-- ✅ 搜索表单（由 BaseTable 内部的 BaseForm 渲染） -->
+      <template #search>
+        <BaseForm
+          ref="searchFormRef"
+          v-model="searchForm"
+          :fields="searchFields"
+          inline
+          :show-feedback="false"
+          label-width="auto"
+          @search="handleSearchClick"
+          @reset="handleResetClick"
+        />
+      </template>
+      
+      <!-- ✅ 特殊业务按钮（非数据库配置）放在工具栏右侧 -->
+      <template #toolbar-right>
         <CommonButton type="reset" :button-props="{ secondary: true }" @click="toggleExpand">
           {{ isExpanded ? '折叠' : '展开' }}
         </CommonButton>
@@ -58,7 +55,7 @@ import { ref, reactive, h, onMounted } from 'vue'
 import { useMessage, useDialog, NTag } from 'naive-ui'
 import BaseForm from '@/components/BaseForm/index.vue'
 import MenuFormModal from './components/MenuFormModal.vue'
-import { getMenuList, deleteMenu } from '@/api/menu'
+import { getMenuList, deleteMenu, exportMenus } from '@/api/menu'
 
 const message = useMessage()
 const dialog = useDialog()
@@ -73,9 +70,9 @@ const showSearch = ref(true)
 const searchForm = reactive({
   menu_id: '',
   menu_name: '',
-  menu_type: '',
+  menu_type: null,
   perms: '',
-  status: '', // ✅ 空字符串而不是 null，确保字段始终传递
+  status: null, // ✅ 下拉框初始值为 null，确保显示 placeholder
 })
 
 const menuTypeOptions = [
@@ -263,7 +260,15 @@ const handleResetClick = () => {
 const fetchData = async () => {
   loading.value = true
   try {
-    const res = await getMenuList(searchForm)
+    // ✅ 菜单管理页面：默认只展示 M(目录) 和 C(菜单) 类型，过滤掉 F(按钮)
+    const params = {
+      ...searchForm,
+    }
+    // 如果没有手动选择菜单类型，则默认只查询 M/C 类型
+    if (!params.menu_type) {
+      params.menu_types = ['M', 'C']
+    }
+    const res = await getMenuList(params)
     const data = res.data || res || []
     tableData.value = data
 
@@ -277,25 +282,29 @@ const fetchData = async () => {
 }
 
 // 构建菜单选项（树形结构）
+// ✅ 只允许选择目录(M)作为父级，禁用菜单(C)节点
 const buildMenuOptions = (menus) => {
   const options = [{ menu_id: 0, menu_name: '主类目', children: [] }]
 
   const convert = (items) => {
-    return items.map((item) => {
-      const node = {
-        menu_id: item.menu_id,
-        menu_name: item.menu_name,
-        perms: item.perms || '',
-        path: item.path || '',
-        disabled: item.menu_type === 'F',
-      }
+    return items
+      .filter((item) => item.menu_type !== 'F') // 过滤掉按钮类型
+      .map((item) => {
+        const isDirectory = item.menu_type === 'M'
+        const node = {
+          menu_id: item.menu_id,
+          menu_name: item.menu_name,
+          perms: item.perms || '',
+          path: item.path || '',
+          disabled: !isDirectory, // ✅ 只有目录(M)可选，菜单(C)禁用
+        }
 
-      if (item.children && item.children.length > 0) {
-        node.children = convert(item.children)
-      }
+        if (item.children && item.children.length > 0) {
+          node.children = convert(item.children)
+        }
 
-      return node
-    })
+        return node
+      })
   }
 
   options[0].children = convert(menus)
@@ -374,8 +383,17 @@ const handleActionClick = ({ perms, row }) => {
   if (perms.endsWith(':edit') || perms.endsWith(':update')) {
     handleEdit(row)
   } else if (perms.endsWith(':add') || perms.endsWith(':create')) {
-    handleAddChild(row)
+    // ✅ 修复：row 为 null 时（工具栏点击）调用顶级新增，否则调用新增子菜单
+    if (row) {
+      handleAddChild(row)
+    } else {
+      handleAdd()
+    }
+  } else if (perms.endsWith(':export')) {
+    handleExport()
   } else if (perms.endsWith(':remove') || perms.endsWith(':delete')) {
+    // ✅ row 为 null 时不执行删除
+    if (!row) return
     dialog.warning({
       title: '确认删除',
       content: `确定要删除菜单「${row.menu_name}」吗？`,
@@ -398,6 +416,19 @@ const handleActionClick = ({ perms, row }) => {
 onMounted(() => {
   fetchData()
 })
+
+// 导出功能
+const handleExport = async () => {
+  try {
+    // 构建导出参数（与搜索条件相同）
+    const params = { ...searchForm }
+    await exportMenus(params)
+    // 成功提示已在 download.js 中处理
+  } catch (error) {
+    console.error('导出失败:', error)
+    // 错误提示已在 download.js 中处理
+  }
+}
 </script>
 
 <style scoped>

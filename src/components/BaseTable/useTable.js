@@ -80,7 +80,10 @@ export function useTable(apiMethod, options = {}) {
       return res
     } catch (error) {
       console.error('获取数据失败:', error)
-      message.error(error.message || '获取数据失败')
+      // ✅ 403 错误已经在响应拦截器中处理过了（有 _403Handled 标记），不需要重复提示
+      if (!error._403Handled) {
+        message.error(error.message || '获取数据失败')
+      }
       return null
     } finally {
       loading.value = false

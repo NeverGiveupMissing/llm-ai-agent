@@ -19,7 +19,7 @@ const router = useRouter()
 const appStore = useAppStore()
 
 const handleGoHome = () => {
-  router.push('/dashboard')
+  router.push('/home')
 }
 </script>
 

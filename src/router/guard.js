@@ -34,6 +34,20 @@ export function setupRouterGuard(router) {
     const userStore = useUserStore()
     const permissionStore = usePermissionStore()
 
+    // ✅ 全局错误捕获：监听未处理的 Promise rejection（包括 API 403 错误）
+    // 这样可以在路由级别捕获到 API 请求的 403 错误，防止强制跳转登录页
+    const handleUnhandledRejection = (event) => {
+      const error = event.reason
+      if (error && error._403Handled) {
+        // 403 错误已在拦截器中处理，阻止默认行为
+        event.preventDefault()
+        console.log('✅ [Router Guard] 已捕获并处理 403 错误，用户留在当前页')
+      }
+    }
+    
+    // 添加全局错误监听器
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
+
     // 使用通用权限守卫函数
     const result = await permissionGuard({
       to,
@@ -73,6 +87,11 @@ export function setupRouterGuard(router) {
       redirectCount = 0
       lastRedirectPath = ''
     }
+
+    // ✅ 清理错误监听器
+    setTimeout(() => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+    }, 1000)
 
     return result
   })

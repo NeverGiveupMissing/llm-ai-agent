@@ -103,6 +103,8 @@ defineExpose({ tableRef, containerRef })
 .table-card {
   display: flex;
   flex-direction: column;
+  border: 1px solid #e5e6eb;
+  border-radius: 8px;
 }
 
 /* n-card 内容区 - 也使用 flex 布局 */

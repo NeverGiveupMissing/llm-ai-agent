@@ -69,6 +69,7 @@
                 placeholder="请输入验证码"
                 maxlength="4"
                 clearable
+                @keyup.enter="handleSubmit"
               >
                 <template #prefix>
                   <n-icon :component="KeyOutline" />
@@ -142,8 +143,8 @@ const captchaImg = ref('')
 const captchaUuid = ref('')
 
 const formData = reactive({
-  user_name: '',
-  password: '',
+  user_name: 'common',
+  password: 'common',
   confirm_password: '',
   nick_name: '',
   email: '',
@@ -163,9 +164,8 @@ const rules = {
       trigger: 'blur',
     },
   ],
-  nick_name: [{ required: true, message: '请输入昵称', trigger: 'blur' }],
+  nick_name: [{ required: false, trigger: 'blur' }],
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
     {
       pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
       message: '请输入正确的邮箱地址',
@@ -173,7 +173,6 @@ const rules = {
     },
   ],
   phonenumber: [
-    { required: true, message: '请输入手机号', trigger: 'blur' },
     {
       pattern: /^1[3-9]\d{9}$/,
       message: '请输入正确的手机号码',
@@ -239,7 +238,8 @@ const handleSubmit = async () => {
         nick_name: res.data.nick_name,
         avatar: res.data.avatar,
         roles: res.data.roles,
-        permissions: res.data.permissions || [],
+        role_ids: res.data.role_ids || [],  // ✅ 关键：保存角色 ID 数组
+        permissions: res.data.permissions || [],  // ✅ 聚合权限标识
       })
 
       // 记住密码逻辑
@@ -253,8 +253,23 @@ const handleSubmit = async () => {
       }
 
       permissionStore.resetPermission()
+      
+      // ✅ 关键修复：等待权限加载完成后再跳转，避免首页404
       message.success('登录成功')
-      router.push(route.query.redirect || '/dashboard')
+      
+      try {
+        // 先加载用户权限和菜单
+        await permissionStore.fetchUserPermissions()
+        console.log('✅ [Login] 权限加载完成，准备跳转到首页')
+        
+        // 权限加载完成后跳转到目标页面
+        const redirectPath = route.query.redirect || '/home'
+        router.push(redirectPath)
+      } catch (error) {
+        console.error('❌ [Login] 权限加载失败:', error)
+        // 即使权限加载失败，也尝试跳转到首页
+        router.push(route.query.redirect || '/home')
+      }
     }
   } catch (error) {
     message.error(error.message || '操作失败')

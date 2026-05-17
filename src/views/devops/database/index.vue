@@ -53,7 +53,7 @@
               size="small"
               @click="handleExecuteSql(sqlEditorRef?.sqlContent)"
               :loading="executing"
-              v-permission="'database:execute'"
+              v-hasPermi="'database:execute'"
             >
               <template #icon>
                 <n-icon><PlayCircleOutline /></n-icon>
@@ -103,7 +103,7 @@
               <SqlResult :result="executionResult" />
             </n-tab-pane>
 
-            <n-tab-pane name="tableData" tab="表数据" v-permission="'database:table'">
+            <n-tab-pane name="tableData" tab="表数据" v-hasPermi="'database:table'">
               <TableDataPanel :selected-table="selectedTable" />
             </n-tab-pane>
 

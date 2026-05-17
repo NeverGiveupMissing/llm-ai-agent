@@ -1,26 +1,9 @@
 <template>
   <div class="role-management-container">
-    <!-- 搜索区域 -->
-    <n-card :bordered="false" class="search-card" v-show="showSearch">
-      <BaseForm
-        ref="searchFormRef"
-        v-model="searchForm"
-        :fields="searchFields"
-        inline
-        :show-feedback="false"
-        label-width="auto"
-      >
-        <template #actions>
-          <CommonButton type="query" @click="handleSearchClick">搜索</CommonButton>
-          <CommonButton type="reset" @click="handleResetClick">重置</CommonButton>
-        </template>
-      </BaseForm>
-    </n-card>
-
+    <!-- ✅ 完全由 BaseTable 控制搜索区域和工具栏按钮 -->
     <BaseTable
       :columns="columns"
       :data="tableData"
-      :loading="loading"
       :pagination="pagination"
       :checkable="true"
       toolbar-title="角色列表"
@@ -32,24 +15,21 @@
       @selection-change="handleSelectionChange"
       @refresh="fetchData"
       @action-click="handleActionClick"
+      @search="handleSearchClick"
+      @reset="handleResetClick"
     >
-      <!-- 工具栏左侧按钮 -->
-      <template #toolbar-left>
-        <CommonButton type="add" perms="role:create" @click="handleAdd" />
-        <CommonButton
-          type="edit"
-          :disabled="selectedKeys.length !== 1"
-          perms="role:update"
-          @click="handleEdit(selectedRows[0])"
+      <!-- ✅ 搜索表单（由 BaseTable 内部的 BaseForm 渲染） -->
+      <template #search>
+        <BaseForm
+          ref="searchFormRef"
+          v-model="searchForm"
+          :fields="searchFields"
+          inline
+          :show-feedback="false"
+          label-width="auto"
+          @search="handleSearchClick"
+          @reset="handleResetClick"
         />
-        <CommonButton
-          type="delete"
-          :disabled="selectedKeys.length === 0"
-          perms="role:delete"
-          :confirm-message="`确定要删除选中的 ${selectedKeys.length} 个角色吗？`"
-          @confirm="handleBatchDelete"
-        />
-        <CommonButton type="export" perms="role:export" text="导出" />
       </template>
     </BaseTable>
 
@@ -79,8 +59,7 @@ import {
   updateRole,
   deleteRole,
   batchDeleteRole,
-  saveRoleMenus,
-  saveRoleApis,
+  exportRoles,
 } from '@/api/role'
 import RoleFormModal from './components/RoleFormModal.vue'
 import AssignPermissionModal from './components/AssignPermissionModal.vue'
@@ -98,7 +77,7 @@ const showSearch = ref(true)
 const searchForm = ref({
   role_name: '',
   role_key: '',
-  status: '', // ✅ 空字符串而不是 null，确保字段始终传递
+  status: null, // ✅ 下拉框初始值为 null，确保显示 placeholder
 })
 
 const statusOptions = [
@@ -143,7 +122,7 @@ const handleSearchClick = () => {
 const handleResetClick = () => {
   searchForm.value.role_name = ''
   searchForm.value.role_key = ''
-  searchForm.value.status = '' // ✅ 重置为空字符串而不是 null
+  searchForm.value.status = null // ✅ 重置为 null，确保 placeholder 正常显示
   handleReset()
 }
 
@@ -223,8 +202,12 @@ const currentRole = ref(null)
 
 // ✅ 统一处理动态按钮点击
 const handleActionClick = ({ perms, row }) => {
-  if (perms.endsWith(':edit') || perms.endsWith(':update')) {
+  if (perms.endsWith(':add') || perms.endsWith(':create')) {
+    handleAdd()
+  } else if (perms.endsWith(':edit') || perms.endsWith(':update')) {
     handleEdit(row)
+  } else if (perms.endsWith(':export')) {
+    handleExport()
   } else if (
     perms.endsWith(':assign_role') ||
     perms.endsWith(':assign_permission') // ✅ 下划线命名
@@ -243,7 +226,9 @@ const handleActionClick = ({ perms, row }) => {
           fetchData()
         } catch (error) {
           console.error('删除角色失败:', error)
-          message.error(error.message || '删除失败')
+          if (!error._403Handled) {
+            message.error(error.message || '删除失败')
+          }
         }
       },
     })
@@ -290,7 +275,10 @@ const handleFormSuccess = async (formData) => {
     fetchData()
   } catch (error) {
     console.error('操作失败:', error)
-    message.error(error.message || '操作失败')
+    // ✅ 403 错误已经在响应拦截器中处理过了（有 _403Handled 标记），不需要重复提示
+    if (!error._403Handled) {
+      message.error(error.message || '操作失败')
+    }
   }
 }
 
@@ -300,34 +288,11 @@ const handleAssignPermissions = (role) => {
   permissionModalVisible.value = true
 }
 
-// 保存权限分配
-const handleSavePermissions = async (permissionData) => {
-  try {
-    const role_id = currentRole.value?.role_id
-    const { menu_ids, api_paths } = permissionData
-
-    // 保存菜单权限（包括按钮）
-    if (menu_ids && menu_ids.length > 0) {
-      const res = await saveRoleMenus(role_id, { menu_ids })
-      message.success(res.message || '菜单权限分配成功')
-    }
-
-    // 保存接口权限
-    // api_paths 格式: ['/api/xxx', '/api/yyy']，需要转换为 [{ path: '/api/xxx', method: 'GET' }, ...]
-    if (api_paths && api_paths.length > 0) {
-      const formattedApiPaths = api_paths.map((path) => ({
-        path,
-        method: 'GET', // 默认使用 GET 方法，后续可根据实际需求调整
-      }))
-      const res = await saveRoleApis(role_id, { api_paths: formattedApiPaths })
-      message.success(res.message || '接口权限分配成功')
-    }
-
-    permissionModalVisible.value = false
-    fetchData()
-  } catch (error) {
-    console.error('权限分配失败:', error)
-    message.error(error.message || '权限分配失败')
+// ✅ 保存权限分配（AssignPermissionModal 内部已处理保存逻辑）
+const handleSavePermissions = async ({ success }) => {
+  if (success) {
+    // 刷新列表数据
+    await fetchData()
   }
 }
 
@@ -339,7 +304,10 @@ const handleDelete = async (row) => {
     fetchData()
   } catch (error) {
     console.error('删除角色失败:', error)
-    message.error(error.message || '删除失败')
+    // ✅ 403 错误已经在响应拦截器中处理过了（有 _403Handled 标记），不需要重复提示
+    if (!error._403Handled) {
+      message.error(error.message || '删除失败')
+    }
   }
 }
 
@@ -351,7 +319,23 @@ const handleBatchDelete = async () => {
     fetchData()
   } catch (error) {
     console.error('批量删除失败:', error)
-    message.error(error.message || '批量删除失败')
+    // ✅ 403 错误已经在响应拦截器中处理过了（有 _403Handled 标记），不需要重复提示
+    if (!error._403Handled) {
+      message.error(error.message || '批量删除失败')
+    }
+  }
+}
+
+// 导出功能
+const handleExport = async () => {
+  try {
+    // 构建导出参数（与搜索条件相同）
+    const params = { ...searchForm.value }
+    await exportRoles(params)
+    // 成功提示已在 download.js 中处理
+  } catch (error) {
+    console.error('导出失败:', error)
+    // 错误提示已在 download.js 中处理
   }
 }
 </script>

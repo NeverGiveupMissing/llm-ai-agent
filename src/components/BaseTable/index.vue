@@ -1,11 +1,24 @@
+<!-- 
+/**
+ * BaseTable 公共表格组件
+ * @description 基于 Naive UI NDataTable 封装的通用表格组件，集成搜索、分页、列控制、动态权限按钮等功能
+ * @author System
+ * @date 2026-05-13
+ * 
+ * ✅ Loading 状态管理规范：
+ * - 项目已配置全局 Loading（路由守卫/请求拦截器），默认无需手动处理 loading
+ * - 本组件的 loading 属性仅在特殊场景下使用（如：局部数据刷新、独立表格加载需阻塞交互）
+ * - 调用方通过 :loading="xxx" 传入局部 loading 状态，组件会自动显示在表格加载区域
+ */
+-->
 <template>
   <div class="base-table-wrapper">
-    <!-- 搜索区域 -->
-    <SearchArea v-if="$slots.search" @search="handleSearchClick" @reset="handleResetClick">
-      <slot name="search"></slot>
-    </SearchArea>
+    <!-- ✅ 搜索区域：使用卡片包裹，内部使用 BaseForm 渲染按钮 -->
+    <n-card v-if="showSearch && $slots.search" class="search-card" :bordered="false" :segmented="true">
+      <slot name="search" />
+    </n-card>
 
-    <!-- 表格卡片 -->
+    <!-- ✅ 表格卡片：工具栏按钮完全由数据库配置生成 -->
     <TableCard
       ref="tableCardRef"
       :columns="computedColumns"
@@ -32,9 +45,20 @@
       @page-size-change="handlepage_sizeChange"
       @update:expanded-row-keys="handleExpandedRowKeysChange"
     >
+      <!-- ✅ 工具栏左侧：完全由数据库配置生成（show_location === '0'），不再支持插槽 -->
       <template #toolbar-left>
-        <slot name="toolbar-left"></slot>
+        <CommonButton
+          v-for="action in toolbarActions"
+          :key="action.permission"
+          :type="action.type"
+          :text="action.label"
+          :disabled="action.isDisabled?.()"
+          :perms="action.permission"
+          @click="handleToolbarActionClick(action)"
+        />
       </template>
+
+      <!-- ✅ 工具栏右侧：保留特殊业务插槽（非数据库配置的按钮） -->
       <template #toolbar-right>
         <slot name="toolbar-right"></slot>
       </template>
@@ -45,7 +69,7 @@
 <script setup>
 import { ref, computed, h, useSlots, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { NTag, NSpace, NButton, useMessage } from 'naive-ui'
+import { NTag, NSpace, NButton, NDropdown, useMessage } from 'naive-ui'
 import dayjs from 'dayjs'
 import { usePermissionStore } from '@/stores/modules/permission'
 import { useUserStore } from '@/stores/modules/user'
@@ -53,7 +77,6 @@ import { checkIsAdmin } from '@/utils/permission'
 import { ColumnTypes } from './types'
 import CommonButton from '@/components/CommonButton.vue'
 import { getCurrentRouteButtons, mapPermsToType } from './utils'
-import SearchArea from './components/SearchArea.vue'
 import TableCard from './components/TableCard.vue'
 
 const route = useRoute() // ✅ 定义 route
@@ -154,6 +177,11 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  // ✅ 自定义按钮禁用逻辑：(actionType, row) => boolean
+  getActionDisabled: {
+    type: Function,
+    default: null,
+  },
 })
 
 const emit = defineEmits([
@@ -174,11 +202,96 @@ const message = useMessage()
 const permissionStore = usePermissionStore()
 const tableCardRef = ref(null)
 
+// ✅ 按位置分组的动态按钮列表
+const toolbarActions = ref([]) // 工具栏按钮（show_location === '0'）
+const rowActions = ref([]) // 行内按钮（show_location === '1'）
+const searchActions = ref([]) // 搜索按钮（show_location === '2'）
+
 // ✅ 内部维护的选中 keys（使用 v-model）
 const internalCheckedKeys = ref([])
 
 // ✅ 可见列的 key 数组（用于 RightToolbar）
 const visibleColumnKeys = ref([])
+
+// ✅ 加载当前路由的动态按钮
+const loadDynamicActions = async () => {
+  try {
+    const routeButtons = await getCurrentRouteButtons(permissionStore, route)
+    console.log('BaseTable - 当前路由按钮:', routeButtons)
+
+    // ✅ Label 映射：避免显示原始数据库菜单名
+    const labelMap = {
+      add: '新增',
+      edit: '修改',
+      delete: '删除',
+      query: '查询',
+      export: '导出',
+      assign_role: '分配权限',
+      reset: '重置密码',
+      import: '导入',
+    }
+
+    // 处理按钮的通用函数
+    const processAction = (btn) => {
+      const actionType = mapPermsToType(btn.perms)
+      return {
+        label: labelMap[actionType] || btn.label,
+        type: actionType,
+        permission: btn.perms,
+        show_location: btn.show_location,
+        // ✅ 行内按钮传入 row，工具栏按钮传入 null（由模板处理 disabled 状态）
+        onClick: (row) => emit('action-click', { perms: btn.perms, row }),
+        // ✅ 新增：按钮 disabled 状态计算函数
+        // ⚠️ 注意：这里需要区分工具栏按钮和行内按钮
+        isDisabled: (row) => {
+          // 1. 优先使用父组件传入的自定义禁用逻辑
+          if (props.getActionDisabled && row) {
+            const customDisabled = props.getActionDisabled(actionType, row)
+            if (customDisabled !== undefined && customDisabled !== null) {
+              return customDisabled
+            }
+          }
+          // 2. 工具栏按钮（row 为 null 时）使用选中行控制
+          if (!row) {
+            if (actionType === 'edit') return internalCheckedKeys.value.length !== 1
+            if (actionType === 'delete') return internalCheckedKeys.value.length === 0
+          }
+          // 3. 行内按钮（row 存在时）默认不禁用
+          return false
+        },
+      }
+    }
+
+    // 按位置分组赋值
+    toolbarActions.value = (routeButtons.toolbar || []).map(processAction)
+    rowActions.value = (routeButtons.row || []).map(processAction)
+    searchActions.value = (routeButtons.search || []).map(processAction)
+
+    console.log('BaseTable - 动态按钮加载完成:', {
+      toolbar: toolbarActions.value.length,
+      row: rowActions.value.length,
+      search: searchActions.value.length,
+    })
+  } catch (error) {
+    console.error('BaseTable - 动态按钮加载失败:', error.message)
+    toolbarActions.value = []
+    rowActions.value = []
+    searchActions.value = []
+  }
+}
+
+/**
+ * 监听权限加载完成，加载动态按钮
+ */
+watch(
+  () => permissionStore.isLoaded,
+  (loaded) => {
+    if (loaded) {
+      loadDynamicActions()
+    }
+  },
+  { immediate: true },
+)
 
 // ✅ 初始化可见列
 watch(
@@ -207,38 +320,6 @@ const configurableColumns = computed(() => {
   return props.columns.filter((col) => {
     const excludeTypes = ['actions', 'selection', 'index']
     return !excludeTypes.includes(col.type)
-  })
-})
-
-/**
- * ✅ 生成动态 Actions 数组
- */
-const dynamicActions = computed(() => {
-  const routeButtons = getCurrentRouteButtons(permissionStore, route)
-  console.log('🔵 BaseTable - 当前路由按钮:', routeButtons)
-
-  // ✅ Label 映射：避免显示原始数据库菜单名
-  const labelMap = {
-    add: '新增',
-    edit: '修改',
-    delete: '删除',
-    query: '查询',
-    export: '导出',
-    assign_role: '分配权限', // ✅ 角色管理-分配权限，用户管理-分配角色
-    reset: '重置密码',
-    import: '导入',
-  }
-
-  return routeButtons.map((btn) => {
-    // ✅ 完全信任 mapPermsToType，移除冗余判断
-    const actionType = mapPermsToType(btn.perms)
-
-    return {
-      label: labelMap[actionType] || btn.label,
-      type: actionType,
-      permission: btn.perms,
-      onClick: (row) => emit('action-click', { perms: btn.perms, row }),
-    }
   })
 })
 
@@ -332,7 +413,7 @@ const computedColumns = computed(() => {
 })
 
 /**
- * ✅ 处理操作列：合并动态 Actions 与用户自定义 Actions
+ * ✅ 处理操作列：合并动态 Actions 与用户自定义 Actions，并实现智能折叠
  */
 const processActionsColumn = (col) => {
   const column = { ...col, type: 'actions' }
@@ -342,18 +423,22 @@ const processActionsColumn = (col) => {
 
   console.log('🟢 BaseTable - 处理操作列:', {
     userActions: userActions.length,
-    dynamicActions: dynamicActions.value.length,
+    rowActions: rowActions.value.length,
     extraActions: props.extraActions?.length || 0,
   })
 
-  // 合并策略：用户定义 + 数据库动态生成 + 额外按钮
-  column.actions = [
+  // 合并策略：用户定义 + 数据库动态生成（行内） + 额外按钮
+  const allActions = [
     ...userActions, // 优先级最高：用户手动定义
-    ...dynamicActions.value, // 中等优先级：数据库动态生成
+    ...rowActions.value, // 中等优先级：数据库动态生成（行内按钮）
     ...props.extraActions, // 最低优先级：额外业务按钮
   ]
 
-  console.log('🟡 BaseTable - 合并后 actions 数量:', column.actions.length)
+  console.log('🟡 BaseTable - 合并后 actions 数量:', allActions.length)
+
+  // ✅ 智能折叠：超过 3 个自动进入"更多"下拉菜单
+  column.actions = allActions
+  column.maxVisible = col.maxVisible || 3 // 默认最多显示 3 个
 
   return column
 }
@@ -425,8 +510,17 @@ function processColumn(col) {
           }
         }
 
-        // 操作列过滤：只显示 edit、delete、assign_role 类型的按钮
-        const allowedActionTypes = ['edit', 'delete', 'assign_role']
+        // 操作列过滤：只显示允许的按钮类型
+        const allowedActionTypes = [
+          'edit',
+          'delete',
+          'assign_role',
+          // 'reset',
+          'query',
+          'export',
+          'add',
+          'import',
+        ]
         if (action.type && !allowedActionTypes.includes(action.type)) {
           return false
         }
@@ -438,37 +532,70 @@ function processColumn(col) {
         return true
       })
 
-      const buttons = filteredActions.map((action) => {
-        // ✅ action.type 是业务类型（由 mapPermsToType 返回）
-        // CommonButton 内部会自动将其映射为 UI 类型
-        const commonButtonType = action.type || 'primary'
+      // ✅ 智能折叠：超过 maxVisible 个按钮时，剩余的放入下拉菜单
+      const maxVisible = col.maxVisible || 3
+      const visibleActions = filteredActions.slice(0, maxVisible)
+      const overflowActions = filteredActions.slice(maxVisible)
 
-        // ✅ 支持 confirmText 为函数或字符串
+      const buttons = visibleActions.map((action) => {
+        const commonButtonType = action.type || 'primary'
+        // ✅ 计算当前行的 disabled 状态
+        const isDisabled = action.isDisabled ? action.isDisabled(row) : false
+
         const confirmMessage =
           typeof action.confirmText === 'function'
             ? action.confirmText(row)
             : action.confirmText || `确定要${action.label}吗？`
 
-        // ✅ 使用 CommonButton，它会自动处理业务类型 → UI 类型的映射
         const button = h(CommonButton, {
           type: commonButtonType,
           text: action.label,
-          size: 'small', // ✅ 表格内统一使用 small
+          size: 'small',
+          disabled: isDisabled,
           perms: action.permission,
           confirmMessage: confirmMessage,
           onClick: () => action.onClick(row),
-          onConfirm: () => action.onClick(row), // delete 类型使用 onConfirm
+          onConfirm: () => action.onClick(row),
         })
 
         return button
       })
 
-      // ✅ 使用 NSpace 控制按钮间距，默认 8px，支持外部传递 actionGap
-      return h(
-        NSpace,
-        { size: col.actionGap || 8 }, // 默认间距 8px
-        { default: () => buttons },
-      )
+      // ✅ 如果有溢出的按钮，添加"更多"下拉菜单
+      if (overflowActions.length > 0) {
+        const overflowButtons = overflowActions.map((action) => ({
+          label: action.label,
+          key: action.permission || action.label,
+          onClick: () => action.onClick(row),
+        }))
+
+        // 渲染"更多"触发按钮
+        const triggerNode = h(
+          NButton,
+          {
+            size: 'small',
+            quaternary: true,
+            type: 'primary',
+          },
+          { default: () => '更多' },
+        )
+
+        const moreButton = h(
+          NDropdown,
+          {
+            options: overflowButtons,
+            trigger: 'hover',
+            onSelect: (key, option) => option.onClick(),
+          },
+          {
+            default: () => triggerNode,
+          },
+        )
+        buttons.push(moreButton)
+      }
+
+      // ✅ 使用 NSpace 控制按钮间距
+      return h(NSpace, { size: col.actionGap || 8 }, { default: () => buttons })
     }
   }
 
@@ -589,7 +716,26 @@ function handleResetClick() {
 }
 
 /**
- * ✅ 处理树形表格展开变化
+ * ✅ 处理工具栏按钮点击（传递选中的数据）
+ */
+function handleToolbarActionClick(action) {
+  // 获取选中的行数据
+  const selectedRowsData = props.data.filter((row) => {
+    const key = typeof props.rowKey === 'function' ? props.rowKey(row) : row[props.rowKey]
+    return key !== undefined && internalCheckedKeys.value.includes(key)
+  })
+
+  // 对于修改/删除操作，传递选中的第一行数据
+  if (action.type === 'edit' || action.type === 'delete') {
+    emit('action-click', { perms: action.permission, row: selectedRowsData[0] || null })
+  } else {
+    // 其他操作（新增、导出等）不需要传递行数据
+    emit('action-click', { perms: action.permission, row: null })
+  }
+}
+
+/**
+ * 处理树形表格展开变化
  */
 function handleExpandedRowKeysChange(keys) {
   emit('update:expandedRowKeys', keys)
@@ -606,5 +752,10 @@ defineExpose({
 .base-table-wrapper {
   display: flex;
   flex-direction: column;
+}
+
+/* 搜索区域卡片 */
+.search-card {
+  margin-bottom: 15px;
 }
 </style>

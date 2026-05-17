@@ -6,10 +6,13 @@
 export function getPermsArray(perms) {
   if (!perms) return []
   if (Array.isArray(perms)) {
-    return perms.filter(p => p && typeof p === 'string')
+    return perms.filter((p) => p && typeof p === 'string')
   }
   if (typeof perms === 'string') {
-    return perms.split(',').map(p => p.trim()).filter(Boolean)
+    return perms
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
   }
   return []
 }
@@ -23,8 +26,8 @@ export function checkIsAdmin(roles) {
   if (!roles || !Array.isArray(roles) || roles.length === 0) {
     return false
   }
-  
-  return roles.some(role => {
+
+  return roles.some((role) => {
     // 支持字符串格式：['admin', 'common']
     if (typeof role === 'string') {
       return role.toLowerCase().includes('admin')
@@ -39,17 +42,18 @@ export function checkIsAdmin(roles) {
 }
 
 /**
- * 检查权限标识
+ * 检查按钮权限标识
  * @param {Object} permissionStore - 权限 store 实例
- * @param {String|Array} permissionCodes - 权限标识
- * @returns {Boolean} 是否有权限
+ * @param {String|Array} permissionCodes - 按钮权限标识
+ * @returns {Boolean} 是否有按钮权限
+ * @description 使用 buttonPermissions 数据源（来自 sys_button 的 perms 字段）
  */
 export function checkPermissionCodes(permissionStore, permissionCodes) {
-  if (!permissionStore || !permissionStore.hasAnyPermission) {
+  if (!permissionStore) {
     console.warn('checkPermissionCodes: permissionStore 未正确初始化')
     return false
   }
-  
+
   // 支持字符串或数组
   let codes = permissionCodes
   if (typeof permissionCodes === 'string') {
@@ -60,8 +64,8 @@ export function checkPermissionCodes(permissionStore, permissionCodes) {
     console.warn('CommonButton perms 属性必须是字符串或数组')
     return false
   }
-  
-  // 检查权限（使用 hasAnyPermission，任一权限即可）
+
+  // 检查按钮权限（使用 hasAnyPermission，从 buttonPermissions 数据源检查）
   return permissionStore.hasAnyPermission(codes)
 }
 
@@ -84,8 +88,10 @@ export async function permissionGuard({
   publicPaths = [],
   getCurrentUser,
   loginPath = '/login',
-  forbiddenPath = '/403'
+  forbiddenPath = '/403',
 }) {
+  // ✅ 导入离散消息工具，用于非组件环境（路由守卫）的提示
+  const { message } = await import('@/utils/http/message')
   const hasToken = userStore.token || localStorage.getItem('access_token')
 
   // 1. 未登录访问非公开页面 → 跳转登录
@@ -95,10 +101,10 @@ export async function permissionGuard({
 
   // 2. 已登录访问登录页 → 跳转首页
   if (hasToken && to.path === loginPath) {
-    // 如果权限已加载，直接跳转到 dashboard
+    // 如果权限已加载，直接跳转到首页
     if (permissionStore.isLoaded) {
-      console.log('✅ [PermissionGuard] 已登录且权限已加载，跳转到 dashboard')
-      return { path: '/dashboard', replace: true }
+      console.log('✅ [PermissionGuard] 已登录且权限已加载，跳转到首页')
+      return { path: '/home', replace: true }
     }
     // 如果权限未加载，跳转到 / 让权限加载完成后再重定向
     console.log('⏳ [PermissionGuard] 已登录但权限未加载，跳转到 /')
@@ -106,7 +112,13 @@ export async function permissionGuard({
   }
 
   // 3. 权限正在加载中 → 直接放行（由 watch 监听处理 UI 更新）
-  if (hasToken && permissionStore.isLoading && !publicPaths.includes(to.path)) {
+  // ✅ 关键修复：如果权限已经加载完成（isLoaded = true），不要进入此分支
+  if (
+    hasToken &&
+    permissionStore.isLoading &&
+    !permissionStore.isLoaded &&
+    !publicPaths.includes(to.path)
+  ) {
     console.log('⏳ [PermissionGuard] 权限加载中，直接放行')
     return true
   }
@@ -132,26 +144,65 @@ export async function permissionGuard({
       }
 
       // 获取权限和菜单（内部会设置 loading 状态）
+      // ✅ 异步解耦：即使失败也不会中断执行流
       await permissionStore.fetchUserPermissions()
 
-      // ✅ 权限加载完成，路由已注册
-      // router.addRoute() 在导航过程中注册的路由，当前导航的 matched 不会更新
-      // 必须返回重定向对象，让 Vue Router 使用新的路由表重新匹配
-      console.log('✅ [PermissionGuard] 权限加载完成，路由已注册，重新导航到:', to.path)
-      return { path: to.path, query: to.query, replace: true }
+      // ✅ 关键修复：权限加载完成后，需要等待 Vue 响应式更新
+      // 使用 await nextTick() 确保 isPermissionLoaded 状态已更新
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // ✅ 确认权限确实加载完成后，才进行重定向
+      if (!permissionStore.isLoaded) {
+        console.warn('⚠️ [PermissionGuard] 权限加载状态未更新，等待重试...')
+        await new Promise((resolve) => setTimeout(resolve, 200))
+      }
+
+      console.log('✅ [PermissionGuard] 权限加载完成，准备重定向到首页')
+      // ✅ 关键修复：使用路由名称重定向，避免路径匹配冲突
+      // 如果当前访问的是登录页，则跳转到首页；否则继续访问原目标页面
+      if (to.path === loginPath) {
+        return { name: 'Home', replace: true }
+      } else {
+        // 继续访问原目标页面，但需要确保路由已注册
+        return { path: to.path, query: to.query, replace: true }
+      }
     } catch (error) {
       console.error('❌ [PermissionGuard] 权限加载失败:', error)
-      permissionStore.setFailed()
 
-      // Token 失效 → 跳转登录
+      // ✅ 优化异常处理：如果是 403 或 500 错误，给一个默认的空数组，并完成路由注册
+      if (error.status === 403 || error.status === 500) {
+        console.warn(`⚠️ [PermissionGuard] 权限接口返回 ${error.status}，降级处理`)
+
+        // ✅ 设置空权限，但不标记为失败，允许路由继续注册
+        permissionStore.setPermissions([])
+        permissionStore.setButtonPermissions([])
+        permissionStore.setMenuTree([])
+        permissionStore.setLoaded() // ✅ 标记为已加载，避免无限重试
+
+        // ✅ 离散 API 提示，不阻塞 Promise 链
+        if (!error._403Handled && !error._500Handled) {
+          message.warning(error.message || '权限接口异常，已使用默认配置')
+        }
+
+        // ✅ 继续执行，不中断
+        return { path: to.path, query: to.query, replace: true }
+      }
+
+      // ✅ 401 处理：认证失败 → 清空 Token 并跳转登录页
       if (error.message?.includes('登录已过期') || error.message?.includes('401')) {
         console.warn('⚠️ [PermissionGuard] Token 失效，跳转登录页')
         userStore.logout()
         return loginPath
       }
 
-      // 其他错误 → 降级放行（允许访问，但可能无菜单）
-      console.warn('⚠️ [PermissionGuard] 权限加载失败，降级放行')
+      // ✅ 其他错误：降级放行，允许路由匹配，但可能无菜单/数据
+      console.warn('⚠️ [PermissionGuard] 权限加载异常，降级放行。错误详情:', error.message)
+
+      if (!error._403Handled) {
+        message.error(error.message || '权限不足，已拦截请求')
+      }
+
+      // 降级放行：允许路由匹配，但可能无菜单/数据
       return true
     }
   }
@@ -161,6 +212,34 @@ export async function permissionGuard({
     document.title = `${to.meta.title} - AI Agent`
   }
 
-  // 6. 正常放行
+  // 6. ✅ 路由匹配检查：如果路由未注册且不是公开路径，拦截到 403
+  if (hasToken && to.matched.length === 0 && !publicPaths.includes(to.path)) {
+    console.warn(`⚠️ [PermissionGuard] 路由未注册，拦截访问: ${to.path}`)
+    return { path: forbiddenPath, replace: true }
+  }
+
+  // 7. ✅ 导航行为权限检查（直接访问URL、点击菜单、刷新页面）
+  // ✅ 菜单显示通过 menuTree 控制，按钮权限通过 buttonPermissions 控制
+  // 只要路由已注册（在 menuTree 中），就说明用户有该菜单的访问权限
+  // 这里只需要检查路由是否存在，不需要再检查 permissions
+  if (hasToken && !publicPaths.includes(to.path)) {
+    // 跳过 Layout 根路径和重定向
+    if (to.path === '/' || to.redirectedFrom?.path === '/') {
+      return true
+    }
+
+    // ✅ 管理员权限判断：如果是 admin 角色，直接放行
+    const userRoles = userStore.userInfo?.roles || userStore.roles || []
+    const isAdmin = checkIsAdmin(userRoles)
+    if (isAdmin) {
+      return true // 超级管理员直接放行
+    }
+
+    // 路由的存在本身就代表用户有访问权限（通过 menuTree 控制）
+    // 只要路由已经注册到 router 中，就直接放行
+    return true
+  }
+
+  // 8. 正常放行
   return true
 }

@@ -50,10 +50,10 @@ const isEdit = ref(false)
 
 // 表单数据
 const formData = ref({
-  api_name: '',
-  api_url: '',
-  api_method: 'GET',
-  api_category: '',
+  interface_name: '',
+  interface_url: '',
+  interface_method: 'GET',
+  interface_category: '',
   status: '0',
   remark: '',
 })
@@ -68,10 +68,10 @@ watch(
       if (props.row) {
         // 编辑模式：填充表单数据
         formData.value = {
-          api_name: props.row.api_name || '',
-          api_url: props.row.api_url || '',
-          api_method: props.row.api_method || 'GET',
-          api_category: props.row.api_category || '',
+          interface_name: props.row.interface_name || '',
+          interface_url: props.row.interface_url || '',
+          interface_method: props.row.interface_method || 'GET',
+          interface_category: props.row.interface_category || '',
           status: props.row.status || '0',
           remark: props.row.remark || '',
         }
@@ -121,10 +121,10 @@ const handleCancel = () => {
 // 重置表单
 const resetForm = () => {
   formData.value = {
-    api_name: '',
-    api_url: '',
-    api_method: 'GET',
-    api_category: '',
+    interface_name: '',
+    interface_url: '',
+    interface_method: 'GET',
+    interface_category: '',
     status: '0',
     remark: '',
   }
