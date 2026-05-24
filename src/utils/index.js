@@ -85,8 +85,28 @@ export function formatTimeOnly(date) {
   return `${hours}:${minutes}:${seconds}`
 }
 
+/**
+ * 通用文件下载函数
+ * @param {string|Blob} content - 文件内容（字符串或 Blob 对象）
+ * @param {string} filename - 文件名（包含扩展名）
+ * @param {string} mimeType - MIME 类型，例如 'text/markdown', 'text/plain', 'application/json'
+ * 
+ * @example
+ * downloadFile('Hello World', 'hello.txt', 'text/plain')
+ * downloadFile(jsonString, 'data.json', 'application/json')
+ */
+export function downloadFile(content, filename, mimeType) {
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(new Blob([content], { type: mimeType }))
+  link.download = filename
+  link.click()
+  //  释放 URL 对象，避免内存泄漏
+  URL.revokeObjectURL(link.href)
+}
+
 export default {
   formatDate,
   formatDateOnly,
   formatTimeOnly,
+  downloadFile,
 }

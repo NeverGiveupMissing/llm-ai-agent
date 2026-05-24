@@ -1,0 +1,22 @@
+/* 全局样式 */
+html,
+body,
+#app {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* 禁止顶层滚动 */
+}
+
+/*
+  全局覆盖：隐藏 Naive UI 布局组件内部的滚动条，同时保持滚动功能
+*/
+.n-layout-scroll-container::-webkit-scrollbar {
+  display: none !important;
+}
+
+.n-layout-scroll-container {
+  scrollbar-width: none !important; /* For Firefox */
+  -ms-overflow-style: none !important; /* For IE and Edge */
+}

@@ -71,7 +71,7 @@ class RoleService {
       throw new Error('角色不存在')
     }
 
-    const permissions = await roleModel.getRolePermissions(role_id)
+    const permissions = await roleModel.getRoleAllPermissions(role_id)
 
     return {
       success: true,

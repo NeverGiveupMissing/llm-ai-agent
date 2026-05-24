@@ -31,10 +31,10 @@ class RoleController {
    * 获取角色详情
    */
   getRoleDetail = asyncHandler(async (ctx) => {
-    const role_id = parseInt(ctx.params.role_id, 10)
+    const role_id = ctx.params.role_id
 
-    if (isNaN(role_id)) {
-      throw new BadRequestError('role_id 必须是有效的数字')
+    if (!role_id) {
+      throw new BadRequestError('缺少 role_id 参数')
     }
 
     const result = await roleService.getRoleDetail(role_id)

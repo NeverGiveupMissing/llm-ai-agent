@@ -134,9 +134,13 @@ watch(
 
         // 3. 分别填充到三个独立的 checkedKeys 数组中（独立状态回显）
         // ✅ 类型转换：菜单ID和按钮ID需要转换为数字类型，与树节点的 key 匹配
-        menuCheckedKeys.value = (permissions.menus || []).map((id) => Number(id)).filter((id) => !isNaN(id))
-        buttonCheckedKeys.value = (permissions.buttons || []).map((id) => Number(id)).filter((id) => !isNaN(id))
-        apiCheckedKeys.value = permissions.apis || []  // 接口权限保持原样
+        menuCheckedKeys.value = (permissions.menus || [])
+          .map((id) => Number(id))
+          .filter((id) => !isNaN(id))
+        buttonCheckedKeys.value = (permissions.buttons || [])
+          .map((id) => Number(id))
+          .filter((id) => !isNaN(id))
+        apiCheckedKeys.value = permissions.apis || [] // 接口权限保持原样
 
         console.log('[AssignPermissionModal] ✅ 步骤 2/2 完成：独立状态回显完成')
         console.log('[AssignPermissionModal] 🎉 权限数据加载流程全部完成')
@@ -216,36 +220,36 @@ const handleSave = async () => {
     if (activeTab.value === 'menu') {
       // 保存菜单权限
       console.log('[AssignPermissionModal] 💾 原始菜单权限 keys:', menuCheckedKeys.value)
-      
+
       // ✅ 过滤掉非数字的 key（如 "group-其他"），只保留合法的 menu_id
       const validMenuIds = menuCheckedKeys.value
-        .filter(key => !isNaN(Number(key)) && Number(key) > 0)
-        .map(key => Number(key))
-      
+        .filter((key) => !isNaN(Number(key)) && Number(key) > 0)
+        .map((key) => Number(key))
+
       console.log('[AssignPermissionModal] ✅ 过滤后的合法 menu_id:', validMenuIds)
       await saveRoleMenus(role_id, validMenuIds)
       message.success('菜单权限保存成功')
     } else if (activeTab.value === 'button') {
       // 保存按钮权限
       console.log('[AssignPermissionModal] 💾 原始按钮权限 keys:', buttonCheckedKeys.value)
-      
+
       // ✅ 过滤掉非数字的 key
       const validButtonIds = buttonCheckedKeys.value
-        .filter(key => !isNaN(Number(key)) && Number(key) > 0)
-        .map(key => Number(key))
-      
+        .filter((key) => !isNaN(Number(key)) && Number(key) > 0)
+        .map((key) => Number(key))
+
       console.log('[AssignPermissionModal] ✅ 过滤后的合法 button_id:', validButtonIds)
       await saveRoleButtons(role_id, validButtonIds)
       message.success('按钮权限保存成功')
     } else if (activeTab.value === 'api') {
       // 保存接口权限
       console.log('[AssignPermissionModal]  原始接口权限 keys:', apiCheckedKeys.value)
-      
+
       // ✅ 过滤掉非数字的 key
       const validApiIds = apiCheckedKeys.value
-        .filter(key => !isNaN(Number(key)) && Number(key) > 0)
-        .map(key => Number(key))
-      
+        .filter((key) => !isNaN(Number(key)) && Number(key) > 0)
+        .map((key) => Number(key))
+
       console.log('[AssignPermissionModal] ✅ 过滤后的合法 interface_id:', validApiIds)
       await saveRoleApis(role_id, validApiIds)
       message.success('接口权限保存成功')
@@ -265,7 +269,7 @@ const handleSave = async () => {
 
 <style scoped>
 .permission-container {
-  min-height: 600px;
+  min-height: 500px;
 }
 :deep(.n-tabs-pane-wrapper) {
   height: 570px;

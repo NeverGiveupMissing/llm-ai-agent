@@ -90,8 +90,10 @@ export async function permissionGuard({
   loginPath = '/login',
   forbiddenPath = '/403',
 }) {
-  // ✅ 导入离散消息工具，用于非组件环境（路由守卫）的提示
+  // ✅ 导入离散消息工具和 router，用于非组件环境（路由守卫）的提示
   const { message } = await import('@/utils/http/message')
+  const routerModule = await import('@/router/index.js')
+  const router = routerModule.default
   const hasToken = userStore.token || localStorage.getItem('access_token')
 
   // 1. 未登录访问非公开页面 → 跳转登录
@@ -215,6 +217,18 @@ export async function permissionGuard({
   // 6. ✅ 路由匹配检查：如果路由未注册且不是公开路径，拦截到 403
   if (hasToken && to.matched.length === 0 && !publicPaths.includes(to.path)) {
     console.warn(`⚠️ [PermissionGuard] 路由未注册，拦截访问: ${to.path}`)
+    console.warn('🔍 [PermissionGuard] 当前所有已注册路由:', router.getRoutes().map(r => ({ name: r.name, path: r.path })))
+    console.warn('🔍 [PermissionGuard] to.matched:', to.matched)
+    console.warn('🔍 [PermissionGuard] userStore.userInfo?.roles:', userStore.userInfo?.roles)
+    
+    // ✅ 管理员特权：即使路由未注册，也允许访问（可能是动态路由加载延迟）
+    const userRoles = userStore.userInfo?.roles || userStore.roles || []
+    const isAdmin = checkIsAdmin(userRoles)
+    if (isAdmin) {
+      console.log('👑 [PermissionGuard] 管理员用户，允许访问未注册路由:', to.path)
+      return true
+    }
+    
     return { path: forbiddenPath, replace: true }
   }
 

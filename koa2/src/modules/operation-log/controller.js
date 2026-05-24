@@ -5,6 +5,8 @@
 
 const operationLogService = require('./service')
 const { asyncHandler } = require('../../utils/async-handler')
+const { exportToExcel } = require('../../utils/excel-exporter')
+const { ExportDTO } = require('../../utils/export-dto')
 
 class OperationLogController {
   /**
@@ -96,6 +98,26 @@ class OperationLogController {
 
     const result = await operationLogService.getStats(start_time, end_time)
     ctx.success(result)
+  })
+
+  /**
+   * 导出操作日志数据为 Excel
+   * GET /operation-logs/export
+   * 支持过滤条件：username, module, action, start_time, end_time
+   */
+  exportOperationLogs = asyncHandler(async (ctx) => {
+    const params = ctx.query
+    
+    // 调用 service 获取导出数据
+    const data = await operationLogService.exportOperationLogs(params)
+    
+    // 使用通用导出函数
+    await exportToExcel(ctx, {
+      filename: ExportDTO.operationLog.filename,
+      sheetName: ExportDTO.operationLog.sheetName,
+      headers: ExportDTO.operationLog.headers,
+      data,
+    })
   })
 }
 

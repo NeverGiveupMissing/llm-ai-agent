@@ -33,7 +33,7 @@
           </div>
         </div>
 
-        <div class="dashboard-card" @click="$router.push('/ChatLogs')">
+        <div class="dashboard-card" @click="$router.push('/log/chat-logs')">
           <div class="card-icon logs">
             <n-icon :size="32"><DocumentTextOutline /></n-icon>
           </div>
@@ -46,7 +46,7 @@
           </div>
         </div>
 
-        <div class="dashboard-card" @click="$router.push('/settings')">
+        <div class="dashboard-card" @click="$router.push('/system/settings')">
           <div class="card-icon settings">
             <n-icon :size="32"><SettingsOutline /></n-icon>
           </div>

@@ -1,5 +1,6 @@
 const operationLogService = require('../modules/operation-log/service')
-const { getUserById } = require('../modules/user/service')
+const userModel = require('../modules/user/model')
+const { getRealIP } = require('../utils/ip-location')
 
 /**
  * 操作日志记录中间件
@@ -27,13 +28,18 @@ async function operationLogger(ctx, next) {
   // 获取用户信息
   let username = 'unknown'
   try {
-    const user = await getUserById(ctx.state.user_id)
+    // ✅ 修复：直接从 model 获取用户信息
+    const user = await userModel.selectUserById(ctx.state.user_id)
     if (user) {
-      username = user.username || user.email || 'unknown'
+      // ✅ 修复：使用 user_name（数据库字段名）而不是 username
+      username = user.user_name || user.nick_name || user.email || 'unknown'
     }
   } catch (error) {
     console.error('获取用户信息失败:', error)
   }
+  
+  // ✅ 使用 getRealIP 获取真实 IP（支持反向代理）
+  const realIP = getRealIP(ctx)
   
   // 构建日志数据
   const logData = {
@@ -44,7 +50,7 @@ async function operationLogger(ctx, next) {
     action: getActionName(ctx),
     method: ctx.method,
     path: ctx.path,
-    ipAddress: ctx.ip || ctx.request.ip,
+    ipAddress: realIP,  // ✅ 使用真实 IP
     userAgent: ctx.get('User-Agent') || '',
     requestParams: sanitizeParams(ctx.request.body || ctx.query || {}),
     responseStatus: ctx.status,
@@ -76,18 +82,26 @@ function shouldRecordLog(ctx) {
     return false
   }
   
-  // 只记录特定模块的操作
+  // 只记录特定模块的操作（系统管理相关）
+  // ✅ 注意：ctx.path 包含 API 前缀（如 /koa2api/menus/5）
+  // 所以只需要匹配模块名即可，不需要完整路径
   const logModules = [
-    '/users',
-    '/roles',
-    '/permissions',
-    '/chat-sessions',
-    '/session-groups',
-    '/memories',
-    '/operation-logs',
+    '/users',           // 用户管理
+    '/roles',           // 角色管理
+    '/permissions',     // 权限管理
+    '/menus',           // 菜单管理
+    '/buttons',         // 按钮管理
+    '/interfaces',      // 接口管理
+    '/sessions',        // 会话管理
+    '/session-groups',  // 会话组管理
+    '/memory',          // 记忆管理
+    '/login-logs',      // 登录日志
+    '/operation-logs',  // 操作日志
   ]
   
-  return logModules.some((module) => path.startsWith(module))
+  // ✅ 使用 includes 而不是 startsWith，因为路径包含 API 前缀
+  // 例如：/koa2api/menus/5 包含 /menus
+  return logModules.some((module) => path.includes(module))
 }
 
 /**
@@ -117,20 +131,35 @@ function getModuleName(ctx) {
   
   if (segments.length === 0) return 'unknown'
   
-  // 提取模块名（第一段路径）
-  const moduleName = segments[0]
+  // ✅ 修复：提取正确的模块名
+  // 路径格式：/koa2api/menus/1 或 /api/menus/1
+  // 需要匹配 logModules 中的模块名（如 /menus）
+  const logModules = [
+    'users', 'roles', 'permissions', 'menus', 'buttons', 'interfaces',
+    'sessions', 'session-groups', 'memory', 'login-logs', 'operation-logs'
+  ]
   
-  const moduleNames = {
-    users: '用户管理',
-    roles: '角色管理',
-    permissions: '权限管理',
-    'chat-sessions': '会话管理',
-    'session-groups': '会话组管理',
-    memories: '记忆管理',
-    'operation-logs': '操作日志',
+  // 找到匹配的模块名
+  for (const module of logModules) {
+    if (path.includes(module)) {
+      const moduleNames = {
+        users: '用户管理',
+        roles: '角色管理',
+        permissions: '权限管理',
+        menus: '菜单管理',
+        buttons: '按钮管理',
+        interfaces: '接口管理',
+        sessions: '会话管理',
+        'session-groups': '会话组管理',
+        memory: '记忆管理',
+        'login-logs': '登录日志',
+        'operation-logs': '操作日志',
+      }
+      return moduleNames[module] || module
+    }
   }
   
-  return moduleNames[moduleName] || moduleName
+  return 'unknown'
 }
 
 /**

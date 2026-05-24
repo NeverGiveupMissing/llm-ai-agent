@@ -10,7 +10,7 @@
       <n-avatar :size="32" color="#667eea">
         {{ getUserInitial() }}
       </n-avatar>
-      <span class="user-name">{{ userInfo.user_name || userInfo.nick_name || '用户' }}</span>
+      <span>{{ userInfo.user_name || userInfo.nick_name || '用户' }}</span>
     </div>
   </n-dropdown>
 </template>
@@ -52,7 +52,7 @@ const handleSelect = (key) => {
       break
     case 'settings':
       // ✅ 检查路由是否存在，而不是硬编码的权限标识
-      const settingsRoute = router.getRoutes().find(r => r.path === '/system/settings')
+      const settingsRoute = router.getRoutes().find((r) => r.path === '/system/settings')
       if (settingsRoute) {
         router.push('/system/settings')
       } else {
@@ -68,21 +68,17 @@ const handleSelect = (key) => {
 </script>
 
 <style scoped>
+/* ✅ 用户下拉容器 - 赛博朋克全息风格 */
 .user-dropdown {
+  color: #fff;
   display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background 0.2s;
-}
-
-.user-dropdown:hover {
-  background: #f5f5f5;
-}
-
-.user-name {
-  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent;
+  border: 1px solid transparent;
 }
 </style>

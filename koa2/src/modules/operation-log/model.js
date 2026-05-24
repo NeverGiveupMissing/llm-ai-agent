@@ -25,7 +25,7 @@ class OperationLogModel {
 
     const query = `
       INSERT INTO operation_logs (
-        user_id, username, operation, module, action, method, path,
+        user_id, username, operation, module, "action", method, path,
         ip_address, user_agent, request_params, response_status,
         response_data, duration, status, error_message
       ) VALUES (
@@ -43,9 +43,9 @@ class OperationLogModel {
       path,
       ipAddress,
       userAgent,
-      JSON.stringify(requestParams || {}),
+      requestParams || {},  // ✅ JSONB 类型，PostgreSQL 驱动会自动处理
       responseStatus,
-      responseData ? JSON.stringify(responseData) : null,
+      responseData || null,
       duration,
       status || 'success',
       errorMessage,
@@ -65,6 +65,7 @@ class OperationLogModel {
       user_id,
       username,
       module,
+      action,
       operation,
       status,
       start_time,
@@ -93,6 +94,12 @@ class OperationLogModel {
     if (module) {
       whereConditions.push(`module = $${paramIndex}`)
       values.push(module)
+      paramIndex++
+    }
+
+    if (action) {
+      whereConditions.push(`action = $${paramIndex}`)
+      values.push(action)
       paramIndex++
     }
 

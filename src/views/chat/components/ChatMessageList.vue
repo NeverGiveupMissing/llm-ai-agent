@@ -4,13 +4,19 @@
       <div v-if="messages.length === 0" class="empty-state">
         <div class="empty-logo">
           <svg
-            width="48"
-            height="48"
+            width="80"
+            height="80"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#10a37f"
+            stroke="url(#gradient)"
             stroke-width="1.5"
           >
+            <defs>
+              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#00f2fe" />
+                <stop offset="100%" stop-color="#b186ff" />
+              </linearGradient>
+            </defs>
             <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
           </svg>
         </div>
@@ -86,7 +92,16 @@
               @click.stop="handleNavDelete(msg.id, index)"
               title="删除此消息"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
               </svg>
@@ -115,7 +130,7 @@ const dialogApi = useDialog()
 const messageListRef = ref(null)
 const lastMessageId = ref('')
 const activeMessageIndex = ref(0)
-const isNavigationCollapsed = ref(false)
+const isNavigationCollapsed = ref(true) // 默认关闭快捷导航面板
 let observer = null
 
 const scrollToEnd = () => {
@@ -239,12 +254,34 @@ onUnmounted(() => {
 <style scoped>
 .chat-message-list {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: auto; /* ✅ 允许纵向滚动 */
+  overflow-x: hidden;
   display: flex;
   justify-content: center;
-  padding: 0 16px;
-  padding-bottom: 120px; /* 为固定输入框预留空间 */
+  padding: 20px 16px;
   position: relative;
+  /* ✅ 暗色科技感滚动条 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 242, 254, 0.3) transparent;
+}
+
+/* Webkit 浏览器滚动条样式 */
+.chat-message-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-message-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-message-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 242, 254, 0.3);
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.chat-message-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 242, 254, 0.5);
 }
 
 .messages-container {
@@ -255,24 +292,70 @@ onUnmounted(() => {
   padding-right: 40px;
 }
 
+/* ✅ 消息气泡流容器 - Flex 布局 */
+.messages-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 20px; /* ✅ 气泡之间保持 20px 呼吸间距 */
+  padding-bottom: 20px;
+
+  /* ✅ 换成带有极高透明度的深色底 */
+  background: rgba(10, 12, 26, 0.35) !important;
+
+  /* ✅ 开启高斯模糊，让星空在顶部也朦胧地透过来 */
+  backdrop-filter: blur(15px) !important;
+  -webkit-backdrop-filter: blur(15px) !important;
+
+  /* ✅ 加一条极其细微的底部青蓝发光线，把上下稍微隔开一点 */
+  border-bottom: 1px solid rgba(0, 242, 254, 0.15) !important;
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   height: 100%;
-  gap: 16px;
+  gap: 30px;
+}
+
+.empty-logo {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .empty-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #0d0d0d;
+  font-size: 36px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #00f2fe 0%, #b186ff 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 3s ease infinite;
   margin: 0;
+  text-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
 }
 
-.messages-scroll {
-  padding-bottom: 20px;
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .message-wrapper {
@@ -280,7 +363,7 @@ onUnmounted(() => {
   scroll-margin-bottom: 20px;
 }
 
-/* 右侧快捷跳转导航 */
+/* 右侧快捷跳转导航 - 毛玻璃效果 */
 .message-navigation {
   position: fixed;
   right: 20px;
@@ -292,18 +375,20 @@ onUnmounted(() => {
   gap: 6px;
   max-height: 60vh;
   padding: 8px 4px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(16, 22, 42, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.1);
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
   z-index: 10;
   transition: all 0.3s ease;
 }
 
 .message-navigation.collapsed {
   padding: 8px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: rgba(16, 22, 42, 0.6);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.05);
 }
 
 /* 收起/展开按钮 */
@@ -313,19 +398,20 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  background: rgba(16, 22, 42, 0.6);
   border-radius: 50%;
-  color: white;
+  color: #00f2fe;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
   flex-shrink: 0;
 }
 
 .nav-toggle-btn:hover {
   transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.6);
+  box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+  border-color: rgba(0, 242, 254, 0.6);
 }
 
 .nav-toggle-btn:active {
@@ -364,12 +450,12 @@ onUnmounted(() => {
 }
 
 .nav-content::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: rgba(0, 242, 254, 0.3);
   border-radius: 3px;
 }
 
 .nav-content::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: rgba(0, 242, 254, 0.5);
 }
 
 .nav-item {
@@ -385,18 +471,26 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: rgba(16, 22, 42, 0.4);
+  border: 1px solid rgba(0, 242, 254, 0.2);
+  color: #e0e0e0;
 }
 
 .nav-item:hover {
-  background: #f3f4f6;
+  background: rgba(0, 242, 254, 0.1);
   transform: translateX(-4px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+  border-color: rgba(0, 242, 254, 0.4);
 }
 
 .nav-item:hover .nav-delete-btn {
   opacity: 1;
+}
+
+.nav-item.active {
+  background: rgba(177, 134, 255, 0.2);
+  border-color: rgba(177, 134, 255, 0.4);
+  box-shadow: 0 0 15px rgba(177, 134, 255, 0.2);
 }
 
 /* 导航删除按钮 */
@@ -418,8 +512,8 @@ onUnmounted(() => {
 }
 
 .nav-delete-btn:hover {
-  background: #ff4d4f;
-  color: white;
+  background: rgba(255, 77, 79, 0.2);
+  color: #ff4d4f;
 }
 
 .nav-item.active .nav-delete-btn {
@@ -443,13 +537,13 @@ onUnmounted(() => {
 }
 
 .nav-user {
-  background: #f0f9ff;
-  border: 1px solid #bae6fd;
+  background: rgba(16, 22, 42, 0.6);
+  border: 1px solid rgba(0, 242, 254, 0.3);
 }
 
 .nav-user:hover {
-  background: #e0f2fe;
-  border-color: #7dd3fc;
+  background: rgba(0, 242, 254, 0.15);
+  border-color: rgba(0, 242, 254, 0.5);
 }
 
 .nav-user.active {
@@ -458,13 +552,13 @@ onUnmounted(() => {
 }
 
 .nav-assistant {
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: rgba(16, 22, 42, 0.5);
+  border: 1px solid rgba(0, 242, 254, 0.25);
 }
 
 .nav-assistant:hover {
-  background: #dcfce7;
-  border-color: #86efac;
+  background: rgba(0, 242, 254, 0.12);
+  border-color: rgba(0, 242, 254, 0.4);
 }
 
 .nav-assistant.active {
@@ -475,7 +569,7 @@ onUnmounted(() => {
 .nav-text {
   font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.8); /* ✅ 改为白色半透明 */
   user-select: none;
   white-space: nowrap;
   overflow: hidden;
@@ -483,15 +577,15 @@ onUnmounted(() => {
 }
 
 .nav-user .nav-text {
-  color: #0284c7;
+  color: rgba(255, 255, 255, 0.9); /* ✅ 用户消息文本更亮 */
 }
 
 .nav-assistant .nav-text {
-  color: #16a34a;
+  color: rgba(255, 255, 255, 0.9); /* ✅ AI 消息文本更亮 */
 }
 
 .nav-item.active .nav-text {
-  color: white;
+  color: white; /* ✅ 激活状态纯白 */
 }
 
 /* 导航内容展开/收起动画 */

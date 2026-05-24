@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>诊断页面</title>
+</head>
+<body>
+  <h1>Vue 应用诊断</h1>
+  <div id="status">检查中...</div>
+  
+  <script>
+    // 检查 main.js 是否能加载
+    const statusDiv = document.getElementById('status');
+    
+    try {
+      statusDiv.innerHTML = '✅ HTML 正常加载<br>';
+      statusDiv.innerHTML += '📝 开始加载 main.js...<br>';
+      
+      // 模拟加载 main.js
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = '/src/main.js';
+      script.onload = () => {
+        statusDiv.innerHTML += '✅ main.js 加载成功<br>';
+      };
+      script.onerror = (e) => {
+        statusDiv.innerHTML += '❌ main.js 加载失败: ' + e.message + '<br>';
+        statusDiv.innerHTML += '请检查浏览器控制台查看详细错误<br>';
+      };
+      document.body.appendChild(script);
+    } catch (error) {
+      statusDiv.innerHTML = '❌ 错误: ' + error.message;
+    }
+  </script>
+</body>
+</html>

@@ -42,11 +42,19 @@ class SessionController {
     const { sessionId } = ctx.params
     const updates = ctx.request.body
 
+    console.log(' 收到更新会话请求:', {
+      sessionId,
+      updates,
+      user_id: ctx.state.user_id
+    })
+
     if (!sessionId) {
       throw new BadRequestError('缺少 sessionId 参数')
     }
 
     const result = await sessionService.updateSession(sessionId, updates)
+    console.log(' 更新会话结果:', result)
+    
     ctx.success(result.data, result.message)
   })
 

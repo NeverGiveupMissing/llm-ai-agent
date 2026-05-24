@@ -27,7 +27,11 @@ class UserController {
       user_type,
     } = ctx.request.body
 
-    if (!user_name || !password) {
+    // ✅ 去除用户名和密码的前后空格
+    const trimmedUserName = user_name ? user_name.trim() : ''
+    const trimmedPassword = password ? password.trim() : ''
+
+    if (!trimmedUserName || !trimmedPassword) {
       throw new BadRequestError('用户名和密码不能为空')
     }
 
@@ -42,8 +46,8 @@ class UserController {
     }
 
     const result = await userService.createUser({
-      user_name,
-      password,
+      user_name: trimmedUserName,
+      password: trimmedPassword,
       nick_name,
       email,
       phonenumber,
@@ -78,10 +82,15 @@ class UserController {
       uuid, // 验证码 UUID
     } = ctx.request.body
 
+    // ✅ 去除用户名和密码的前后空格
+    const trimmedUserName = user_name ? user_name.trim() : ''
+    const trimmedPassword = password ? password.trim() : ''
+
     console.log('[DEBUG] 解构后的 user_name:', user_name)
+    console.log('[DEBUG] trim 后的 user_name:', trimmedUserName)
     console.log('[DEBUG] 解构后的 password:', password)
 
-    if (!user_name || !password) {
+    if (!trimmedUserName || !trimmedPassword) {
       throw new BadRequestError('用户名和密码不能为空')
     }
 
@@ -106,8 +115,8 @@ class UserController {
     }
 
     const result = await userService.createUser({
-      user_name,
-      password,
+      user_name: trimmedUserName,
+      password: trimmedPassword,
       nick_name,
       email,
       phonenumber,
@@ -126,21 +135,32 @@ class UserController {
   login = asyncHandler(async (ctx) => {
     const { user_name, password, code, uuid } = ctx.request.body
 
-    if (!user_name || !password) {
+    // ✅ 去除用户名和密码的前后空格
+    const trimmedUserName = user_name ? user_name.trim() : ''
+    const trimmedPassword = password ? password.trim() : ''
+
+    if (!trimmedUserName || !trimmedPassword) {
       throw new BadRequestError('用户名和密码不能为空')
     }
 
-    // 验证码校验
-    if (!code || !uuid) {
-      throw new BadRequestError('请输入验证码')
+    // 验证码校验（开发/测试环境下可跳过）
+    const skipCaptcha = process.env.NODE_ENV === 'development' || process.env.SKIP_CAPTCHA === 'true';
+    
+    if (!skipCaptcha) {
+      // 生产环境需要验证码
+      if (!code || !uuid) {
+        throw new BadRequestError('请输入验证码')
+      }
+
+      const captchaResult = captchaService.verifyCaptcha(uuid, code)
+      if (!captchaResult.valid) {
+        throw new BadRequestError(captchaResult.message)
+      }
+    } else {
+      console.log('[DEBUG] 跳过验证码验证（开发/测试环境）');
     }
 
-    const captchaResult = captchaService.verifyCaptcha(uuid, code)
-    if (!captchaResult.valid) {
-      throw new BadRequestError(captchaResult.message)
-    }
-
-    const result = await userService.login(user_name, password, ctx)
+    const result = await userService.login(trimmedUserName, trimmedPassword, ctx)
 
     ctx.success(result.data, result.message)
   })

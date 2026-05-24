@@ -9,9 +9,12 @@
       <n-icon size="14">
         <component :is="isCollapsed ? ChevronForwardOutline : ChevronDownOutline" />
       </n-icon>
-      <n-icon size="16">
-        <FolderOutline />
+
+      <!-- 动态渲染分组图标 -->
+      <n-icon v-if="group.icon" size="16">
+        <component :is="getIconComponent(group.icon)" />
       </n-icon>
+
       <span>{{ group.name }}</span>
       <span class="group-count">({{ sessionCount }})</span>
     </div>
@@ -55,7 +58,30 @@ import {
   ChevronDownOutline,
   FolderOutline,
   EllipsisHorizontalOutline,
+  // 分组图标
+  DocumentTextOutline,
+  ChatbubbleEllipsesOutline,
+  BookOutline,
+  ArchiveOutline,
+  GridOutline,
+  CodeSlashOutline,
 } from '@vicons/ionicons5'
+
+// 图标名称到组件的映射表
+const iconMap = {
+  DocumentTextOutline,
+  ChatbubbleEllipsesOutline,
+  BookOutline,
+  ArchiveOutline,
+  GridOutline,
+  CodeSlashOutline,
+  FolderOutline,
+}
+
+// 根据图标名称获取组件
+const getIconComponent = (iconName) => {
+  return iconMap[iconName] || FolderOutline
+}
 
 defineProps({
   group: {
@@ -77,6 +103,7 @@ defineEmits(['toggle-collapse', 'pin', 'menu-select'])
 
 <style scoped>
 .group-header {
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: space-between;

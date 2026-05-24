@@ -32,16 +32,19 @@
       :content="message.content"
       @save="handleSaveEdit"
       @cancel="handleCancelEdit"
+      @copy="handleCopy"
+      @edit="handleEdit"
+      @share="handleShare"
     />
 
-    <!-- 用户消息操作按钮 -->
-    <MessageActions
+    <!-- 用户消息操作按钮 - 已隐藏 -->
+    <!-- <MessageActions
       v-if="message.role === 'user' && showUserActions"
       role="user"
       @copy="handleCopy"
       @edit="handleEdit"
       @share="handleShare"
-    />
+    /> -->
 
     <!-- AI 消息 -->
     <AIMessage
@@ -77,7 +80,6 @@ import AIMessage from './AIMessage.vue'
 import MessageCheckbox from './MessageCheckbox.vue'
 import MessageActions from './MessageActions.vue'
 import MessageActionBar from './MessageActionBar.vue'
-import { deleteMessage } from '@/api/chat'
 
 const props = defineProps({
   message: { type: Object, required: true },
@@ -215,7 +217,7 @@ const handleEdit = () => {
 // 保存编辑
 const handleSaveEdit = (newContent) => {
   emit('edit', { ...props.message, content: newContent })
-  msgApi.success('消息已更新')
+  //  不显示提示，由父组件统一处理并触发重新生成
 }
 
 // 取消编辑
@@ -242,9 +244,9 @@ const handleDelete = () => {
     negativeText: '取消',
     onPositiveClick: async () => {
       try {
-        await deleteMessage(props.message.id)
-        msgApi.success('删除成功')
+        //  只触发事件，由父组件统一处理删除逻辑
         emit('delete', props.message.id)
+        msgApi.success('删除成功')
       } catch (error) {
         msgApi.error('删除失败')
       }
@@ -260,7 +262,8 @@ const handleDelete = () => {
 }
 
 .chat-message:hover {
-  background: #f9f9f9;
+  background: rgba(16, 22, 42, 0.3); /* ✅ 深色半透明背景，符合深色主题 */
+  backdrop-filter: blur(10px); /* ✅ 添加毛玻璃效果 */
 }
 
 /* 删除按钮 */

@@ -102,6 +102,28 @@ class OperationLogService {
       return { success: false, error: error.message }
     }
   }
+
+  /**
+   * 导出操作日志数据
+   */
+  async exportOperationLogs(params = {}) {
+    try {
+      // 获取所有符合条件的数据（不分页）
+      const exportParams = {
+        ...params,
+        page: 1,
+        limit: 10000, // 导出所有数据
+      }
+      
+      const result = await operationLogModel.getList(exportParams)
+      
+      // 返回原始数据，由 export-dto.js 中的 transformOperationLogExport 转换
+      return result.list
+    } catch (error) {
+      console.error('导出操作日志失败:', error)
+      throw error
+    }
+  }
 }
 
 module.exports = new OperationLogService()

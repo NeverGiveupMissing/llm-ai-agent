@@ -59,16 +59,29 @@ function pathPatternToRegex(pattern) {
  */
 function isAdminUser(ctx) {
   const userRoles = ctx.state.user?.roles || []
-  return userRoles.some((role) => {
+  
+  // ✅ 调试日志：输出 Token 中的 roles 信息
+  console.log('🔍 [isAdminUser] ctx.state.user:', JSON.stringify(ctx.state.user, null, 2))
+  console.log('🔍 [isAdminUser] userRoles:', userRoles)
+  
+  const isAdmin = userRoles.some((role) => {
     if (typeof role === 'string') {
-      return role.toLowerCase().includes('admin')
+      const result = role.toLowerCase().includes('admin')
+      console.log(`🔍 [isAdminUser] 检查角色字符串: "${role}" -> ${result}`)
+      return result
     }
     if (role && typeof role === 'object') {
       const roleKey = role.roleKey || role.role_key || ''
-      return roleKey.toLowerCase().includes('admin')
+      const result = roleKey.toLowerCase().includes('admin')
+      console.log(`🔍 [isAdminUser] 检查角色对象: roleKey="${roleKey}" -> ${result}`)
+      return result
     }
+    console.log(`🔍 [isAdminUser] 未知角色类型:`, typeof role)
     return false
   })
+  
+  console.log(`🔍 [isAdminUser] 最终结果: ${isAdmin}`)
+  return isAdmin
 }
 
 /**
@@ -157,6 +170,8 @@ function globalApiPermissionInterceptor() {
     // ========================================================================
     // 防线 2：身份认证校验（必须登录才能继续）
     // ========================================================================
+    // 确保 ctx.state 存在
+    if (!ctx.state) ctx.state = {}
     const userId = ctx.state.user_id
     if (!userId) {
       console.warn(`⛔ [防线2] 未认证请求拦截: ${requestMethod} ${requestPath}`)
@@ -180,7 +195,7 @@ function globalApiPermissionInterceptor() {
     // ========================================================================
     // 防线 3.5：强安全防线 - 检查账号是否被停用
     // ========================================================================
-    if (ctx.state.user?.status === '1') {
+    if (ctx.state.user && ctx.state.user.status === '1') {
       console.warn(
         ` [防线3.5] 账号已停用拦截：用户 ${userId}, ${requestMethod} ${requestPath}`,
       )

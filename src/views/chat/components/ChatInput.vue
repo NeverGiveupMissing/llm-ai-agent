@@ -1,58 +1,58 @@
 <template>
   <div class="chat-input-wrapper">
-    <div class="input-container">
-      <n-input
-        ref="inputRef"
-        v-model:value="inputValue"
-        type="textarea"
-        :placeholder="placeholder"
-        :autosize="{ minRows: 1, maxRows: 8 }"
-        :disabled="loading"
-        @keydown.enter.exact.prevent="handleSend"
-      >
-        <template #suffix>
-          <n-space vertical align="end" style="gap: 4px">
-            <n-space horizontal>
-              <n-button
-                text
-                size="tiny"
-                :type="showMemoryPanel ? 'primary' : 'default'"
-                @click="toggleMemoryPanel"
-                title="记忆中心"
-              >
-                <template #icon>
-                  <n-icon><SparklesOutline /></n-icon>
-                </template>
-              </n-button>
-            </n-space>
-            <n-button
-              v-if="loading"
-              text
-              size="tiny"
-              type="error"
-              @click="handleAbort"
-              title="停止生成"
-            >
-              <template #icon>
-                <n-icon><StopOutline /></n-icon>
-              </template>
-            </n-button>
-            <n-button
-              v-else
-              text
-              size="tiny"
-              type="primary"
-              :disabled="!inputValue.trim()"
-              @click="handleSend"
-              title="发送"
-            >
-              <template #icon>
-                <n-icon><SendOutline /></n-icon>
-              </template>
-            </n-button>
-          </n-space>
-        </template>
-      </n-input>
+    <div class="input-area">
+      <div class="input-container">
+        <n-input
+          ref="inputRef"
+          v-model:value="inputValue"
+          type="textarea"
+          :placeholder="placeholder"
+          :autosize="{ minRows: 1, maxRows: 8 }"
+          :disabled="loading"
+          @keydown.enter.exact.prevent="handleSend"
+        />
+      </div>
+      <div class="action-buttons">
+        <n-button
+          text
+          size="large"
+          :type="showMemoryPanel ? 'primary' : 'default'"
+          @click="toggleMemoryPanel"
+          title="记忆中心"
+          class="memory-btn"
+        >
+          <template #icon>
+            <n-icon><SparklesOutline /></n-icon>
+          </template>
+        </n-button>
+        <n-button
+          v-if="loading"
+          text
+          size="large"
+          type="error"
+          @click="handleAbort"
+          title="停止生成"
+          class="stop-btn"
+        >
+          <template #icon>
+            <n-icon><StopOutline /></n-icon>
+          </template>
+        </n-button>
+        <n-button
+          v-else
+          text
+          size="large"
+          type="primary"
+          :disabled="!inputValue.trim()"
+          @click="handleSend"
+          title="发送"
+          class="send-btn"
+        >
+          <template #icon>
+            <n-icon><SendOutline /></n-icon>
+          </template>
+        </n-button>
+      </div>
     </div>
     <div class="input-tip">按 Enter 发送，Shift + Enter 换行</div>
   </div>
@@ -104,36 +104,107 @@ defineExpose({
 
 <style scoped>
 .chat-input-wrapper {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 16px 20px;
-  border-top: 1px solid #f0f0f0;
-  background: #fafafa;
-  z-index: 0;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 2;
+}
+
+.input-area {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
 }
 
 .input-container {
-  max-width: 800px;
-  margin: 0 auto;
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  background: #fff;
-  transition: border-color 0.2s;
+  flex: 1;
 }
 
-.input-container:focus-within {
-  border-color: #10a37f;
-  box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.1);
+/* Naive UI 输入框深度覆盖 - 青蓝发光 */
+:deep(.n-input) {
+  background: rgba(16, 22, 42, 0.6) !important;
+  border: 1px solid rgba(0, 242, 254, 0.3) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.1) !important;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+:deep(.n-input:hover) {
+  border-color: rgba(0, 242, 254, 0.5) !important;
+  box-shadow: 0 0 20px rgba(0, 242, 254, 0.2) !important;
+}
+
+:deep(.n-input:focus) {
+  border-color: rgba(0, 242, 254, 0.8) !important;
+  box-shadow: 0 0 25px rgba(0, 242, 254, 0.3) !important;
+}
+
+:deep(.n-input .n-input__textarea-el) {
+  color: #e0e0e0 !important;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+:deep(.n-input .n-input__textarea-el::placeholder) {
+  color: rgba(224, 224, 224, 0.5) !important;
+}
+
+/* 操作按钮组 */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+/* 按钮样式 - 青蓝发光 */
+:deep(.n-button) {
+  background: rgba(16, 22, 42, 0.6) !important;
+  border: 1px solid rgba(0, 242, 254, 0.3) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.1) !important;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  color: #00f2fe !important;
+}
+
+:deep(.n-button:hover:not(:disabled)) {
+  border-color: rgba(0, 242, 254, 0.6) !important;
+  box-shadow: 0 0 25px rgba(0, 242, 254, 0.3) !important;
+  transform: translateY(-2px);
+}
+
+:deep(.n-button:disabled) {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+:deep(.n-button .n-icon) {
+  font-size: 20px;
+}
+
+/* 发送按钮特殊效果 */
+.send-btn:deep(.n-button) {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(177, 134, 255, 0.2)) !important;
+  border-color: rgba(0, 242, 254, 0.5) !important;
+}
+
+.send-btn:deep(.n-button:hover:not(:disabled)) {
+  box-shadow: 0 0 30px rgba(0, 242, 254, 0.5) !important;
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(0, 242, 254, 0.6);
+  }
 }
 
 .input-tip {
-  max-width: 800px;
-  margin: 8px auto 0;
+  margin-top: 8px;
   text-align: center;
   font-size: 12px;
-  color: #999;
+  color: rgba(224, 224, 224, 0.5);
 }
 </style>

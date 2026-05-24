@@ -9,14 +9,28 @@ class ChatMessageModel {
    * @param {string} role - 角色 (user/assistant/system)
    * @param {string} content - 消息内容
    * @param {object} metadata - 额外元数据
+   * @param {number} userId - 用户ID（必填）
    */
-  async create(sessionId, role, content, metadata = {}) {
+  async create(sessionId, role, content, metadata = {}, userId) {
+    // 🔥 如果没有提供 userId，尝试从 session 中查询
+    if (!userId) {
+      try {
+        const sessionQuery = `SELECT user_id FROM chat_sessions WHERE id = $1`
+        const sessionResult = await pool.query(sessionQuery, [sessionId])
+        if (sessionResult.rows.length > 0) {
+          userId = sessionResult.rows[0].user_id
+        }
+      } catch (error) {
+        console.error('⚠️ 获取 session user_id 失败:', error.message)
+      }
+    }
+
     const query = `
-      INSERT INTO chat_messages (session_id, role, content, metadata)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO chat_messages (session_id, user_id, role, content, metadata)
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `
-    const result = await pool.query(query, [sessionId, role, content, JSON.stringify(metadata)])
+    const result = await pool.query(query, [sessionId, userId, role, content, JSON.stringify(metadata)])
     return result.rows[0]
   }
 

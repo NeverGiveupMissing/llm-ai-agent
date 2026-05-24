@@ -179,6 +179,50 @@ function formatDateTime(date) {
 }
 
 /**
+ * 转换操作日志数据为导出格式
+ * @param {Object} log - 操作日志原始数据
+ * @returns {Object} 导出格式数据
+ */
+function transformOperationLogExport(log) {
+  return {
+    id: log.id,
+    username: log.username || '-',
+    operation: log.operation || '-',
+    module: log.module || '-',
+    action: getActionText(log.action),
+    method: log.method || '-',
+    path: log.path || '-',
+    ip_address: log.ip_address || '-',
+    status: log.status === 'success' ? '成功' : '失败',
+    duration: formatDuration(log.duration),
+    created_at: formatDateTime(log.created_at),
+  }
+}
+
+/**
+ * 获取操作类型文本
+ */
+function getActionText(action) {
+  const actionMap = {
+    create: '创建',
+    update: '更新',
+    delete: '删除',
+    patch: '修改',
+    read: '查看',
+  }
+  return actionMap[action] || action || '-'
+}
+
+/**
+ * 格式化时长
+ */
+function formatDuration(ms) {
+  if (ms === null || ms === undefined) return '-'
+  if (ms < 1000) return `${ms}ms`
+  return `${(ms / 1000).toFixed(2)}s`
+}
+
+/**
  * 导出 DTO 配置
  */
 const ExportDTO = {
@@ -261,6 +305,26 @@ const ExportDTO = {
     ],
     transform: transformInterfaceExport,
   },
+
+  // 操作日志导出配置
+  operationLog: {
+    filename: '操作日志数据',
+    sheetName: '操作日志列表',
+    headers: [
+      { header: '日志ID', key: 'id', width: 10 },
+      { header: '操作人', key: 'username', width: 15 },
+      { header: '操作描述', key: 'operation', width: 30 },
+      { header: '所属模块', key: 'module', width: 15 },
+      { header: '操作类型', key: 'action', width: 10 },
+      { header: '请求方法', key: 'method', width: 10 },
+      { header: '请求路径', key: 'path', width: 40 },
+      { header: 'IP地址', key: 'ip_address', width: 15 },
+      { header: '状态', key: 'status', width: 8 },
+      { header: '执行耗时', key: 'duration', width: 12 },
+      { header: '操作时间', key: 'created_at', width: 20 },
+    ],
+    transform: transformOperationLogExport,
+  },
 }
 
 module.exports = {
@@ -275,5 +339,6 @@ module.exports = {
   transformRoleExport,
   transformMenuExport,
   transformInterfaceExport,
+  transformOperationLogExport,
   formatDateTime,
 }

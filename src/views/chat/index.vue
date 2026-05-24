@@ -4,7 +4,16 @@
     <div class="session-sidebar" :class="{ collapsed: !showSessionList }">
       <!-- 侧边栏内容 -->
       <div class="sidebar-content" style="position: fixed">
-        <!-- SessionList 组件已被移除 -->
+        <SessionList
+          ref="sessionListRef"
+          :sessions="sessions"
+          :current-session-id="currentSessionId"
+          :loading="sessionLoading"
+          @select="handleSelectSession"
+          @create="handleCreateSession"
+          @delete="handleDeleteSession"
+          @rename="handleRenameSession"
+        />
       </div>
     </div>
 
@@ -40,9 +49,7 @@
         @close="showApiWarning = false"
         style="margin: 16px 16px 0"
       >
-        <template #header>
-          ⚠️ 记忆功能暂时不可用
-        </template>
+        <template #header> ⚠️ 记忆功能暂时不可用 </template>
         检测到 Embedding API 配置问题，记忆提取功能暂时禁用，但不影响正常聊天。
         <br />
         <strong>解决建议：</strong>
@@ -87,7 +94,7 @@ import { useMessage, useDialog, NButton, NIcon, NAlert } from 'naive-ui'
 import { ChevronBackOutline, ChevronForwardOutline } from '@vicons/ionicons5'
 import ChatMessageList from './components/ChatMessageList.vue'
 import ChatInput from './components/ChatInput.vue'
-// SessionList 组件已被移除
+import SessionList from './components/SessionList/index.vue'
 import MemoryPanel from './components/MemoryPanel/index.vue'
 import { createChatStream } from './components/util.js'
 import { utils } from '@/utils/http'
@@ -114,8 +121,9 @@ const showApiWarning = ref(false) // 是否显示 API 配置警告
 const currentSessionId = ref('')
 const currentuser_id = ref('')
 const memoryPanelRef = ref(null)
-// SessionList 组件相关逻辑已被移除
-const editingMessage = ref(null)
+const sessionListRef = ref(null) // ✅ SessionList 组件引用
+const sessions = ref([]) // 会话列表
+const sessionLoading = ref(false) // 会话列表加载状态
 
 // API 配置信息（从环境变量读取）
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.laozhang.ai/v1'
@@ -149,13 +157,16 @@ const initSession = async () => {
     userStore.userInfo?.id || localStorage.getItem('user_id') || 'user_' + Date.now()
 
   console.log('🔍 初始化会话, user_id:', currentuser_id.value)
-  console.log('🔍 userStore.userInfo:', userStore.userInfo)
+  console.log(' userStore.userInfo:', userStore.userInfo)
   console.log('🔍 localStorage user_id:', localStorage.getItem('user_id'))
 
   // 如果没有保存 user_id，存储到 localStorage
   if (!localStorage.getItem('user_id')) {
     localStorage.setItem('user_id', currentuser_id.value)
   }
+
+  // ✅ 刷新会话列表
+  await refreshSessionList()
 
   // ✅ 验证保存的会话ID是否有效
   if (saved) {
@@ -217,7 +228,8 @@ const handleCreateSession = async () => {
     messages.value = []
     msgApi.success('已创建新会话')
 
-    // SessionList 组件已被移除，不再刷新会话列表
+    // 刷新会话列表
+    await refreshSessionList()
   } catch (error) {
     msgApi.error('创建会话失败')
   }
@@ -234,15 +246,6 @@ const handleSend = async (content) => {
   }
 
   const trimmed = content.trim()
-
-  // 如果是编辑模式，删除原消息及之后的所有消息
-  if (editingMessage.value) {
-    const editIndex = messages.value.findIndex((m) => m.id === editingMessage.value.id)
-    if (editIndex !== -1) {
-      messages.value = messages.value.slice(0, editIndex)
-      editingMessage.value = null
-    }
-  }
 
   const user_id = utils.generateId()
   messages.value.push({ id: user_id, role: 'user', content: trimmed, timestamp: Date.now() })
@@ -328,24 +331,45 @@ const handleSend = async (content) => {
   }
 }
 
-const handleEditMessage = (message) => {
-  editingMessage.value = message
-  msgApi.info('编辑模式：修改消息后将重新生成回复')
+const handleEditMessage = async (message) => {
+  try {
+    console.log('️ 开始编辑消息:', message.id)
+
+    // 找到编辑消息的索引
+    const editIndex = messages.value.findIndex((m) => m.id === message.id)
+    if (editIndex === -1) {
+      msgApi.error('未找到要编辑的消息')
+      return
+    }
+
+    // 删除该消息及其之后的所有消息
+    messages.value = messages.value.slice(0, editIndex)
+
+    // 使用编辑后的内容重新发送
+    console.log(' 使用新内容重新发送:', message.content)
+    await handleSend(message.content)
+
+    msgApi.success('消息已更新，正在重新生成回复...')
+  } catch {
+    msgApi.error('编辑消息失败')
+  }
 }
 
 // 删除消息
 const handleDeleteMessage = async (messageId) => {
   try {
-    // 判断是否为数据库 ID（纯数字）
-    const isDatabaseId = /^\d+$/.test(messageId)
+    //  判断是否是历史消息（从数据库加载的消息有 timestamp）
+    const message = messages.value.find((m) => m.id === messageId)
+    const isHistoricalMessage = message?.timestamp
 
-    if (isDatabaseId) {
-      // 历史消息（有数字 ID）：正常调用后端删除
+    if (isHistoricalMessage) {
+      // 历史消息：调用后端删除
+      console.log('️ 删除历史消息:', messageId)
       await deleteMessage(messageId)
       console.log('✅ 已从数据库删除消息:', messageId)
     } else {
-      // 新发送的消息（UUID）：仅前端删除，不调用后端
-      console.log('ℹ️ 仅前端删除消息（UUID）:', messageId)
+      // 新发送的消息：仅前端删除，不调用后端
+      console.log('️ 仅前端删除消息（新发送）:', messageId)
     }
 
     // 从本地消息列表中移除
@@ -353,9 +377,13 @@ const handleDeleteMessage = async (messageId) => {
     if (index !== -1) {
       messages.value.splice(index, 1)
     }
+    
+    // ✅ 刷新会话列表，同步数据
+    await refreshSessionList()
+    console.log('✅ 删除消息后已刷新会话列表')
   } catch (error) {
     console.error('删除消息失败:', error)
-    // 错误提示已在 deleteMessage 的调用处（ChatMessage 组件）显示
+    msgApi.error('删除消息失败: ' + (error.message || '未知错误'))
   }
 }
 
@@ -414,10 +442,89 @@ const updateSessionMessageCount = async () => {
   }
 }
 
-// 🏷️ 刷新会话列表（SessionList 组件已被移除，此函数暂时保留但无实际功能）
+// 🏷️ 刷新会话列表
 const refreshSessionList = async () => {
-  // SessionList 组件已被移除，不再刷新会话列表
-  console.log('ℹ️ 会话列表刷新功能已被移除')
+  try {
+    sessionLoading.value = true
+    const res = await getSessionList(currentuser_id.value)
+    sessions.value = res.data || []
+    console.log('✅ 刷新会话列表成功，共', sessions.value.length, '个会话')
+    
+    // ✅ 同时调用子组件的 fetchSessions 方法，确保数据同步
+    if (sessionListRef.value && sessionListRef.value.fetchSessions) {
+      await sessionListRef.value.fetchSessions()
+      console.log('✅ 已同步刷新子组件会话列表')
+    }
+  } catch (error) {
+    console.error('❌ 刷新会话列表失败:', error)
+  } finally {
+    sessionLoading.value = false
+  }
+}
+
+// 选择会话
+const handleSelectSession = async (session) => {
+  //  兼容处理：支持传入 session 对象或 sessionId 字符串
+  const sessionId = typeof session === 'string' ? session : session?.id
+
+  if (!sessionId) {
+    console.warn('⚠️ 无效的 session ID')
+    return
+  }
+
+  currentSessionId.value = sessionId
+  localStorage.setItem('current_session_id', sessionId)
+
+  try {
+    const msgRes = await getSessionMessages(sessionId, 100, 0)
+    const loadedMessages = msgRes.data || []
+
+    messages.value = loadedMessages.map((msg) => ({
+      id: msg.id.toString(),
+      role: msg.role,
+      content: msg.content,
+      timestamp: new Date(msg.created_at).getTime(),
+      isStreaming: false,
+    }))
+
+    console.log(`✅ 加载了 ${messages.value.length} 条历史消息`)
+  } catch (error) {
+    console.error('加载历史消息失败:', error)
+    messages.value = []
+    msgApi.error('加载消息失败')
+  }
+}
+
+// 删除会话
+const handleDeleteSession = async (sessionId) => {
+  try {
+    dialogApi.warning({
+      title: '确认删除',
+      content: '确定要删除这个会话吗？',
+      positiveText: '确定',
+      negativeText: '取消',
+      onPositiveClick: async () => {
+        // TODO: 调用删除会话 API
+        if (currentSessionId.value === sessionId) {
+          await handleCreateSession()
+        }
+        await refreshSessionList()
+        msgApi.success('会话已删除')
+      },
+    })
+  } catch (error) {
+    msgApi.error('删除会话失败')
+  }
+}
+
+// 重命名会话
+const handleRenameSession = async (sessionId, newTitle) => {
+  try {
+    // 子组件已经调用了 updateSession，这里只需要刷新列表
+    await refreshSessionList()
+  } catch (error) {
+    console.error('刷新会话列表失败:', error)
+  }
 }
 
 const handleAbort = () => {
@@ -439,37 +546,71 @@ onMounted(() => initSession())
 </script>
 
 <style scoped>
+/* ✅ 引入 Chat 页面专属样式 */
+@import './chat-styles.css';
+
 .chat-container {
   display: flex;
-  height: 100%;
-  background-color: #ffffff;
+  height: calc(100vh - 80px); /* ✅ 使用视口高度，而不是父容器的百分比 */
+  background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
   position: relative;
   overflow: hidden;
 }
 
-/* 左侧会话侧边栏 */
+/* 星空背景点缀 */
+.chat-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, rgba(0, 242, 254, 0.8), transparent),
+    radial-gradient(2px 2px at 40px 70px, rgba(177, 134, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(2px 2px at 160px 120px, rgba(0, 242, 254, 0.6), transparent),
+    radial-gradient(1px 1px at 230px 80px, rgba(177, 134, 255, 0.8), transparent);
+  background-size: 250px 150px;
+  animation: twinkle 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* 左侧会话侧边栏 - 青蓝发光 */
 .session-sidebar {
   position: relative;
   width: 233px;
   flex-shrink: 0;
-  border-right: 1px solid #e5e5e5;
+  background: rgba(16, 22, 42, 0.45);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(0, 242, 254, 0.2);
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.1);
   transition: all 0.3s ease;
   overflow: hidden;
+  z-index: 1;
 }
 
 .session-sidebar.collapsed {
   width: 0 !important;
   border-right: none;
-}
-
-/* 展开/收起按钮（使用Naive UI样式，位置由JS动态计算） */
-.sidebar-toggle-btn {
-  /* 位置属性已移至 inline style (toggleBtnStyle) 以支持动态计算 */
+  box-shadow: none;
 }
 
 .sidebar-content {
   width: 233px;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 80px); /* ✅ 减去header高度 */
   transition: all 0.3s ease;
   overflow-y: auto;
 }
@@ -486,21 +627,41 @@ onMounted(() => initSession())
   min-width: 0;
   position: relative;
   overflow: hidden;
+  z-index: 1;
+  padding: 20px;
+  gap: 20px;
 }
 
 .messages-area {
   flex: 1;
+  background: rgba(16, 22, 42, 0.45);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(177, 134, 255, 0.2);
+  box-shadow: 0 0 15px rgba(177, 134, 255, 0.1);
+  border-radius: 16px;
   overflow-y: auto;
-  padding-bottom: 100px; /* 为底部输入框留出空间 */
+  overflow-x: hidden;
+  padding: 0;
 }
 
-/* 滚动条美化 */
+/* 滚动条美化 - 极光紫 */
 .messages-area::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
+}
+
+.messages-area::-webkit-scrollbar-track {
+  background: rgba(16, 22, 42, 0.3);
+  border-radius: 4px;
 }
 
 .messages-area::-webkit-scrollbar-thumb {
-  background-color: #d1d5db;
+  background: rgba(177, 134, 255, 0.3);
   border-radius: 4px;
+  transition: background 0.3s;
+}
+
+.messages-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(177, 134, 255, 0.5);
 }
 </style>

@@ -140,6 +140,12 @@ defineExpose({ tableRef, containerRef })
 .table-body-wrapper {
   overflow-y: visible;
   overflow-x: auto;
+  position: relative; /* 确保滚动条层级 */
+}
+
+/* ✅ 强制 NDataTable 内容不被压缩 */
+:deep(.n-data-table-wrapper) {
+  overflow-x: auto !important;
 }
 
 .table-body-wrapper.overflow-auto {
@@ -147,23 +153,24 @@ defineExpose({ tableRef, containerRef })
   overflow-y: auto;
 }
 
-/* 自定义滚动条样式 - 与菜单滚动条一致 */
-.table-body-wrapper::-webkit-scrollbar {
-  width: 6px;
+/* ✅ 强制显示横向滚动条（覆盖全局样式） */
+:deep(.n-data-table-wrapper::-webkit-scrollbar) {
+  width: 0;    /* 隐藏纵向滚动条 */
+  height: 8px !important;  /* 强制显示横向滚动条 */
 }
 
-.table-body-wrapper::-webkit-scrollbar-track {
-  background: transparent;
+:deep(.n-data-table-wrapper::-webkit-scrollbar-track) {
+  background: #f1f1f1 !important;
+  border-radius: 4px;
 }
 
-.table-body-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-  transition: background 0.3s ease;
+:deep(.n-data-table-wrapper::-webkit-scrollbar-thumb) {
+  background: #888 !important;
+  border-radius: 4px;
 }
 
-.table-body-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #ddd;
+:deep(.n-data-table-wrapper::-webkit-scrollbar-thumb:hover) {
+  background: #555 !important;
 }
 
 /* 调整表格行高和字体大小 */

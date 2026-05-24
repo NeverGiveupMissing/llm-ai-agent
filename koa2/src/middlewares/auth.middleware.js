@@ -124,6 +124,8 @@ function authMiddleware() {
         // ✅ 拦截停用账号
         if (userStatus === '0') {
           console.warn(` [Auth] 用户 ${user_id} 已被停用，拦截请求，路径:`, ctx.path)
+          // 确保 ctx.state 存在
+          if (!ctx.state) ctx.state = {}
           // 清除上下文
           ctx.state.user_id = null
           ctx.state.user_name = null

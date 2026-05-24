@@ -1,6 +1,7 @@
 const Router = require('@koa/router')
 const operationLogController = require('./controller')
 const { authMiddleware } = require('../../middlewares/auth.middleware')
+const { exportPermissionChecker } = require('../../middlewares/permission-checker')
 
 const router = new Router({
   prefix: '/operation-logs',
@@ -61,6 +62,51 @@ router.get('/', authMiddleware(), operationLogController.getLogs)
  *         description: 获取成功
  */
 router.get('/stats', authMiddleware(), operationLogController.getStats)
+
+/**
+ * @swagger
+ * /operation-logs/export:
+ *   get:
+ *     tags: [操作日志]
+ *     summary: 导出操作日志数据
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: username
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: module
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: action
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: start_time
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: end_time
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: 导出成功
+ *         content:
+ *           application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+ *             schema:
+ *               type: string
+ *               format: binary
+ */
+router.get(
+  '/export',
+  authMiddleware(),
+  exportPermissionChecker(),
+  operationLogController.exportOperationLogs.bind(operationLogController)
+)
 
 /**
  * @swagger

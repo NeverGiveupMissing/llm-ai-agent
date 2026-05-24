@@ -1,10 +1,10 @@
 <template>
   <div class="table-data-editor">
     <!-- ✅ 调试信息 -->
-    <div style="margin-bottom: 8px; padding: 8px; background: #f0f0f0;">
+    <div style="margin-bottom: 8px; padding: 8px; background: #f0f0f0">
       数据条数: {{ tableDataList.length }}, 列数: {{ tableColumns.length }}
     </div>
-    
+
     <n-data-table
       :columns="tableColumns"
       :data="tableDataList"
@@ -63,24 +63,24 @@ watch(
       length: newData?.length,
       isArray: Array.isArray(newData),
       firstRow: newData?.[0],
-      columns: props.columns
+      columns: props.columns,
     })
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // 创建表格列配置
 const tableColumns = computed(() => {
   console.log('🔧 tableColumns computed 执行', {
     columnsLength: props.columns.length,
-    dataLength: props.data.length
+    dataLength: props.data.length,
   })
-  
+
   if (props.columns.length === 0) {
     console.warn('⚠️ columns 为空数组')
     return []
   }
-  
+
   const cols = props.columns.map((col) => ({
     title: col,
     key: col,
@@ -101,7 +101,7 @@ const tableColumns = computed(() => {
       // 检查是否为敏感字段
       const isSensitiveField = (fieldName) => {
         const sensitiveKeys = ['password', 'hash', 'secret', 'token', 'key']
-        return sensitiveKeys.some(key => fieldName.toLowerCase().includes(key))
+        return sensitiveKeys.some((key) => fieldName.toLowerCase().includes(key))
       }
 
       // 编辑状态
@@ -324,7 +324,7 @@ defineExpose({
 <style scoped>
 .table-data-editor {
   width: 100%;
-  min-height: 300px;
+  min-height: 250px;
 }
 
 :deep(.modified-row) {

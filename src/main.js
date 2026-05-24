@@ -18,6 +18,7 @@ console.warn = (...args) => {
 
 // 引入全局样式
 import './styles/markdown-styles.css'
+import './styles/base.css' // ✅ UI 组件全局样式
 
 // 引入路由守卫（会自动执行）
 import './router/guard'
@@ -65,14 +66,14 @@ console.log('✅ Vue 应用已成功挂载！')
 setTimeout(() => {
   const appElement = document.getElementById('app')
   console.log('🔍 DOM 检查:', appElement?.innerHTML?.substring(0, 500))
-  
+
   // 检查路由当前状态
   const currentRoute = router.currentRoute.value
   console.log('🛣️ 当前路由:', currentRoute)
   console.log('🛣️ 当前路由 name:', currentRoute.name)
   console.log('🛣️ 当前路由 matched:', currentRoute.matched)
   console.log('🛣️ 路由 matched 长度:', currentRoute.matched?.length)
-  
+
   if (currentRoute.matched && currentRoute.matched.length > 0) {
     console.log('✅ 路由已匹配！组件信息:')
     currentRoute.matched.forEach((route, index) => {

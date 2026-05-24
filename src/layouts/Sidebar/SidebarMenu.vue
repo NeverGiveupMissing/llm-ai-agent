@@ -38,13 +38,13 @@ watch(
     console.log(' [侧边栏] 菜单数据变化:', newOptions)
     console.log(' [侧边栏] 菜单数量:', newOptions?.length)
     console.log(' [侧边栏] permissionStore.isLoaded:', permissionStore.isLoaded)
-    
+
     if (newOptions && newOptions.length > 0) {
       console.log('✅ [侧边栏] 菜单数据已更新！')
       console.log('📋 [侧边栏] 第一个菜单:', newOptions[0])
     }
   },
-  { deep: true, immediate: true }
+  { deep: true, immediate: true },
 )
 
 onMounted(() => {
@@ -115,8 +115,12 @@ onMounted(() => {
   margin: 4px 0 !important;
   padding: 0 !important;
 }
-
+:deep(.n-menu--collapsed .n-menu-item-content__icon) {
+  margin-left: 15px !important;
+  color: #fff !important;
+}
 :deep(.n-menu--collapsed .n-menu-item-content__label) {
+  margin-left: 15px !important;
   display: none;
 }
 </style>

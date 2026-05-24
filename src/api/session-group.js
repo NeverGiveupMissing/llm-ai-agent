@@ -5,8 +5,8 @@ import { axios } from '@/utils/http'
 import { API_PREFIX } from '@/utils/constants'
 
 // 获取用户的所有分组
-export function getGroupList(user_id) {
-  return axios.get(`${API_PREFIX}/session-groups`, { user_id })
+export function getGroupList() {
+  return axios.get(`${API_PREFIX}/session-groups`)
 }
 
 // 创建分组

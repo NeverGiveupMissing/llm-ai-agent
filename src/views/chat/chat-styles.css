@@ -1,0 +1,52 @@
+/* ======================================== */
+/* ✅ Chat 页面专属样式 */
+/* ✅ 仅应用于 AI 对话页面，不影响其他页面 */
+/* ======================================== */
+
+/* ======================================== */
+/* 1. 编辑模式输入框 - 赛博朋克深色主题 */
+/* ======================================== */
+
+/* 输入框容器 */
+.n-input,
+.n-input--focus,
+.n-input:hover {
+  background: rgba(16, 22, 42, 0.8) !important;
+  border-color: rgba(0, 242, 254, 0.3) !important;
+}
+
+/* 输入框内部元素 */
+.n-input .n-input__input-el,
+.n-input .n-input__textarea-el {
+  color: #FFFFFF !important;
+  background: rgba(16, 22, 42, 0.8) !important;
+}
+
+/* 占位符文字 */
+.n-input .n-input__input-el::placeholder,
+.n-input .n-input__textarea-el::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* ======================================== */
+/* 2. 聊天输入框 - 底部输入区域 */
+/* ======================================== */
+
+/* 主输入框 */
+.chat-input-area .n-input,
+.chat-input-area .n-input--focus,
+.chat-input-area .n-input:hover {
+  background: rgba(16, 22, 42, 0.6) !important;
+  border-color: rgba(0, 242, 254, 0.25) !important;
+}
+
+.chat-input-area .n-input .n-input__input-el,
+.chat-input-area .n-input .n-input__textarea-el {
+  color: #FFFFFF !important;
+  background: transparent !important;
+}
+
+.chat-input-area .n-input .n-input__input-el::placeholder,
+.chat-input-area .n-input .n-input__textarea-el::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}

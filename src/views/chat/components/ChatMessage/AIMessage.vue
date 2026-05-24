@@ -30,6 +30,20 @@
       <div v-else ref="messageTextRef" class="message-text markdown-rendered" v-html="displayContent" />
       <span v-if="isStreaming" class="typing-cursor"></span>
 
+      <!-- ✅ 操作按钮组 - 绝对定位在气泡内部右下角 -->
+      <div class="action-buttons-wrapper">
+        <n-button text circle size="tiny" class="action-btn" @click="$emit('copy')" title="复制">
+          <template #icon>
+            <n-icon><CopyOutline /></n-icon>
+          </template>
+        </n-button>
+        <n-button text circle size="tiny" class="action-btn" @click="$emit('regenerate')" title="重新生成">
+          <template #icon>
+            <n-icon><RefreshOutline /></n-icon>
+          </template>
+        </n-button>
+      </div>
+
       <!-- 操作按钮 -->
       <MessageActions
         v-if="showActions"
@@ -45,6 +59,8 @@
 <script setup name="AIMessage">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useMessage } from 'naive-ui'
+import { NIcon } from 'naive-ui'
+import { CopyOutline, RefreshOutline } from '@vicons/ionicons5'
 import { md, fixBrokenCodeBlocks } from '@/utils/markdown'
 import MessageActions from './MessageActions.vue'
 
@@ -116,7 +132,7 @@ const handleShare = () => {
 
 const handleFeedback = (type) => {
   emit('feedback', type)
-  msgApi.success(type === 'good' ? '感谢您的反馈!' : '我们会改进')
+  //  提示由父组件 ChatMessage 统一处理，避免重复提示
 }
 
 // 事件委托：处理代码块工具栏按钮点击
@@ -354,35 +370,94 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* ✅ AI 消息容器 - 靠左对齐 */
 .ai-message-wrapper {
   display: flex;
-  flex-direction: row;
+  flex-direction: row; /* ✅ 头像在左，气泡在右 */
   gap: 16px;
+  align-self: flex-start; /* ✅ 靠左对齐 */
 }
 
+/* ✅ AI 消息气泡 - 毛玻璃深紫色 + 相对定位 */
 .assistant-content {
+  position: relative; /* ✅ 为绝对定位按钮提供参照 */
   max-width: 85%;
   flex: 1;
+  background: rgba(32, 22, 54, 0.45); /* ✅ 半透明深紫色 */
+  backdrop-filter: blur(12px); /* ✅ 毛玻璃模糊 */
+  -webkit-backdrop-filter: blur(12px);
+  padding: 12px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(177, 134, 255, 0.3); /* ✅ 极光紫边框 */
+  box-shadow: 0 4px 15px rgba(177, 134, 255, 0.08); /* ✅ 紫色外发光 */
+  transition: all 0.3s ease; /* ✅ 平滑过渡 */
+}
+
+/* ✅ 鼠标悬浮时的全息亮化特效 */
+.assistant-content:hover {
+  background: rgba(42, 32, 74, 0.65); /* ✅ 背景变亮 */
+  border-color: rgba(177, 134, 255, 0.5); /* ✅ 边框加亮 */
+  box-shadow: 0 6px 25px rgba(177, 134, 255, 0.2); /* ✅ 增强紫色外发光 */
 }
 
 .assistant-content .message-text {
-  color: #333;
+  color: white; /* ✅ 白色文字 */
   line-height: 1.7;
   word-break: break-word;
   font-size: 15px;
 }
 
+/* ✅ 操作按钮组 - 绝对定位在气泡内部右下角 */
+.action-buttons-wrapper {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+  opacity: 0; /* ✅ 默认隐藏 */
+  transform: translateY(6px); /* ✅ 默认向下偏移 */
+  transition: all 0.25s ease-in-out; /* ✅ 淡入动画 */
+  pointer-events: none; /* ✅ 隐藏时不响应鼠标 */
+}
+
+/* ✅ 悬浮时显示按钮组 */
+.assistant-content:hover .action-buttons-wrapper {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* ✅ 操作按钮样式 */
+.action-btn {
+  color: rgba(255, 255, 255, 0.4) !important;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  color: rgba(255, 255, 255, 1) !important;
+  background: rgba(177, 134, 255, 0.15) !important;
+  box-shadow: 0 0 10px rgba(177, 134, 255, 0.3);
+}
+
+/* ✅ 删除按钮特殊样式 */
+.action-btn.danger:hover {
+  background: rgba(255, 77, 79, 0.2) !important;
+  box-shadow: 0 0 10px rgba(255, 77, 79, 0.3);
+}
+
+/* ✅ AI 头像 - 精致圆形 + 微光圆环 */
 .ai-icon {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  flex-shrink: 0; /* ✅ 防止被挤压 */
+  width: 40px; /* ✅ 固定大小 */
+  height: 40px; /* ✅ 固定大小 */
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 50%; /* ✅ 圆形 */
   margin-top: 2px;
   background: white;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 0 1px rgba(177, 134, 255, 0.2), /* ✅ 极细微光圆环 */
+              0 2px 8px rgba(59, 130, 246, 0.3);
   padding: 0;
 }
 

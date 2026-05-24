@@ -134,8 +134,9 @@ class UserService {
       throw new ForbiddenError('账号已被禁用')
     }
 
-    // 获取客户端 IP
-    const loginIp = ctx?.ip || ctx?.request?.ip || ''
+    // 获取客户端 IP（支持反向代理场景）
+    const { getRealIP, queryIPLocation } = require('../../utils/ip-location')
+    const loginIp = getRealIP(ctx)
 
     // 更新最后登录 IP 和时间
     await userModel.updateUser(user.user_id, {
@@ -173,10 +174,17 @@ class UserService {
     const browser = parseBrowser(userAgent)
     const os = parseOS(userAgent)
 
+    // ✅ 异步查询 IP 地理位置（不阻塞登录流程）
+    const loginLocation = await queryIPLocation(loginIp).catch(err => {
+      console.warn('查询 IP 地理位置失败:', err.message)
+      return ''
+    })
+
     await loginLogService.logLogin({
-      user_id: user.user_id, //  下划线
-      user_name: userName, //  下划线
+      user_id: user.user_id,
+      user_name: userName,
       ipAddress: loginIp,
+      loginLocation,              // ✅ 添加登录地点
       browser,
       os,
       status: '0',

@@ -14,10 +14,11 @@ class SessionGroupController {
    * 获取用户的所有分组
    */
   static getGroups = asyncHandler(async (ctx) => {
-    const user_id = ctx.request.body.user_id || ctx.request.query.user_id
+    // ✅ 从认证上下文中获取当前用户 ID
+    const user_id = ctx.state.user_id
 
     if (!user_id) {
-      throw new BadRequestError('user_id 不能为空')
+      throw new BadRequestError('用户未登录')
     }
 
     const groups = await SessionGroupModel.list(user_id)
@@ -40,10 +41,12 @@ class SessionGroupController {
    * 创建分组
    */
   static createGroup = asyncHandler(async (ctx) => {
-    const { name, icon, user_id } = ctx.request.body
+    const { name, icon } = ctx.request.body
+    // ✅ 从认证上下文中获取当前用户 ID
+    const user_id = ctx.state.user_id
 
     if (!name || !user_id) {
-      throw new BadRequestError('分组名称和用户ID不能为空')
+      throw new BadRequestError('分组名称不能为空')
     }
 
     const group = await SessionGroupModel.create({

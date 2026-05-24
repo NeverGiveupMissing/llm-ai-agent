@@ -30,7 +30,7 @@
           @reset="handleResetClick"
         />
       </template>
-      
+
       <!-- ✅ 特殊业务按钮（非数据库配置）放在工具栏右侧 -->
       <template #toolbar-right>
         <CommonButton type="reset" :button-props="{ secondary: true }" @click="toggleExpand">
@@ -177,7 +177,9 @@ const columns = [
     align: 'center',
     render: (row) => {
       if (!row.icon) return '-'
-      return h('i', { class: row.icon, style: { fontSize: '18px' } })
+      // The instruction mentions SvgIcon, but the context and failed blocks suggest NIcon with Vicons is the intended implementation for this NaiveUI project.
+      // This logic converts kebab-case icon names (e.g., 'grid-outline') to PascalCase ('GridOutline') for Vicons lookup.
+      return row.icon
     },
   },
   {

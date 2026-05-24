@@ -119,12 +119,59 @@ async function checkUserPermission(user_id, permission) {
 /**
  * 导出权限检查中间件
  * 专门用于导出操作的权限验证
+ * ✅ 支持自动根据请求路径推断权限标识
  */
-function exportPermissionChecker() {
-  return permissionChecker({
-    permission: 'system:common:export',
-    checkAdmin: true,
-  })
+function exportPermissionChecker(customPermission = null) {
+  return async (ctx, next) => {
+    try {
+      // 如果传入了自定义权限标识，直接使用
+      let permission = customPermission
+
+      // 否则根据请求路径自动推断
+      if (!permission) {
+        const path = ctx.path
+
+        // 路径到权限标识的映射规则
+        const pathToPermissionMap = {
+          '/api/users/export': 'system:user:export',
+          '/api/roles/export': 'system:role:export',
+          '/api/menus/export': 'system:menu:export',
+          '/api/interfaces/export': 'system:api:export',
+          '/api/buttons/export': 'system:button:export',
+          '/api/operation-logs/export': 'system:operation-log:export',
+          '/api/login-logs/export': 'system:login-log:export',
+          '/api/databases/export': 'system:database:export',
+          // 可以添加更多模块的映射...
+        }
+
+        // 查找匹配的权限标识
+        for (const [pathPattern, perm] of Object.entries(pathToPermissionMap)) {
+          if (path.includes(pathPattern.replace('/api/', ''))) {
+            permission = perm
+            break
+          }
+        }
+
+        // 如果没有找到匹配的，使用默认通用权限
+        if (!permission) {
+          permission = 'system:common:export'
+          console.warn(`⚠️ [PermissionChecker] 未找到路径 ${path} 的权限映射，使用默认权限: ${permission}`)
+        }
+      }
+
+      // 调用通用权限检查器
+      const checker = permissionChecker({
+        permission,
+        checkAdmin: true,
+      })
+
+      await checker(ctx, next)
+    } catch (error) {
+      console.error('❌ [exportPermissionChecker] 权限检查失败:', error.message)
+      ctx.status = 500
+      ctx.error('导出权限检查失败')
+    }
+  }
 }
 
 /**

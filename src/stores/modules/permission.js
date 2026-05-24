@@ -6,8 +6,8 @@ import { ref, computed } from 'vue'
 import { getUserMenus } from '@/api/menu'
 import { useMenuStore } from './menu'
 import router from '@/router'
-import { buildMenuTreeWithFullPath, extractRoutesFromMenuTree } from '@/utils/route-helper'
-import { getRoleAllPermissions, getRoleButtonIds } from '@/api/role'
+import { generateRoutesFromMenu } from '@/router/routes'
+import { getRoleButtonIds } from '@/api/role'
 import { useUserStore } from './user'
 // ✅ 使用离散 API 替代 naive-ui 的直接导入
 import { message } from '@/utils/http/message'
@@ -460,112 +460,57 @@ export const usePermissionStore = defineStore('permission', () => {
    */
   async function registerDynamicRoutes(menuTree) {
     try {
-      console.log('🛣️ 开始注册动态路由...')
+      console.log('🛣️ 开始注册动态路由（两层嵌套守卫模式）...')
 
-      // ✅ 步骤1：构建带完整路径的菜单树
-      const menuTreeWithFullPath = buildMenuTreeWithFullPath(menuTree)
-      console.log('✅ 菜单树路径拼接完成:', menuTreeWithFullPath)
+      // ✅ 使用重构后的 generateRoutesFromMenu 生成企业级嵌套路由树
+      //    该函数会自动处理：
+      //    - 有子菜单 → Layout 壳 + children + redirect 到第一个子页面
+      //    - 无子菜单 → Layout 壳 + 空路径子路由承载实际页面
+      const generatedRoutes = generateRoutesFromMenu(menuTree)
+      console.log(`📊 generateRoutesFromMenu 返回 ${generatedRoutes.length} 个顶级路由`)
 
-      // ✅ 步骤2：从菜单树中提取路由配置（已包含完整路径）
-      const routeConfigs = extractRoutesFromMenuTree(menuTreeWithFullPath)
-      console.log(`📊 提取到 ${routeConfigs.length} 个路由配置`)
-
-      // ✅ 步骤3：为每个路由配置加载组件并注册
-      const validRoutes = []
-
-      routeConfigs.forEach(({ path, menu }) => {
-        // ✅ 使用下划线命名规范
-        const {
-          menu_name,
-          component,
-          route_name,
-          icon,
-          perms,
-          menu_type,
-          menu_id,
-          is_frame,
-          is_cache,
-        } = menu
-
-        // ✅ 如果是外链（is_frame === 0），不注册为路由
-        // 数据库定义：is_frame = 0 是外链，is_frame = 1 是内部路由
-        if (is_frame === 0) {
-          console.log(`    🔗 外链菜单 ${menu_name} 不注册为路由（path: ${path}）`)
+      // ✅ 将每个顶级路由注册到 router
+      //    作为顶级路由添加（非 Layout 子路由），每个一级菜单独立拥有自己的 Layout 壳
+      generatedRoutes.forEach((route) => {
+        // 检查同名路由是否已存在（防止重复注册）
+        if (router.hasRoute(route.name)) {
+          console.warn(`⚠️ 路由 ${route.name} 已存在，跳过`)
           return
         }
-
-        // 确定组件路径
-        const componentKey = component ? component.replace(/\/index$/, '') : path.split('/').pop()
-        const vueComponent = loadComponent(componentKey)
-
-        if (!vueComponent) {
-          console.error(`❌ 菜单 ${menu_name} 组件加载失败: ${componentKey}`)
-          return
-        }
-
-        // 生成唯一的路由名称
-        const uniqueName = route_name || path.replace(/\//g, '-').replace(/^-/, '')
-
-        console.log(`    📄 注册路由: ${menu_name} -> path: ${path}, name: ${uniqueName}`)
-
-        // ✅ 关键修复：作为 Layout 子路由注册时，path 必须是相对路径（去掉前导 /）
-        // 这样 Vue Router 才能正确拼接成 /dashboard 而不是 /
-        const childPath = path.startsWith('/') ? path.slice(1) : path
-
-        validRoutes.push({
-          path: childPath, // ✅ 相对路径
-          name: uniqueName,
-          component: vueComponent,
-          meta: {
-            title: menu_name,
-            icon: icon,
-            menu_id: menu_id,
-            menuType: menu_type,
-            perms: perms ? (Array.isArray(perms) ? perms : [perms]) : [],
-            keepAlive: is_cache === 1, // ✅ 缓存控制
-            isFrame: is_frame === 1, // ✅ 外链标识
-          },
-        })
+        router.addRoute(route)
+        console.log(
+          `    ✅ 已注册: ${route.path} → ${route.name} (children: ${route.children?.length || 0})`,
+        )
       })
 
-      console.log(` 有效路由数量: ${validRoutes.length}`)
-
-      // ✅ 步骤4：将有效路由添加到 Layout 父路由下
-      // 这样这些路由才会使用 BasicLayout 布局组件（包含侧边栏）
-      const layoutRoute = router.getRoutes().find((route) => route.name === 'Layout')
-
-      if (layoutRoute) {
-        console.log('🔍 找到 Layout 父路由:', layoutRoute.name)
-
-        // 将每个动态路由添加为 Layout 的子路由
-        validRoutes.forEach((route) => {
-          router.addRoute('Layout', route)
-          console.log(`    ✅ 已添加子路由到 Layout: ${route.path}`)
-        })
-
-        // ✅ 步骤5：通配路由必须作为 Layout 的子路由，避免拦截一级独立页面
-        // 先删除旧的通配路由（防止重复注册）
-        if (router.hasRoute('CatchAll')) {
-          router.removeRoute('CatchAll')
-          console.log('🗑️ 已删除旧的通配路由')
-        }
-
-        // ✅ 关键修复：通配路由作为子路由时，path 必须是相对路径（去掉前导 /）
-        // 否则它会匹配根路径 /，导致所有路由都被拦截
-        router.addRoute('Layout', {
-          path: ':pathMatch(.*)*', // ✅ 相对路径，不带 /
-          name: 'CatchAll',
-          component: () => import('@/views/error/404.vue'),
-          meta: { hidden: true },
-        })
-
-        console.log(`✅ 成功注册 ${validRoutes.length} 个动态路由 + 通配路由（均为 Layout 子路由）`)
-      } else {
-        console.error('❌ 未找到 Layout 路由')
-        throw new Error('Layout 路由不存在，请检查路由配置')
+      // ✅ 全局 CatchAll 404 兜底路由（放在 Layout 下）
+      if (router.hasRoute('CatchAll')) {
+        router.removeRoute('CatchAll')
+        console.log('🗑️ 已删除旧的通配路由')
       }
+      router.addRoute('Layout', {
+        path: ':pathMatch(.*)*',
+        name: 'CatchAll',
+        component: () => import('@/views/error/404.vue'),
+        meta: { hidden: true },
+      })
+
+      console.log(`✅ 成功注册 ${generatedRoutes.length} 个动态路由 + CatchAll`)
+
+      // 调试：打印注册后的完整路由表
+      const allRoutes = router.getRoutes()
+      const topLevelRoutes = allRoutes.filter((r) => !r.name.includes('CatchAll') && r.path !== '/')
+      console.log(
+        '📊 注册后的顶级路由:',
+        topLevelRoutes.map((r) => ({
+          name: r.name,
+          path: r.path,
+          redirect: r.redirect,
+          children: r.children?.map((c) => ({ name: c.name, path: c.path })),
+        })),
+      )
     } catch (error) {
-      console.error(' 注册动态路由失败:', error)
+      console.error('❌ 注册动态路由失败:', error)
       throw error
     }
   }

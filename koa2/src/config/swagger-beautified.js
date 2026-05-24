@@ -22,10 +22,10 @@ function countRoutes(filePath) {
 function countAllModuleRoutes() {
   const modulesDir = path.join(__dirname, '..', 'modules')
   const routesDir = path.join(__dirname, '..', 'routes')
-
+  
   const moduleCounts = {}
   let totalCount = 0
-
+  
   // 统计主路由文件
   const mainRouteFile = path.join(routesDir, 'index.js')
   if (fs.existsSync(mainRouteFile)) {
@@ -35,11 +35,11 @@ function countAllModuleRoutes() {
       totalCount += count
     }
   }
-
+  
   // 统计各模块路由文件
   if (fs.existsSync(modulesDir)) {
     const modules = fs.readdirSync(modulesDir)
-    modules.forEach((module) => {
+    modules.forEach(module => {
       const modulePath = path.join(modulesDir, module)
       if (fs.statSync(modulePath).isDirectory()) {
         const routeFile = path.join(modulePath, 'routes.js')
@@ -52,7 +52,7 @@ function countAllModuleRoutes() {
             else if (module === 'operation-log') moduleName = '操作日志'
             else if (module === 'session-group') moduleName = '会话分组'
             else if (module === 'chat-memory') moduleName = '对话记忆'
-
+            
             moduleCounts[moduleName] = count
             totalCount += count
           }
@@ -60,63 +60,46 @@ function countAllModuleRoutes() {
       }
     })
   }
-
+  
   return { moduleCounts, totalCount }
 }
-
-// 获取接口统计信息
-const { moduleCounts, totalCount } = countAllModuleRoutes()
 
 /**
  * 根据模块名称返回对应的 emoji 图标
  */
 function getModuleIcon(moduleName) {
   const iconMap = {
-    主路由: '🚀',
-    chat: '💬',
-    logs: '📝',
-    session: '🗂️',
-    会话分组: '📁',
-    对话记忆: '🧠',
-    memory: '🧠',
-    interface: '🔌',
-    menu: '📁',
-    role: '🔐',
-    user: '👤',
-    button: '🔘',
-    登录日志: '🔐',
-    操作日志: '📊',
-    database: '💾',
-    api: '🌐',
-    captcha: '🛡️',
-    upload: '📤',
-    health: '❤️',
-    permission: '🔑',
+    '主路由': '🚀',
+    'chat': '💬',
+    'logs': '📝',
+    'session': '🗂️',
+    '会话分组': '📁',
+    '对话记忆': '🧠',
+    'memory': '🧠',
+    'interface': '🔌',
+    'menu': '',
+    'role': '',
+    'user': '👤',
+    'button': '🔘',
+    '登录日志': '',
+    '操作日志': '',
+    'database': '💾',
+    'api': '🌐',
+    'captcha': '️',
+    'upload': '',
+    'health': '❤️',
+    'permission': '',
   }
   return iconMap[moduleName] || ''
 }
 
-// 构建 tags 数组，包含所有模块的接口数量
+// 获取接口统计信息
+const { moduleCounts, totalCount } = countAllModuleRoutes()
+
+// 构建 tags 数组，包含接口数量
 const tagsWithCount = [
   { name: 'chat', description: `聊天相关接口(${moduleCounts['chat'] || 0}个)` },
   { name: 'logs', description: `日志管理接口(${moduleCounts['logs'] || 0}个)` },
-  { name: '会话管理', description: `会话管理接口(${moduleCounts['session'] || 0}个)` },
-  { name: '会话分组管理', description: `会话分组管理接口(${moduleCounts['会话分组'] || 0}个)` },
-  { name: '对话记忆管理', description: `对话记忆管理接口(${moduleCounts['对话记忆'] || 0}个)` },
-  { name: '记忆管理', description: `记忆管理接口(${moduleCounts['memory'] || 0}个)` },
-  { name: '接口管理', description: `接口管理接口(${moduleCounts['interface'] || 0}个)` },
-  { name: '菜单管理', description: `菜单管理接口(${moduleCounts['menu'] || 0}个)` },
-  { name: '角色管理', description: `角色管理接口(${moduleCounts['role'] || 0}个)` },
-  { name: '用户管理', description: `用户管理接口(${moduleCounts['user'] || 0}个)` },
-  { name: '按钮管理', description: `按钮权限管理接口(${moduleCounts['button'] || 0}个)` },
-  { name: '登录日志', description: `登录日志管理接口(${moduleCounts['登录日志'] || 0}个)` },
-  { name: '操作日志', description: `操作日志管理接口(${moduleCounts['操作日志'] || 0}个)` },
-  { name: '数据库管理', description: `数据库管理接口(${moduleCounts['database'] || 0}个)` },
-  { name: 'API管理', description: `API管理接口(${moduleCounts['api'] || 0}个)` },
-  { name: '验证码', description: `验证码接口(${moduleCounts['captcha'] || 0}个)` },
-  { name: '文件上传', description: `文件上传接口(${moduleCounts['upload'] || 0}个)` },
-  { name: '健康检查', description: `健康检查接口(${moduleCounts['health'] || 0}个)` },
-  { name: '权限管理', description: `权限管理接口(${moduleCounts['permission'] || 0}个)` },
 ]
 
 /**
@@ -128,22 +111,19 @@ const swaggerConfig = {
     info: {
       title: 'AI Chat API',
       version: '1.0.0',
-      description:
-        `AI 聊天 API - Node.js Koa2 JavaScript 实现
+      description: `AI 聊天 API - Node.js Koa2 JavaScript 实现
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- 接口总览
+📊 接口总览
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔢 接口总数：${totalCount} 个
 
 📦 模块分布：
-
-` +
+` + 
         Object.entries(moduleCounts)
-          .map(([name, count]) => `  ${getModuleIcon(name)} ${name}: ${count} 个接口`)
-          .join('<br>') +
-        `
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+          .map(([name, count]) => `  ├─ ${getModuleIcon(name)} ${name}: ${count} 个接口`)
+          .join('\n') +
+        `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       contact: {
         name: 'API Support',
         email: 'support@example.com',

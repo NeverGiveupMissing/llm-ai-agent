@@ -76,7 +76,7 @@ class RoleModel {
 
   /**
    * 根据 ID 查询角色
-   * @param {number} role_id - 角色ID (SERIAL, PRIMARY KEY)
+   * @param {number|string} role_id - 角色ID (SERIAL, PRIMARY KEY)
    * @returns {Object|null} 角色对象（下划线格式）
    */
   async getById(role_id) {
@@ -86,7 +86,7 @@ class RoleModel {
         menu_check_strictly, dept_check_strictly, status, del_flag,
         create_by, create_time, update_by, update_time, remark
       FROM sys_role
-      WHERE role_id = $1::int AND del_flag = '0'
+      WHERE role_id = $1 AND del_flag = '0'
     `
     const result = await pool.query(query, [role_id])
     // ✅ 返回数据库原始字段（下划线格式）

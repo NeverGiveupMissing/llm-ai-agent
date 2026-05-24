@@ -23,8 +23,6 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { createMenu, updateMenu } from '@/api/menu'
-import FieldHelp from '@/components/FieldHelp/index.vue'
-import IconPicker from '@/components/IconPicker/index.vue'
 import BaseForm from '@/components/BaseForm/index.vue'
 
 const props = defineProps({
@@ -196,8 +194,6 @@ const formFields = computed(() => [
   },
 ])
 
-
-
 // 表单验证规则
 const rules = computed(() => {
   const baseRules = {
@@ -231,8 +227,6 @@ const resetForm = () => {
   formData.remark = ''
   formRef.value?.restoreValidation()
 }
-
-
 
 // 监听弹窗显示状态
 watch(
@@ -361,7 +355,7 @@ const handleClosed = () => {
 
 /* 表单项样式 */
 :deep(.n-form-item) {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
 /* Label 插槽布局 */

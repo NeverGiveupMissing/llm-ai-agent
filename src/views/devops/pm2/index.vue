@@ -227,9 +227,15 @@ function handleRefresh() {
 
 // 查看日志详情
 async function handleViewDetail(row) {
+  console.log('📋 点击查看详情:', row)
   currentLogFile.value = `${row.process}-${row.type}`
   showDetailModal.value = true
   detailConfig.type = row.type
+  console.log(' 准备请求参数:', {
+    process: currentLogFile.value.split('-')[0],
+    type: detailConfig.type,
+    lines: detailConfig.lines,
+  })
   await fetchLogDetail()
 }
 
@@ -242,13 +248,18 @@ async function fetchLogDetail() {
       process: currentLogFile.value.split('-')[0],
     })
 
+    console.log('📡 API响应:', res)
+    
     if (res.code === 200) {
       logContent.value = res.data?.logs || '暂无日志内容'
+      console.log('📝 日志内容长度:', logContent.value.length)
     } else {
       logContent.value = `获取日志失败: ${res.message || '未知错误'}`
+      console.error('❌ 获取失败:', res)
     }
   } catch (error) {
     logContent.value = `请求失败: ${error.message}`
+    console.error(' 请求异常:', error)
   }
 }
 

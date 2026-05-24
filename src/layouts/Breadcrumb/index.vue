@@ -8,7 +8,7 @@
     <!-- 动态面包屑项 -->
     <n-breadcrumb-item
       v-for="(item, index) in breadcrumbs"
-      :key="item.path"
+      :key="`${index}-${item.path}`"
       :class="{ 'is-active': index === breadcrumbs.length - 1 }"
       @click="handleClick(item.path)"
     >
@@ -26,12 +26,27 @@ const route = useRoute()
 
 // 根据当前路由生成面包屑（排除 Layout 和首页）
 const breadcrumbs = computed(() => {
-  return route.matched
+  const matched = route.matched
     .filter(item => item.meta?.title && item.path !== '/dashboard')
-    .map(item => ({
-      path: item.path,
-      title: item.meta.title,
-    }))
+  
+  // ✅ 去重：如果父路由和子路由的 title 相同（一级路由场景），只保留最后一个
+  const uniqueBreadcrumbs = []
+  for (let i = 0; i < matched.length; i++) {
+    const current = matched[i]
+    const next = matched[i + 1]
+    
+    // 如果当前项的 title 和下一项相同，跳过当前项（只显示最后出现的）
+    if (next && next.meta?.title === current.meta?.title) {
+      continue
+    }
+    
+    uniqueBreadcrumbs.push({
+      path: current.path,
+      title: current.meta.title,
+    })
+  }
+  
+  return uniqueBreadcrumbs
 })
 
 // 点击面包屑项
