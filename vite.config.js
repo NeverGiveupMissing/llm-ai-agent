@@ -10,7 +10,8 @@ import VueSetupExtend from 'vite-plugin-vue-setup-extend'
 import viteCompression from 'vite-plugin-compression'
 import { visualizer } from 'rollup-plugin-visualizer'
 
-const target = 'http://127.0.0.1:65432'
+// const target = 'http://127.0.0.1:65432'
+const target = 'http://yumanyi.top'
 
 export default defineConfig(({ mode }) => {
   // 获取当前是否为生产环境打包

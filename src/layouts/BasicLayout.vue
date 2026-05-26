@@ -172,6 +172,22 @@ const handleCollapse = (collapsed) => {
 .n-layout-sider {
   background: #001529 !important;
   transition: width 0.3s ease !important;
+  /* 隐藏滚动条，但保留滚动功能 */
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+.n-layout-sider::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* 隐藏侧边栏滚动条，但保留滚动功能 */
+.n-layout-sider .n-layout-scroll-container::-webkit-scrollbar {
+  display: none !important;
+}
+.n-layout-sider .n-layout-scroll-container {
+  scrollbar-width: none !important; /* For Firefox */
+  -ms-overflow-style: none !important; /* For IE and Edge */
 }
 
 .n-layout-sider-trigger {

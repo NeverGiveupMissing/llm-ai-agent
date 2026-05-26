@@ -33,6 +33,7 @@ const handleGoHome = () => {
   padding: 0 16px;
   background: #001529;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid #1e1e1e;
   cursor: pointer;
   transition: all 0.3s ease;
 }

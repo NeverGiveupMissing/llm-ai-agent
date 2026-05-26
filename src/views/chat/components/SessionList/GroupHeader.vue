@@ -102,7 +102,7 @@ defineEmits(['toggle-collapse', 'pin', 'menu-select'])
 </script>
 
 <style scoped>
-.group-header {
+:deep(.group-header) {
   color: #fff;
   display: flex;
   align-items: center;
@@ -110,6 +110,7 @@ defineEmits(['toggle-collapse', 'pin', 'menu-select'])
   padding: 8px 12px;
   cursor: pointer;
   user-select: none;
+  border-right: 1px solid #e5e7eb;
 }
 
 .group-title {
